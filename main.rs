@@ -620,7 +620,7 @@ impl Sim {
     // epilogue_tick: 0-based tick within epilogue phase.
     // Returns true when converged.
     fn epilogue_tick(&mut self, orig: &OriginalState, epilogue_tick: usize) -> bool {
-        const RAMP_TICKS: usize = 2400; // 40 seconds at 60fps (4× slower than before)
+        const RAMP_TICKS: usize = 32; // fully ramped by frame 32
         let t = (epilogue_tick as f32 / RAMP_TICKS as f32).min(1.0);
 
         // Conway deaths only (no births) with ramping-down rate — clears non-original cells.
