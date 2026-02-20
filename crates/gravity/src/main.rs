@@ -533,8 +533,8 @@ fn run(name: &str, g: f32, softening: f32, speed_cap: f32, conway_every: usize, 
 fn main() {
     fs::create_dir_all("frames").unwrap();
 
-    // Every tick, 960 frames = 32 seconds at 30fps
-    let snaps: Vec<usize> = (0..=960).collect();
+    // Every tick, 3840 frames = 64 seconds at 60fps
+    let snaps: Vec<usize> = (0..=3840).collect();
 
     // Four-body clockwise: each blob at a corner of the middle region,
     // velocity perpendicular pointing clockwise.
@@ -550,5 +550,5 @@ fn main() {
         (144.0,  32.0, 12.0,  0.000,  0.010, 0),
         (144.0,  96.0, 12.0, -0.010,  0.000, 0),
         ( 48.0,  96.0, 12.0,  0.000, -0.010, 0),
-    ], 960, &snaps);
+    ], 3840, &snaps);
 }
