@@ -503,8 +503,13 @@ fn main() {
     // 40 frames at 10fps = 4 seconds, snap every 250 ticks over 10000
     let snaps: Vec<usize> = (0..=40).map(|i| i * 250).collect();
 
-    run("soft25", 0.003, 25.0, 0.5, 128, &[
-        (100.0, 128.0, 13.0,  0.0, -0.046, 0),
-        (284.0, 128.0, 13.0,  0.0,  0.046, 0),
+    // Back to D_best style: blobs moving toward each other, offset by ~26px vertically
+    // Original had ivx=±0.2 which was too fast. Try ±0.05 — slow enough to curve.
+    // Conway every 128, soft=2 (original), cap=1
+    let snaps: Vec<usize> = (0..=40).map(|i| i * 250).collect();
+
+    run("glancing_slow", 0.001, 1.5, 0.5, 128, &[
+        ( 80.0, 115.0, 13.0,  0.05,  0.0, 0),  // left blob moving right
+        (304.0, 141.0, 13.0, -0.05,  0.0, 0),  // right blob moving left, offset 26px down
     ], 10000, &snaps);
 }
