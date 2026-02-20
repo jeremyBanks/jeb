@@ -627,6 +627,31 @@ impl Sim {
                 if reservation[key] == usize::MAX { reservation[key] = idx; }
             }
         }
+
+        // Steer correction: counter-rotate velocity by the angular error introduced by
+        // discrete grid movement. If the grid forced a cell 20° clockwise of its intended
+        // direction, rotate the velocity 20° counter-clockwise to compensate.
+        if self.steer {
+            for idx in 0..n {
+                if !moved[idx] { continue; }
+                let (ox, oy) = old_pos[idx];
+                let (nx, ny) = (self.cells[idx].x, self.cells[idx].y);
+                if nx == ox && ny == oy { continue; } // stayed in same square, no error
+                // Actual displacement (with min-image for wrap, direct for no-wrap)
+                let adx = if self.wrap { min_image(nx as f32 - ox as f32, W as f32) }
+                           else { nx as f32 - ox as f32 };
+                let ady = if self.wrap { min_image(ny as f32 - oy as f32, H as f32) }
+                           else { ny as f32 - oy as f32 };
+                let spd = (self.cells[idx].vx.powi(2) + self.cells[idx].vy.powi(2)).sqrt();
+                if spd == 0.0 { continue; }
+                let intended = self.cells[idx].vy.atan2(self.cells[idx].vx);
+                let actual   = ady.atan2(adx);
+                let error    = actual - intended; // how much the grid rotated us
+                let corrected = intended - error; // rotate back by the same amount
+                self.cells[idx].vx = corrected.cos() * spd;
+                self.cells[idx].vy = corrected.sin() * spd;
+            }
+        }
     }
 
     fn tick(&mut self) {
