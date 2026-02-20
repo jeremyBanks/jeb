@@ -459,21 +459,9 @@ fn main() {
 
     let d_snaps: Vec<usize> = (0..=32).map(|i| i * 150).collect();
 
-    // D1: tiny offset — near-direct, gravity bends them just slightly
-    run("D1_offset6", 0.001, 1.5, 0.5, &[
-        ( 80.0, 125.0, 13.0,  0.2,  0.0, 0),
-        (304.0, 131.0, 13.0, -0.2,  0.0, 0),
-    ], 4800, &d_snaps);
-
-    // D2: medium offset — paths cross diagonally, slingshot territory
-    run("D2_offset13", 0.001, 1.5, 0.5, &[
+    // D2: medium offset (13px) — slingshot zone
+    run("D_best", 0.001, 1.5, 0.5, &[
         ( 80.0, 115.0, 13.0,  0.2,  0.0, 0),
         (304.0, 141.0, 13.0, -0.2,  0.0, 0),
-    ], 4800, &d_snaps);
-
-    // D3: large offset — wide pass, gravity just curves the edges
-    run("D3_offset26", 0.001, 1.5, 0.5, &[
-        ( 80.0, 102.0, 13.0,  0.2,  0.0, 0),
-        (304.0, 154.0, 13.0, -0.2,  0.0, 0),
     ], 4800, &d_snaps);
 }
