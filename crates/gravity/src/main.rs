@@ -42,8 +42,8 @@ impl Sim {
                     let y = (cy + dy as f32).rem_euclid(H as f32);
                     let xi = x as usize;
                     let yi = y as usize;
-                    // 50% random inclusion — no spatial bias
-                    if xoru64(&mut rng) % 2 != 0 { continue; }
+                    // Checkerboard 50% density — deterministic, no spatial bias vs RNG
+                    if (xi + yi) % 2 != 0 { continue; }
                     if cells.iter().any(|c: &Cell| c.x as usize == xi && c.y as usize == yi) {
                         continue;
                     }
@@ -52,7 +52,7 @@ impl Sim {
             }
         }
         // Shuffle so cell indices are interleaved across blobs — no first-blob bias
-        shuffle_vec_rng(&mut cells, &mut rng);
+        shuffle_vec(&mut cells, &mut rng);
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: n,
@@ -247,19 +247,21 @@ impl Sim {
             }
         }
 
-        // Speed cap: clamp to max(prev_speed, global_cap) so momentum from
-        // Conway operations isn't immediately eaten by the hard limit.
-        // prev_speed decays toward global_cap each tick to prevent ratcheting.
+        // Record speed BEFORE applying cap — this is what the cell "earned" via
+        // gravity this tick. Next tick's floor is max(this speed, global_cap).
+        // Gravity can slow a cell naturally (by pulling against its direction),
+        // but the cap never takes away momentum the cell legitimately had.
         for c in &mut self.cells {
             let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
             let effective_cap = c.prev_speed.max(self.speed_cap);
             if spd > effective_cap {
                 c.vx = c.vx / spd * effective_cap;
                 c.vy = c.vy / spd * effective_cap;
+                c.prev_speed = effective_cap;
+            } else {
+                // Cell is under cap — record actual speed as new floor
+                c.prev_speed = spd;
             }
-            // Decay prev_speed toward global_cap — momentum bleeds off over ~16 ticks
-            let capped_spd = spd.min(effective_cap);
-            c.prev_speed = (capped_spd * 0.9 + self.speed_cap * 0.1).max(self.speed_cap);
         }
 
         // Movement with reservation chaining:
@@ -502,10 +504,17 @@ fn main() {
 
     let snaps: Vec<usize> = (0..=320).map(|i| i * 120).collect();
 
-    // Per-component birth/death clamping — ±4 cells, three-body
-    run("percomp_3body", 0.00005, 1.5, 0.125, 1, 4.0, &[
-        (130.0,  96.0, 6.0,  0.08,  0.0, 0),
-        (130.0, 160.0, 6.0,  0.08,  0.0, 0),
-        (260.0, 128.0, 6.0, -0.08,  0.0, 0),
+    // Four-body clockwise: each blob at a corner of the middle region,
+    // velocity perpendicular pointing clockwise.
+    // W=384, H=256 — inner thirds: x∈[96,288], y∈[64,192]
+    //   top-left    (96,  64) → moving right  ( 0.08,  0.0)
+    //   top-right  (288,  64) → moving down   ( 0.0,   0.08)
+    //   bot-right  (288, 192) → moving left   (-0.08,  0.0)
+    //   bot-left    (96, 192) → moving up     ( 0.0,  -0.08)
+    run("four_clockwise", 0.00005, 1.5, 0.125, 1, 4.0, &[
+        ( 96.0,  64.0, 6.0,  0.08,  0.00, 0),
+        (288.0,  64.0, 6.0,  0.00,  0.08, 0),
+        (288.0, 192.0, 6.0, -0.08,  0.00, 0),
+        ( 96.0, 192.0, 6.0,  0.00, -0.08, 0),
     ], 38400, &snaps);
 }
