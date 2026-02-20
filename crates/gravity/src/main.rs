@@ -456,6 +456,31 @@ impl Sim {
         false
     }
 
+    fn epilogue_conway_deaths_only(&mut self, max_deaths: usize) {
+        let mut grid = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            grid[c.y as usize % H * W + c.x as usize % W] = i;
+        }
+        let neighbour_offsets: [(i32, i32); 8] = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)];
+        let mut deaths: Vec<usize> = Vec::new();
+        for (i, c) in self.cells.iter().enumerate() {
+            let gx = c.x as usize % W; let gy = c.y as usize % H;
+            let cnt = neighbour_offsets.iter().filter(|&&(dy, dx)| {
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                grid[ny * W + nx] != usize::MAX
+            }).count();
+            if cnt != 2 && cnt != 3 { deaths.push(i); }
+        }
+        shuffle_vec(&mut deaths, &mut self.rng);
+        deaths.truncate(max_deaths);
+        let dying: std::collections::HashSet<usize> = deaths.into_iter().collect();
+        let mut di: Vec<usize> = dying.into_iter().collect();
+        di.sort_unstable_by(|a, b| b.cmp(a));
+        for i in di { self.cells.swap_remove(i); }
+        self.order = (0..self.cells.len()).collect();
+    }
+
     fn epilogue_conway_step(&mut self, max_per_component: usize, target_pop: usize) {
         // Simplified Conway step with fixed max births/deaths (no pop_band logic)
         shuffle_vec(&mut self.cells, &mut self.rng);
