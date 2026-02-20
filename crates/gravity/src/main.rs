@@ -628,3 +628,14 @@ fn main() {
 
 // [recovery] edit target not found, appending:
 use std::io::{BufWriter, Write};
+
+// [recovery] edit target not found, appending:
+        // Enforce per-component: clamp births and deaths independently.
+        // Births can't push us above pop_max; deaths can't push us below pop_min.
+        // Additionally rate-limit to ceil(pop_band/2) per tick — 1/4 of total band range.
+        // This applies even when outside the band, preventing runaway explosions/crashes.
+        let rate_limit = ((self.pop_band / 2.0).ceil() as usize).max(1);
+        let max_births = pop_max.saturating_sub(n).min(rate_limit);
+        let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
+        desired_births.truncate(max_births);
+        desired_deaths.truncate(max_deaths);
