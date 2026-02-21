@@ -1284,7 +1284,7 @@ fn main() {
 
             // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
             let t = (ep_tick as f32 / 600.0_f32).min(1.0);
-            let fade = 0.999767_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
+            let fade = 0.999534_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
             for v in canvas.iter_mut() { *v *= fade; }
             sim.paint_frame(&mut canvas);
             let global_frame = total_frames + ep_frame;
