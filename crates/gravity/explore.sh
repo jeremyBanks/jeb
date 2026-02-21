@@ -41,9 +41,9 @@ trap "rm -rf $WORKDIR" EXIT
 
 # ── BASE PARAMS (explicitly set; configs override individual flags) ────────────
 # These match the known-good production config. Override any in CONFIGS entries.
-BASE_ARGS="--pop-target 5120 --pop-band 1280 --rate-limit 32 --seed-density 128 --speed-cap 6.0 --gravity 0.03125 --softening 6"
-# Note: --wrap is NOT in BASE_ARGS so we can test both modes.
-# Add --wrap explicitly in any config entry that needs it.
+BASE_ARGS="--pop-target 5120 --pop-band 160 --rate-limit 4 --seed-density 128 --speed-cap 4.5 --gravity 0.03125 --softening 6 --init-vel zero"
+# Baseline = 3am known-good params. Note: --wrap is NOT in BASE_ARGS so we can
+# test both modes. Add --wrap explicitly in any config entry that needs it.
 
 echo "=== Explore round $ROUND | sim=${SIM_SECONDS}s | seed=$SEED ==="
 echo "=== Base: $BASE_ARGS ==="
@@ -52,19 +52,18 @@ echo "=== Base: $BASE_ARGS ==="
 declare -a CONFIGS
 case "$ROUND" in
 1)
-  # Round 1: vary the Conway activity parameters.
-  # Key insight: the dynamic rate formula shuts Conway off when p90 ≈ speed_cap.
-  # rate_limit controls max churn; pop_band controls how aggressively it steers pop.
-  # Start by understanding how these affect long-term dynamics.
+  # Round 1: vary around 3am known-good baseline (BASE_ARGS).
+  # Baseline: G=0.03125 soft=6 cap=4.5 pop_band=160 rate=4 init_vel=zero
+  # Test wrap/nowrap, rate_limit, pop_band, and init_vel modes.
   CONFIGS=(
-    "wrap+base:--gravity 0.03125 --softening 6 --wrap"
-    "nowrap+base:--gravity 0.03125 --softening 6"
-    "wrap+rate=8:--gravity 0.03125 --softening 6 --wrap --rate-limit 8"
-    "wrap+rate=128:--gravity 0.03125 --softening 6 --wrap --rate-limit 128"
-    "wrap+band=256:--gravity 0.03125 --softening 6 --wrap --pop-band 256"
-    "wrap+band=2560:--gravity 0.03125 --softening 6 --wrap --pop-band 2560"
-    "wrap+cap=2:--gravity 0.03125 --softening 6 --wrap --speed-cap 2"
-    "wrap+cap=12:--gravity 0.03125 --softening 6 --wrap --speed-cap 12"
+    "wrap+base:--wrap"
+    "nowrap+base:"
+    "wrap+rate=1:--wrap --rate-limit 1"
+    "wrap+rate=8:--wrap --rate-limit 8"
+    "wrap+band=80:--wrap --pop-band 80"
+    "wrap+band=320:--wrap --pop-band 320"
+    "wrap+swirl:--wrap --init-vel swirl"
+    "wrap+spin:--wrap --init-vel spin"
   )
   ;;
 2)
