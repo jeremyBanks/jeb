@@ -21,7 +21,7 @@ const AUDIO_BASE_FREQ: f32  = 130.81; // C3
 const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
 const AUDIO_SLEW: f32       = 0.05;   // per-sample freq snap (fast — less glide between scale degrees)
 const AUDIO_AMP_SCALE: f32  = 0.0015; // per-voice amplitude scale; tanh handles headroom
-const AUDIO_ATTACK: usize   = 882;    // 20 ms — softer onset, less click
+const AUDIO_ATTACK: usize   = 1058;   // 24 ms — softer onset, less click
 const AUDIO_RELEASE: usize  = 88200;  // 2 seconds — long enough to outlive Conway deaths smoothly
 
 #[derive(Clone, Copy, PartialEq)]
