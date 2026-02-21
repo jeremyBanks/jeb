@@ -1,5 +1,6 @@
 #!/bin/bash
-# segment-watcher.sh — sends a Discord preview clip whenever a new segment completes
+# segment-watcher.sh — sends a 3-part Discord preview clip whenever a new segment completes
+# Preview: first 6s + middle 6s + last 6s @ 512×320 NN, with 1/8s black gap between parts
 cd "$(dirname "$0")"
 
 DISCORD_CHANNEL="1467063568712339561"
@@ -10,6 +11,54 @@ touch "$SEEN_FILE"
 echo "[watcher] started, watching segments/"
 
 TOTAL=69
+PREVIEW_W=512
+PREVIEW_H=320
+CLIP_DUR=6
+GAP_DUR="0.125"  # 1/8 second
+
+make_preview() {
+    local seg="$1"
+    local out="$2"
+
+    # Get duration
+    local dur
+    dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$seg" 2>/dev/null | tr -d '[:space:]')
+    dur=${dur:-0}
+
+    local scale="scale=${PREVIEW_W}:${PREVIEW_H}:flags=neighbor"
+
+    if (( $(echo "$dur < $((CLIP_DUR * 2 + 1))" | bc -l) )); then
+        # Short segment — just take what we have
+        ffmpeg -y -i "$seg" -vf "$scale" -c:v libx264 -crf 22 -preset fast "$out" 2>/dev/null
+        return
+    fi
+
+    local mid_start
+    mid_start=$(echo "scale=3; $dur / 2 - $CLIP_DUR / 2" | bc)
+    local last_start
+    last_start=$(echo "scale=3; $dur - $CLIP_DUR" | bc)
+
+    local tmp
+    tmp=$(mktemp -d)
+
+    # Extract three clips at preview resolution
+    ffmpeg -y -i "$seg" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_a.mp4" 2>/dev/null
+    ffmpeg -y -i "$seg" -ss "$mid_start" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_b.mp4" 2>/dev/null
+    ffmpeg -y -i "$seg" -ss "$last_start" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_c.mp4" 2>/dev/null
+
+    # 1/8s black gap
+    ffmpeg -y -f lavfi -i "color=black:s=${PREVIEW_W}x${PREVIEW_H}:r=60" \
+        -t $GAP_DUR -c:v libx264 -crf 22 -preset fast "$tmp/gap.mp4" 2>/dev/null
+
+    # Concat: A + gap + B + gap + C
+    printf "file '%s'\nfile '%s'\nfile '%s'\nfile '%s'\nfile '%s'\n" \
+        "$tmp/part_a.mp4" "$tmp/gap.mp4" \
+        "$tmp/part_b.mp4" "$tmp/gap.mp4" \
+        "$tmp/part_c.mp4" > "$tmp/list.txt"
+
+    ffmpeg -y -f concat -safe 0 -i "$tmp/list.txt" -c copy "$out" 2>/dev/null
+    rm -rf "$tmp"
+}
 
 while true; do
     for seg in $(ls segments/seg_*.mp4 2>/dev/null | sort); do
@@ -27,20 +76,20 @@ while true; do
 
         preview="${PREVIEW_DIR}/preview_chunk${chunk_num}.mp4"
 
-        if ffmpeg -y -i "$seg" -t 15 -vf scale=960:600 -c:v libx264 -crf 22 -preset fast "$preview" 2>/dev/null; then
+        if make_preview "$seg" "$preview"; then
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
                 -m "chunk ${chunk_num}/${TOTAL} — \`$seg_name\`"; then
                 echo "[watcher] sent chunk $chunk_num"
-                echo "$seg" >> "$SEEN_FILE"  # only mark seen on success
+                echo "$seg" >> "$SEEN_FILE"
             else
                 echo "[watcher] send failed for chunk $chunk_num, will retry"
             fi
-            rm -f "$preview"
         else
             echo "[watcher] ffmpeg failed for chunk $chunk_num, will retry"
         fi
+        rm -f "$preview"
     done
 
     sleep 5
