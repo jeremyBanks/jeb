@@ -1300,25 +1300,35 @@ fn main() {
     println!("gravity: {}s × {}fps = {} frames, {} chunks of {} frames",
         seconds, FPS, total_frames, n_chunks, CHUNK_FRAMES);
 
+    // ── GOOD SETTINGS (local optimum, Feb 21 2026) ───────────────────────────
+    // These defaults produce genuinely interesting dynamics: Conway-active clusters
+    // that move, interact, and sustain themselves without collapsing into a static blob.
+    // Key properties: eff_spd≈2.2, moved≈68-75%, p10≈2.4, spread≈50-70.
+    // Recommended invocation: --wrap --dampen (not default-able as boolean flags).
+    // Starting point for all future exploration; escape local optima by trying
+    // radically different G, softening, or init_vel — but return here if lost.
+    //   G=0.075  soft=3  cap=2  pop=768  band=256  rate=16  vel=swirl  wrap  dampen
+    // ─────────────────────────────────────────────────────────────────────────────
+
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.03125_f32);
+        .unwrap_or(0.075_f32);
     let softening: f32 = parse_arg("--softening")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(6.0_f32);
+        .unwrap_or(3.0_f32);
     let speed_cap: f32 = parse_arg("--speed-cap")
-        .and_then(|v| v.parse().ok()).unwrap_or(1.125); // cells/frame
-    let target_pop_default = W * H / 16; // 2560 for 256×160
+        .and_then(|v| v.parse().ok()).unwrap_or(2.0); // cells/frame
+    let target_pop_default = 768_usize;
     let target_pop: usize = parse_arg("--pop-target")
         .and_then(|s| s.parse().ok())
         .unwrap_or(target_pop_default);
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(1280.0); // ±1280 around target → range [1280, 3840]
+        .unwrap_or(256.0);
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
+        .unwrap_or(16);
 
     // --init-vel MODE: initial velocity field for seeded cells.
     //   swirl   (default) — asymmetric quadrant bias, net angular momentum
