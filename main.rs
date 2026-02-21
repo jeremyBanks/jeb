@@ -574,8 +574,22 @@ impl Sim {
         // Deaths: uniform random selection (shuffled above)
         // Births: weighted by neighbour speed — handled below after grid2 is built
 
-        // Rate-limit: max births/deaths per Conway call, independent of pop_band.
-        let rate_limit = self.rate_limit;
+        // Dynamic rate-limit: inversely proportional to 90th-percentile cell speed.
+        // Slow cells → Conway churns hard (up to self.rate_limit/tick).
+        // Fast cells → Conway barely fires (minimum 1/tick).
+        // Creates a feedback loop: slow clusters explode with Life activity, launching
+        // new cells; fast clusters let gravity do the work until they settle again.
+        let rate_limit = {
+            let mut speeds: Vec<f32> = self.cells.iter()
+                .map(|c| (c.vx * c.vx + c.vy * c.vy).sqrt())
+                .collect();
+            speeds.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            let p90_idx = ((speeds.len() as f32 * 0.9) as usize).min(speeds.len().saturating_sub(1));
+            let p90 = speeds.get(p90_idx).copied().unwrap_or(0.0);
+            let t = (p90 / self.speed_cap).clamp(0.0, 1.0);
+            // Quadratic falloff: slow=max_rate, fast=1
+            ((self.rate_limit as f32 * (1.0 - t) * (1.0 - t)).round() as usize).max(1)
+        };
         let max_births = pop_max.saturating_sub(n).min(rate_limit);
         let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         // desired_births NOT truncated here — weighted selection happens post-deaths
