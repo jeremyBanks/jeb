@@ -2244,3 +2244,7 @@ use std::io::{BufWriter, Write};
         // Write stats for segment-watcher.sh to include in Discord messages
         let _ = fs::write("state/last_stats.txt",
             format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
+
+// [recovery] edit target not found, appending:
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
+              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
