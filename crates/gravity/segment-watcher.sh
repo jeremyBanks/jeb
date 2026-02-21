@@ -85,11 +85,18 @@ while true; do
             SIZE_MB=$(du -m "$seg" | cut -f1)
             META="${MINS}m${SECS}s | ${SIZE_MB}MB"
 
-            # Include run_id, pop, sim/enc timing
+            # Include run_id, params, pop, sim/enc timing
             EXTRA=""
             RUN_ID=""
+            PARAMS=""
             if [ -f "state/run_info.txt" ]; then
                 RUN_ID=$(grep "^run_id=" state/run_info.txt | cut -d= -f2)
+                G=$(grep "^gravity:" state/run_info.txt | awk '{print $2}')
+                S=$(grep "^softening:" state/run_info.txt | awk '{print $2}')
+                SC=$(grep "^speed_cap:" state/run_info.txt | awk '{print $2}')
+                POP_T=$(grep "^pop_target:" state/run_info.txt | awk '{print $2}')
+                WRAP=$(grep "^wrap:" state/run_info.txt | awk '{print $2}')
+                PARAMS="G=${G} soft=${S} cap=${SC} pop=${POP_T} wrap=${WRAP}"
             fi
             if [ -f "state/last_stats.txt" ]; then
                 POP=$(grep "^pop=" state/last_stats.txt | cut -d= -f2)
@@ -98,7 +105,7 @@ while true; do
                 [ -n "$POP" ] && EXTRA=" | pop=${POP}"
                 [ -n "$SIM_MS" ] && EXTRA="${EXTRA} | sim=${SIM_MS}ms enc=${ENC_MS}ms"
             fi
-            [ -n "$RUN_ID" ] && EXTRA=" \`${RUN_ID}\`${EXTRA}"
+            [ -n "$RUN_ID" ] && EXTRA="\`${RUN_ID}\` ${PARAMS}${EXTRA}"
 
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
