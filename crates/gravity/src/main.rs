@@ -1332,6 +1332,18 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
 
+    // --init-vel MODE: initial velocity field for seeded cells.
+    //   swirl   (default) — asymmetric quadrant bias, net angular momentum
+    //   random  — isotropic random ±0.25, no directional bias
+    //   spin    — clockwise tangential field proportional to distance from centre
+    //   zero    — all seeded cells start stationary (pure gravity collapse from rest)
+    let init_vel: String = parse_arg("--init-vel")
+        .unwrap_or_else(|| "swirl".to_string());
+
+    // --commit HASH: git commit ID for reproducibility logging (passed by run-loop.sh)
+    let commit_id: String = parse_arg("--commit")
+        .unwrap_or_else(|| "unknown".to_string());
+
     let run_id: String = parse_arg("--run-id")
         .unwrap_or_else(|| format!("seed{}", rng_seed));
 
