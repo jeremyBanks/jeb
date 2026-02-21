@@ -14,11 +14,15 @@ const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
 
 struct Cell {
-    x: usize,  // integer grid column [0, W)
-    y: usize,  // integer grid row    [0, H)
+    px: f32,   // continuous world position, x ∈ [0, W)
+    py: f32,   // continuous world position, y ∈ [0, H)
     vx: f32,
     vy: f32,
     prev_speed: f32,
+}
+impl Cell {
+    #[inline] fn gx(&self) -> usize { self.px.round() as i32).rem_euclid(W as i32) as usize }
+    #[inline] fn gy(&self) -> usize { self.py.round() as i32).rem_euclid(H as i32) as usize }
 }
 
 struct Sim {
