@@ -654,9 +654,7 @@ impl Sim {
     }
 
     fn tick(&mut self) {
-        if self.conway_every > 0 && self.tick_count % self.conway_every == 0 {
-            self.conway_step();
-        }
+        self.conway_step();
         self.gravity_step();
         self.tick_count += 1;
     }
