@@ -122,6 +122,7 @@ struct Sim {
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
     voice_pool: HashMap<u64, Voice>,
+    audio_events: Vec<AudioEvent>,  // filled by conway_step, drained by generate_audio
 }
 
 // Original state captured at tick=0 for epilogue convergence
