@@ -23,12 +23,41 @@ const AUDIO_SLEW: f32       = 0.005;  // per-sample freq portamento
 const AUDIO_ATTACK: usize   = 220;    // 5 ms
 const AUDIO_RELEASE: usize  = 17640;  // 400 ms
 
+struct Voice {
+    phase: f32,
+    current_freq: f32,
+    target_freq: f32,
+    filter_state: f32,         // one-pole LP memory
+    current_cutoff: f32,       // slewed cutoff coefficient
+    target_cutoff: f32,
+    sin_angle: f32,            // waveform blend: -1=pure sine, +1=pure saw
+    current_amp: f32,          // slewed amplitude (speed-based)
+    target_amp: f32,
+    attack_samples: usize,
+    releasing: bool,
+    release_samples: usize,
+    refreshed: bool,           // cleared each frame, set when cell moved
+}
+
+impl Voice {
+    fn new(freq: f32) -> Self {
+        Voice {
+            phase: 0.0, current_freq: freq, target_freq: freq,
+            filter_state: 0.0, current_cutoff: 0.02, target_cutoff: 0.02,
+            sin_angle: 0.0, current_amp: 0.0, target_amp: 0.0,
+            attack_samples: 0, releasing: false, release_samples: 0, refreshed: true,
+        }
+    }
+}
+
 struct Cell {
     px: f32,   // continuous world position, x ∈ [0, W)
     py: f32,   // continuous world position, y ∈ [0, H)
     vx: f32,
     vy: f32,
     prev_speed: f32,
+    id: u64,      // persistent identity — travels with the cell
+    moved: bool,  // true if cell changed grid square this tick
 }
 impl Cell {
     #[inline] fn gx(&self) -> usize { (self.px.round() as i32).rem_euclid(W as i32) as usize }
