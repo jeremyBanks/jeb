@@ -1614,17 +1614,20 @@ use std::io::{BufWriter, Write};
             self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd });
 
 // [recovery] edit target not found, appending:
-        // Build quadtree centered on the actual COM of all cells.
-        // Geometric split at [0,W/2,W]×[0,H/2,H] creates a (0,0) corner bias:
-        // approximation errors don't cancel when the cluster is off-center.
-        // Centering the root on the true COM makes errors symmetric around the cluster.
+        // Build quadtree centered on the actual bounding box of cells.
+        // A fixed [0,W]×[0,H] root creates a (0,0) corner bias because
+        // BH approximation errors don't cancel when the cluster is off-center.
+        // Using the actual cell bbox centers the first split on the data.
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
         {
-            let cx = self.cells.iter().map(|c| c.px).sum::<f32>() / n as f32;
-            let cy = self.cells.iter().map(|c| c.py).sum::<f32>() / n as f32;
-            // Radius: large enough that all cells in [0,W]×[0,H] fit inside root
-            let r = (cx.max(W as f32 - cx)).max(cy.max(H as f32 - cy)) + 2.0;
-            nodes.push(QNode::empty(cx - r, cy - r, cx + r, cy + r));
+            let min_px = self.cells.iter().map(|c| c.px).fold(f32::INFINITY, f32::min);
+            let max_px = self.cells.iter().map(|c| c.px).fold(f32::NEG_INFINITY, f32::max);
+            let min_py = self.cells.iter().map(|c| c.py).fold(f32::INFINITY, f32::min);
+            let max_py = self.cells.iter().map(|c| c.py).fold(f32::NEG_INFINITY, f32::max);
+            let cx = (min_px + max_px) * 0.5;
+            let cy = (min_py + max_py) * 0.5;
+            let half = ((max_px - min_px).max(max_py - min_py)) * 0.5 + 2.0;
+            nodes.push(QNode::empty(cx - half, cy - half, cx + half, cy + half));
         }
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
