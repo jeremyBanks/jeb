@@ -349,7 +349,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, seed_density_inv: usize, wrap: bool, steer: bool, dampen: bool) -> Self {
+           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool, dampen: bool) -> Self {
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
         let mut cells: Vec<Cell> = Vec::new();
@@ -401,7 +401,6 @@ impl Sim {
         shuffle_vec(&mut cells, &mut rng);
 
         let n = cells.len();
-        let target_pop = W * H / 16;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
               conway_births: 0, conway_deaths: 0, next_id, voice_pool: HashMap::new(), audio_events: Vec::new(), reverb: Reverb::new() }
@@ -439,7 +438,7 @@ impl Sim {
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
                        pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
-                       wrap: bool, steer: bool, dampen: bool)
+                       target_pop: usize, wrap: bool, steer: bool, dampen: bool)
         -> Option<(Self, Vec<f32>, usize)>
     {
         let buf = fs::read(path).ok()?;
@@ -484,7 +483,6 @@ impl Sim {
             prev_live_rebuilt[c.gy() * W + c.gx()] = true;
         }
         let order = (0..cells.len()).collect();
-        let target_pop = W * H / 16;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit,
                         tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen,
@@ -1532,7 +1530,10 @@ fn main() {
         .unwrap_or(6.0_f32);
     let speed_cap: f32 = parse_arg("--speed-cap")
         .and_then(|v| v.parse().ok()).unwrap_or(1.125); // cells/frame
-    let target_pop_default = W * H / 16; // 2560 for 256×160 (half of W*H/8)
+    let target_pop_default = W * H / 16; // 2560 for 256×160
+    let target_pop: usize = parse_arg("--pop-target")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(target_pop_default);
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
         .unwrap_or(1280.0); // ±1280 around target → range [1280, 3840]
@@ -1555,14 +1556,14 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, wrap, steer, dampen)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
         })
         .unwrap_or_else(|| {
             println!("Fresh start (seed={rng_seed}, seed_density=1/{seed_density_inv})");
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, wrap, steer, dampen);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
