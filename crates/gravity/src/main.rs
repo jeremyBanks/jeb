@@ -1136,7 +1136,7 @@ fn main() {
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.096000_f32); // 8× previous
+        .unwrap_or(0.048000_f32); // half previous
     let softening   = 1.5_f32;
     let speed_cap   = 0.75_f32; // cells/frame
     let conway_every = FPS as usize / 4; // run Conway 4× per second → up to 4 births + 4 deaths/sec
