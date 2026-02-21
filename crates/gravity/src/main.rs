@@ -1436,47 +1436,125 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
     }
 }
 
-// Returns Oklab (L, a, b) for a cell's velocity — stored directly in canvas, no RGB conversion here.
-// L: 0.45 (still) → 0.75 (fast); C: 0.0 (still) → 0.20 (fast); H: velocity direction angle.
-// ── Palette system ────────────────────────────────────────────────────────────
-// Hot-reload: binary reads /tmp/gravity_palette at the start of each chunk.
-// File contains a single palette name: "classic" | "frozen"
-// If file is absent or unrecognised, falls back to "classic".
-// "classic" = original uniform hue wheel (exact same behaviour as before).
-// "frozen"  = gravity-well hue biasing toward a curated palette; same L/C ramp.
+// ── Colour system ─────────────────────────────────────────────────────────────
+//
+// "Radical" mode (default): perceptual hue-wheel interpolation.
+//   Velocity direction θ → position on a circular spline through the palette colours.
+//   Speed ramp: #061B31 (dark navy, still) → palette colour at speed_cap.
+//   Beyond speed_cap (cells can reach 2×): L and C extrapolated with √ taper.
+//   Out-of-gamut colours → OKLCH chroma binary-search reduction (hue-preserving).
+//
+// "Classic" mode (write "classic" to /tmp/gravity_palette): original uniform hue wheel.
+//
+// Palette (9 colours). Near-achromatic ones (C < 0.02 in Oklch) are excluded from
+// the hue wheel but #061B31 is used as the zero-speed anchor regardless.
+//
+//   #533AFD  violet           #635BFF  periwinkle
+//   #F44BCC  hot pink         #EA2261  crimson
+//   #FF6118  orange           #FFC01F  golden yellow
+//   #50617A  steel blue-gray  #061B31  dark navy (zero-speed anchor)
+//   #F6F9FC  near white       (excluded: C < 0.02)
+
+const PALETTE_SRGB: &[(u8, u8, u8)] = &[
+    (0x53, 0x3A, 0xFD), // #533AFD — violet
+    (0x06, 0x1B, 0x31), // #061B31 — dark navy  (also zero-speed anchor)
+    (0x50, 0x61, 0x7A), // #50617A — steel blue-gray
+    (0xF6, 0xF9, 0xFC), // #F6F9FC — near white  (C < 0.02, skipped from wheel)
+    (0xFF, 0xC0, 0x1F), // #FFC01F — golden yellow
+    (0xFF, 0x61, 0x18), // #FF6118 — orange
+    (0xF4, 0x4B, 0xCC), // #F44BCC — hot pink
+    (0xEA, 0x22, 0x61), // #EA2261 — crimson
+    (0x63, 0x5B, 0xFF), // #635BFF — periwinkle
+];
+
+/// Zero-speed (still cell) colour — dark navy.
+const SLOW_RGB: (u8, u8, u8) = (0x06, 0x1B, 0x31);
+
+/// One entry on the hue wheel: a palette colour plus its OKLab coords and OKLCH hue.
+#[derive(Clone, Debug)]
+struct HueAnchor { l: f32, a: f32, b: f32, h: f32 }
+
+fn srgb_u8_to_linear(x: u8) -> f32 {
+    let x = x as f32 / 255.0;
+    if x <= 0.04045 { x / 12.92 } else { ((x + 0.055) / 1.055).powf(2.4) }
+}
+
+fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    let (rl, gl, bl) = (srgb_u8_to_linear(r), srgb_u8_to_linear(g), srgb_u8_to_linear(b));
+    let lms_l = 0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl;
+    let lms_m = 0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl;
+    let lms_s = 0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl;
+    let (l_, m_, s_) = (lms_l.cbrt(), lms_m.cbrt(), lms_s.cbrt());
+    let lab_l =  0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+    let lab_a =  1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+    let lab_b =  0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+    (lab_l, lab_a, lab_b)
+}
+
+/// Build hue-sorted anchors from PALETTE_SRGB, skipping near-achromatic entries (C < 0.02).
+fn build_hue_anchors() -> Vec<HueAnchor> {
+    let mut anchors: Vec<HueAnchor> = PALETTE_SRGB.iter().filter_map(|&(r, g, b)| {
+        let (l, a, b_) = rgb_to_oklab(r, g, b);
+        let c = (a * a + b_ * b_).sqrt();
+        if c < 0.02 { return None; }   // skip near-achromatic (e.g. #F6F9FC)
+        let h = b_.atan2(a);
+        Some(HueAnchor { l, a, b: b_, h })
+    }).collect();
+    anchors.sort_by(|x, y| x.h.partial_cmp(&y.h).unwrap());
+    anchors
+}
+
+/// Circularly interpolate palette anchors in OKLab for velocity direction θ.
+/// Returns the target (L, a, b) that a cell at speed_cap in direction θ should have.
+fn palette_for_angle(theta: f32, anchors: &[HueAnchor]) -> (f32, f32, f32) {
+    use std::f32::consts::TAU;
+    let n = anchors.len();
+    if n == 0 { return (0.5, 0.0, 0.0); }
+    if n == 1 { return (anchors[0].l, anchors[0].a, anchors[0].b); }
+
+    // Find the two anchors that bracket θ on the circle.
+    let idx = anchors.partition_point(|a| a.h < theta);
+    let i0  = if idx == 0 { n - 1 } else { idx - 1 };
+    let i1  = idx % n;
+
+    let h0 = anchors[i0].h;
+    // Ensure h1 is ahead of h0 (wrap around TAU if needed).
+    let h1 = { let h = anchors[i1].h; if h > h0 { h } else { h + TAU } };
+    let th = if theta >= h0 { theta } else { theta + TAU };
+    let t  = ((th - h0) / (h1 - h0)).clamp(0.0, 1.0);
+
+    // Interpolate in OKLab — perceptually smooth, no hue kinks.
+    let l = anchors[i0].l + (anchors[i1].l - anchors[i0].l) * t;
+    let a = anchors[i0].a + (anchors[i1].a - anchors[i0].a) * t;
+    let b = anchors[i0].b + (anchors[i1].b - anchors[i0].b) * t;
+    (l, a, b)
+}
 
 #[derive(Clone, Debug)]
 enum PaletteMode {
-    /// Original: speed→L/C, direction→hue uniformly.
+    /// Original: speed→L/C, direction→hue uniformly (fallback).
     Classic,
-    /// Gravity-well hue biasing toward the curated palette anchors.
-    /// pull ∈ [0,1]: 0 = classic, 1 = maximum bias.
-    /// sigma_rad: angular half-width of each well in radians (~0.7 ≈ 40°).
-    Frozen { pull: f32, sigma_rad: f32 },
+    /// Perceptual hue-wheel: palette colours at speed_cap, extrapolates beyond.
+    Radical {
+        anchors: Vec<HueAnchor>,
+        dark: (f32, f32, f32),  // OKLab of SLOW_RGB (#061B31)
+    },
 }
 
 fn load_palette() -> PaletteMode {
-    let raw = std::fs::read_to_string("/tmp/gravity_palette")
-        .unwrap_or_default();
+    let raw = std::fs::read_to_string("/tmp/gravity_palette").unwrap_or_default();
     let s = raw.trim().to_lowercase();
-    if s.starts_with("frozen") {
-        // Optional: "frozen pull=0.8 sigma=0.6"
-        let pull = s.split("pull=").nth(1)
-            .and_then(|v| v.split_whitespace().next())
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(0.85_f32);
-        let sigma = s.split("sigma=").nth(1)
-            .and_then(|v| v.split_whitespace().next())
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(0.70_f32);  // ~40°
-        PaletteMode::Frozen { pull, sigma_rad: sigma }
-    } else {
+    if s.starts_with("classic") {
         PaletteMode::Classic
+    } else {
+        // Default (no file, "radical", or anything else) → Radical.
+        let anchors = build_hue_anchors();
+        let dark = rgb_to_oklab(SLOW_RGB.0, SLOW_RGB.1, SLOW_RGB.2);
+        PaletteMode::Radical { anchors, dark }
     }
 }
 
 fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
-    use std::f32::consts::PI;
     let spd = (vx * vx + vy * vy).sqrt();
 
     match palette {
@@ -1489,62 +1567,84 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
             (l, c * h.cos(), c * h.sin())
         }
 
-        PaletteMode::Frozen { pull, sigma_rad } => {
-            // Anchor hues in radians (Oklch atan2 convention, −π..π).
-            // Anchor colors: FF6118 FFC01F 635BFF 533AFD F44BCC EA2261
-            //   orange≈40°  gold≈80°  periwinkle≈274°  violet≈280°  pink≈325°  rose≈5°
-            const ANCHORS: [f32; 6] = [
-                 0.698,   // FF6118  orange  ~40°
-                 1.396,   // FFC01F  gold    ~80°
-                -1.501,   // 635BFF  periwinkle  ~274° (= −86°)
-                -1.396,   // 533AFD  violet  ~280° (= −80°)
-                -0.611,   // F44BCC  pink    ~325° (= −35°)
-                 0.087,   // EA2261  rose    ~5°
-            ];
+        PaletteMode::Radical { anchors, dark: (dl, da, db) } => {
+            let theta = vy.atan2(vx);
+            let (tgt_l, tgt_a, tgt_b) = palette_for_angle(theta, anchors);
 
-            let h_nat = vy.atan2(vx);   // natural hue from velocity direction
-            let s2    = sigma_rad * sigma_rad;
+            // t = 0 → still (dark navy), t = 1 → speed_cap (palette colour).
+            // Cells can reach up to 2× speed_cap, so t can be as high as ~2.
+            let t = spd / speed_cap;
 
-            // Each anchor exerts a pull ∝ weight × angular displacement.
-            // No snapping: force is continuous and zero when sitting on an anchor.
-            let force: f32 = ANCHORS.iter().map(|&h_i| {
-                let mut d = h_i - h_nat;
-                // Wrap angular distance to [−π, π]
-                if d >  PI { d -= 2.0 * PI; }
-                if d < -PI { d += 2.0 * PI; }
-                let w = s2 / (d * d + s2);
-                w * d
-            }).sum();
+            if t <= 1.0 {
+                // Linear blend in OKLab: dark navy → palette colour.
+                let l = dl + (tgt_l - dl) * t;
+                let a = da + (tgt_a - da) * t;
+                let b = db + (tgt_b - db) * t;
+                (l, a, b)
+            } else {
+                // Extrapolation: beyond speed_cap push L brighter and C more saturated.
+                // √-taper gives rapid initial gain with diminishing returns toward 2×.
+                let t_over = (t - 1.0).clamp(0.0, 1.0);
+                let extra  = t_over.sqrt();
 
-            let h_biased = h_nat + pull * force;
-
-            // Speed ramp: dark navy (061B31, L≈0.15) → full chroma at speed_cap.
-            // Slightly brighter and more saturated than classic to suit the palette.
-            let t = (spd / speed_cap).clamp(0.0, 1.0);
-            let l = 0.15 + 0.60 * t;
-            let c = 0.24 * t;
-            (l, c * h_biased.cos(), c * h_biased.sin())
+                // L drifts toward 0.92 (bright but not blown-out white).
+                let l = (tgt_l + (0.92 - tgt_l) * extra * 0.45).min(0.93);
+                // C scales outward: up to +40 % at 2× speed_cap.
+                let c_scale = 1.0 + extra * 0.40;
+                let a = tgt_a * c_scale;
+                let b = tgt_b * c_scale;
+                (l, a, b)
+            }
         }
     }
 }
 
-fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
-    // Oklab → LMS (cube roots)
+// ── sRGB conversion with hue-preserving gamut compression ─────────────────────
+
+/// Oklab → linear sRGB (values may be outside [0, 1] for out-of-gamut colours).
+fn oklab_to_linear_rgb(l: f32, a: f32, b: f32) -> (f32, f32, f32) {
     let l_ = l + 0.3963377774 * a + 0.2158037573 * b;
     let m_ = l - 0.1055613458 * a - 0.0638541728 * b;
     let s_ = l - 0.0894841775 * a - 1.2914855480 * b;
     let (l3, m3, s3) = (l_ * l_ * l_, m_ * m_ * m_, s_ * s_ * s_);
-    // LMS → linear sRGB
     let r_lin =  4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
     let g_lin = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
     let b_lin = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
-    // Linear sRGB → gamma-corrected u8 (clamp handles out-of-gamut)
-    let gamma = |x: f32| -> u8 {
-        let x = x.clamp(0.0, 1.0);
-        let g = if x <= 0.0031308 { x * 12.92 } else { 1.055 * x.powf(1.0 / 2.4) - 0.055 };
-        (g * 255.0).round() as u8
-    };
-    (gamma(r_lin), gamma(g_lin), gamma(b_lin))
+    (r_lin, g_lin, b_lin)
+}
+
+fn linear_to_srgb_u8(x: f32) -> u8 {
+    let x = x.clamp(0.0, 1.0);
+    let g = if x <= 0.0031308 { x * 12.92 } else { 1.055 * x.powf(1.0 / 2.4) - 0.055 };
+    (g * 255.0).round() as u8
+}
+
+fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
+    let (r, g, b_) = oklab_to_linear_rgb(l, a, b);
+
+    // Fast path: in-gamut (the common case).
+    if r >= 0.0 && r <= 1.0 && g >= 0.0 && g <= 1.0 && b_ >= 0.0 && b_ <= 1.0 {
+        return (linear_to_srgb_u8(r), linear_to_srgb_u8(g), linear_to_srgb_u8(b_));
+    }
+
+    // Out-of-gamut: reduce chroma via binary search in OKLCH while preserving hue and L.
+    // 8 iterations → precision of C to within C/256, imperceptible.
+    let c0 = (a * a + b * b).sqrt();
+    let h  = b.atan2(a);
+    let (mut c_lo, mut c_hi) = (0.0_f32, c0);
+    for _ in 0..8 {
+        let c_mid = (c_lo + c_hi) * 0.5;
+        let (a_m, b_m) = (c_mid * h.cos(), c_mid * h.sin());
+        let (r2, g2, b2) = oklab_to_linear_rgb(l, a_m, b_m);
+        if r2 >= 0.0 && r2 <= 1.0 && g2 >= 0.0 && g2 <= 1.0 && b2 >= 0.0 && b2 <= 1.0 {
+            c_lo = c_mid;
+        } else {
+            c_hi = c_mid;
+        }
+    }
+    let (a_s, b_s) = (c_lo * h.cos(), c_lo * h.sin());
+    let (rs, gs, bs) = oklab_to_linear_rgb(l, a_s, b_s);
+    (linear_to_srgb_u8(rs), linear_to_srgb_u8(gs), linear_to_srgb_u8(bs))
 }
 
 fn xoru64(s: &mut u64) -> u64 {

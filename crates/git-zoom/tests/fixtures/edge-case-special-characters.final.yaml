@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: c2d96cb2100af52c30896268562b7b8809fbbee8
+    main: c871e35503be7d245abaad3dc26772ea5a755469
 dce28f:
   author: Tester <test@example.com>
   author-date: 2026-01-02T21:10:36Z
@@ -17,24 +17,23 @@ dce28f:
       файл.txt: Cyrillic filename
       文件.txt: Chinese filename
       😀.txt: Emoji filename
-136d8a:
-  author: Jeremy Banks <_@jeremy.ca>
+87ef49:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: Initial commit
   parents: []
   tree: {}
-'6000e8':
+2f63d2:
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
-  committer: 🔎 <git-zoom-in@localhost>
   message: |-
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 136d8a
+  - 87ef49
   - dce28f
   tree:
     file with spaces.txt:
@@ -58,8 +57,8 @@ dce28f:
     😀.txt:
       //commit: dce28f
       //path: src/😀.txt
-c2d96cb2100af52c30896268562b7b8809fbbee8:
-  author: Jeremy Banks <_@jeremy.ca>
+c871e35503be7d245abaad3dc26772ea5a755469:
+  author: Temp <temp@localhost>
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
   committer: 🔍 <git-zoom-out@localhost>
@@ -69,4 +68,4 @@ c2d96cb2100af52c30896268562b7b8809fbbee8:
     git-zoom-out: src
   parents:
   - dce28f
-  - '6000e8'
+  - 2f63d2
