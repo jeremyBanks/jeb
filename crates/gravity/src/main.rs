@@ -1003,7 +1003,9 @@ fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
     // speed_cap → 75% saturation; 100% requires exceeding speed_cap (≥ 4/3 × speed_cap)
     let sat = (spd * 0.75 / speed_cap).clamp(0.0, 1.0);
     let hue = (vy.atan2(vx) + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
-    let (r, g, b) = hsv_to_rgb(hue, sat, 1.0);
+    // Brightness: 0.5 at rest, eases up to 1.0 at 2× speed_cap and above
+    let val = 0.5 + 0.5 * (spd / (2.0 * speed_cap)).clamp(0.0, 1.0);
+    let (r, g, b) = hsv_to_rgb(hue, sat, val);
     let floor = 64u8;
     (r.max(floor), g.max(floor), b.max(floor))
 }
@@ -1219,7 +1221,7 @@ fn main() {
             let global_frame = chunk_start_frame + local_frame;
             if !headless {
                 sim.paint_frame(&mut canvas);
-                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
             }
             sim.tick();
 
@@ -1231,7 +1233,7 @@ fn main() {
 
         if !headless {
             // Encode chunk
-            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:08}.mp4");
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
             encode_chunk(frames_dir, &seg_path, this_chunk_frames);
 
             // Append to segments list
@@ -1265,7 +1267,7 @@ fn main() {
             if !keep_running.load(Ordering::Relaxed) {
                 // Flush any accumulated epilogue frames (already fully rendered), then stop
                 if !ep_chunk_frames.is_empty() {
-                    let seg_path = format!("{segments_dir}/seg_{:08}.mp4",
+                    let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
                         ep_seg_start + ep_frame - ep_chunk_frames.len());
                     encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
                     writeln!(seg_list, "file '{seg_path}'").unwrap();
@@ -1302,7 +1304,7 @@ fn main() {
             for v in canvas.iter_mut() { *v *= fade; }
             sim.paint_frame(&mut canvas);
             let global_frame = total_frames + ep_frame;
-            let path = format!("{frames_dir}/f{global_frame:08}.png");
+            let path = format!("{frames_dir}/f{global_frame:013}.png");
             Sim::save_png(&canvas, &path);
             ep_chunk_frames.push(path);
             ep_frame += 1;
@@ -1311,7 +1313,7 @@ fn main() {
             // Encode + flush every CHUNK_FRAMES frames
             if ep_chunk_frames.len() == CHUNK_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
-                    let seg_path = format!("{segments_dir}/seg_{:08}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
+                    let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
                     encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
                     writeln!(seg_list, "file '{seg_path}'").unwrap();
                     seg_list.flush().unwrap();
