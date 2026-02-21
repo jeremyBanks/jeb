@@ -1426,8 +1426,8 @@ use std::io::{BufWriter, Write};
             qt_insert(&mut nodes, 0, i, px, py, 0);
         }
         for i in 0..n {
-            if orig.positions.contains(&(self.cells[i].x, self.cells[i].y)) { continue; }
-            let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
+            if orig.positions.contains(&(self.cells[i].gx(), self.cells[i].gy())) { continue; }
+            let (px, py) = (self.cells[i].px, self.cells[i].py);
             let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening);
             self.cells[i].vx += gfx;
             self.cells[i].vy += gfy;
