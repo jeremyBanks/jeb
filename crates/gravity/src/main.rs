@@ -1931,7 +1931,7 @@ use std::io::{BufWriter, Write};
 
                 sum += v.filter_state * env * v.current_amp;
             }
-            let out = (sum * mix_gain).tanh() * 0.7;
+            let out = sum.tanh() * 0.7;
             chunk_audio.push(out);
         }
     }
