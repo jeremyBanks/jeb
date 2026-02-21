@@ -57,7 +57,7 @@ struct OriginalState {
 }
 
 // ── Barnes-Hut quadtree for O(n log n) gravity ────────────────────────────
-const BH_THETA: f32 = 0.5; // opening-angle criterion: width/dist < theta → use point-mass
+const BH_THETA: f32 = 0.1; // opening-angle criterion: width/dist < theta → use point-mass
 
 #[derive(Clone)]
 struct QNode {
@@ -546,19 +546,18 @@ impl Sim {
     fn gravity_step(&mut self) {
         let n = self.cells.len();
 
-        // Build quadtree centered on the actual bounding box of cells.
-        // A fixed [0,W]×[0,H] root creates a (0,0) corner bias because
-        // BH approximation errors don't cancel when the cluster is off-center.
-        // Using the actual cell bbox centers the first split on the data.
+        // Build quadtree with a SQUARE root centered on the grid center.
+        // The grid is W×H = 192×120 (non-square). A non-square root means
+        // node.width() = max(x_range, y_range) always equals the x dimension,
+        // making the BH opening criterion systematically less accurate for y forces.
+        // A square root at size max(W,H) makes every sub-node square, so the
+        // criterion is identical for x and y — no directional bias.
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
         {
-            let min_px = self.cells.iter().map(|c| c.px).fold(f32::INFINITY, f32::min);
-            let max_px = self.cells.iter().map(|c| c.px).fold(f32::NEG_INFINITY, f32::max);
-            let min_py = self.cells.iter().map(|c| c.py).fold(f32::INFINITY, f32::min);
-            let max_py = self.cells.iter().map(|c| c.py).fold(f32::NEG_INFINITY, f32::max);
-            let cx = (min_px + max_px) * 0.5;
-            let cy = (min_py + max_py) * 0.5;
-            let half = ((max_px - min_px).max(max_py - min_py)) * 0.5 + 2.0;
+            let half = 128.0_f32; // 256×256 square, power-of-2 subdivisions
+            let cx = W as f32 * 0.5; // 96
+            let cy = H as f32 * 0.5; // 60
+            // Root: [-32, 224] × [-68, 188] — 256×256, centred on grid centre
             nodes.push(QNode::empty(cx - half, cy - half, cx + half, cy + half));
         }
         for i in 0..n {
