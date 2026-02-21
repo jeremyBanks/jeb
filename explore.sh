@@ -35,6 +35,7 @@ ROUND="${2:-1}"
 SEED=42
 WORKDIR="/tmp/gravity_explore_$$"
 BEST_FILE="$(dirname "$0")/best_config.txt"
+COMMIT=$(git -C "$(dirname "$0")" rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
 mkdir -p "$WORKDIR/state" "$WORKDIR/segments"
 trap "rm -rf $WORKDIR" EXIT
 
