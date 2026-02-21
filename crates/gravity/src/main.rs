@@ -565,7 +565,7 @@ impl Sim {
             let n = self.cells.len() as f32;
             let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
             let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
-            let damp = 1.0 / 128.0;
+            let damp = 1.0 / 512.0;
             for c in &mut self.cells {
                 c.vx -= avg_vx * damp;
                 c.vy -= avg_vy * damp;
