@@ -25,7 +25,7 @@ while true; do
         frame_offset=${frame_offset:-0}
         chunk_num=$(( frame_offset / 3840 + 1 ))
 
-        preview="/tmp/preview_chunk${chunk_num}.mp4"
+        preview="/Users/matte/.openclaw/workspace/shared/gravity/preview_chunk${chunk_num}.mp4"
         ffmpeg -y -i "$seg" -t 15 -vf scale=960:600 -c:v libx264 -crf 22 -preset fast "$preview" 2>/dev/null \
             && openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
