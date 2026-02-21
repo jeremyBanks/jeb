@@ -23,6 +23,11 @@ struct Cell {
 impl Cell {
     #[inline] fn gx(&self) -> usize { (self.px.round() as i32).rem_euclid(W as i32) as usize }
     #[inline] fn gy(&self) -> usize { (self.py.round() as i32).rem_euclid(H as i32) as usize }
+    #[inline] fn in_bounds(&self) -> bool {
+        let x = self.px.round() as i32;
+        let y = self.py.round() as i32;
+        x >= 0 && x < W as i32 && y >= 0 && y < H as i32
+    }
 }
 
 struct Sim {
@@ -532,9 +537,20 @@ impl Sim {
     fn gravity_step(&mut self) {
         let n = self.cells.len();
 
-        // Build quadtree over the toroidal domain (use cell centres for continuous physics)
+        // Build quadtree; for no-wrap use dynamic root covering all cell positions
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
-        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        if self.wrap || n == 0 {
+            nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        } else {
+            let mut x0 = self.cells[0].px; let mut x1 = x0;
+            let mut y0 = self.cells[0].py; let mut y1 = y0;
+            for c in &self.cells {
+                x0 = x0.min(c.px); x1 = x1.max(c.px);
+                y0 = y0.min(c.py); y1 = y1.max(c.py);
+            }
+            let m = self.softening + 1.0;
+            nodes.push(QNode::empty(x0 - m, y0 - m, x1 + m, y1 + m));
+        }
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
             qt_insert(&mut nodes, 0, i, px, py, 0);
@@ -574,10 +590,12 @@ impl Sim {
 
         // Movement: float positions, collision by grid square.
         // Process in shuffled order. Each cell computes its target float position (px+vx, py+vy).
-        // If the target grid square is free: move (update both float pos and grid).
-        // If occupied or same square: stay put entirely — no float accumulation.
+        // In wrap mode: positions wrap toroidally.
+        // In no-wrap mode: cells move freely (open boundary). Only in-bounds cells participate
+        // in grid collision; out-of-bounds cells roam freely and re-enter when gravity pulls them back.
         let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
+            if !self.wrap && !c.in_bounds() { continue; }
             grid[c.gy() * W + c.gx()] = i;
         }
         let n = self.order.len();
@@ -592,25 +610,66 @@ impl Sim {
                 new_px = (c.px + c.vx).rem_euclid(W as f32);
                 new_py = (c.py + c.vy).rem_euclid(H as f32);
             } else {
-                let rx = c.px + c.vx; let ry = c.py + c.vy;
-                if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 { continue; }
-                new_px = rx; new_py = ry;
+                // Open boundary: cells move freely, no wrapping, no clamping
+                new_px = c.px + c.vx;
+                new_py = c.py + c.vy;
             }
-            let tgx = (new_px.round() as i32).rem_euclid(W as i32) as usize;
-            let tgy = (new_py.round() as i32).rem_euclid(H as i32) as usize;
-            let old_gx = c.gx(); let old_gy = c.gy();
-            if tgx == old_gx && tgy == old_gy {
-                // Same grid square — update float position freely
-                self.cells[idx].px = new_px;
-                self.cells[idx].py = new_py;
-            } else if grid[tgy * W + tgx] == usize::MAX {
-                // Target square free — move
-                grid[old_gy * W + old_gx] = usize::MAX;
-                grid[tgy * W + tgx] = idx;
-                self.cells[idx].px = new_px;
-                self.cells[idx].py = new_py;
+
+            if !self.wrap {
+                // Determine old/new in-bounds status
+                let was_in = c.in_bounds();
+                let txi = new_px.round() as i32;
+                let tyi = new_py.round() as i32;
+                let now_in = txi >= 0 && txi < W as i32 && tyi >= 0 && tyi < H as i32;
+                let tgx = txi.rem_euclid(W as i32) as usize;
+                let tgy = tyi.rem_euclid(H as i32) as usize;
+                let old_gx = c.gx(); let old_gy = c.gy();
+                if !was_in {
+                    // Out-of-bounds → move freely; if re-entering, claim grid square if free
+                    if now_in {
+                        if grid[tgy * W + tgx] == usize::MAX {
+                            grid[tgy * W + tgx] = idx;
+                            self.cells[idx].px = new_px;
+                            self.cells[idx].py = new_py;
+                        }
+                        // else: target occupied — stay out-of-bounds (float pos unchanged)
+                    } else {
+                        self.cells[idx].px = new_px;
+                        self.cells[idx].py = new_py;
+                    }
+                } else if now_in {
+                    // In-bounds → in-bounds: normal grid collision
+                    if tgx == old_gx && tgy == old_gy {
+                        self.cells[idx].px = new_px;
+                        self.cells[idx].py = new_py;
+                    } else if grid[tgy * W + tgx] == usize::MAX {
+                        grid[old_gy * W + old_gx] = usize::MAX;
+                        grid[tgy * W + tgx] = idx;
+                        self.cells[idx].px = new_px;
+                        self.cells[idx].py = new_py;
+                    }
+                    // else: target occupied — stay put
+                } else {
+                    // In-bounds → out-of-bounds: leave the grid, move freely
+                    grid[old_gy * W + old_gx] = usize::MAX;
+                    self.cells[idx].px = new_px;
+                    self.cells[idx].py = new_py;
+                }
+            } else {
+                let tgx = (new_px.round() as i32).rem_euclid(W as i32) as usize;
+                let tgy = (new_py.round() as i32).rem_euclid(H as i32) as usize;
+                let old_gx = c.gx(); let old_gy = c.gy();
+                if tgx == old_gx && tgy == old_gy {
+                    self.cells[idx].px = new_px;
+                    self.cells[idx].py = new_py;
+                } else if grid[tgy * W + tgx] == usize::MAX {
+                    grid[old_gy * W + old_gx] = usize::MAX;
+                    grid[tgy * W + tgx] = idx;
+                    self.cells[idx].px = new_px;
+                    self.cells[idx].py = new_py;
+                }
+                // else: target occupied — stay put
             }
-            // else: target occupied — stay put
         }
     }
 
@@ -943,20 +1002,24 @@ impl Sim {
     }
 
     fn stats(&self) -> String {
-        let n = self.cells.len() as f32;
+        let total = self.cells.len() as f32;
+        let in_bounds: Vec<&Cell> = if self.wrap {
+            self.cells.iter().collect()
+        } else {
+            self.cells.iter().filter(|c| c.in_bounds()).collect()
+        };
+        let pop = in_bounds.len();
+        let n = total;
         let avg_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).sum::<f32>() / n;
         let max_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).fold(0.0f32, f32::max);
-        let cx = self.cells.iter().map(|c| c.gx() as f32).sum::<f32>() / n;
-        let cy = self.cells.iter().map(|c| c.gy() as f32).sum::<f32>() / n;
-        let hw = W as f32 / 2.0; let hh = H as f32 / 2.0;
+        let cx = self.cells.iter().map(|c| c.px).sum::<f32>() / n;
+        let cy = self.cells.iter().map(|c| c.py).sum::<f32>() / n;
         let spread = self.cells.iter().map(|c| {
-            let mut dx = c.gx() as f32 - cx; let mut dy = c.gy() as f32 - cy;
-            if dx > hw { dx -= W as f32; } if dx < -hw { dx += W as f32; }
-            if dy > hh { dy -= H as f32; } if dy < -hh { dy += H as f32; }
+            let dx = c.px - cx; let dy = c.py - cy;
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
-        format!("pop={} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.1},{cy:.1})",
-            self.cells.len(), self.conway_births, self.conway_deaths)
+        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.1},{cy:.1})",
+            self.conway_births, self.conway_deaths)
     }
 }
 
@@ -1047,6 +1110,7 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>] [--epilogue]");
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
+    let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
     let wrap  = args.iter().any(|a| a == "--wrap");  // default: hard walls (no wrap)
     let steer = args.iter().any(|a| a == "--steer");     // default: off
     // --radius: circle radius (0 = no blobs), default 4
@@ -1185,25 +1249,30 @@ fn main() {
                 break 'chunks;
             }
             let global_frame = chunk_start_frame + local_frame;
-            sim.paint_frame(&mut canvas);
-            Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
+            if !headless {
+                sim.paint_frame(&mut canvas);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
+            }
             sim.tick();
 
-            if local_frame % 480 == 0 {
+            let log_every = if headless { FPS as usize } else { 480 };
+            if local_frame % log_every == 0 {
                 println!("  frame {}/{total_frames}  {}", global_frame, sim.stats());
             }
         }
 
-        // Encode chunk
-        let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:08}.mp4");
-        encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+        if !headless {
+            // Encode chunk
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:08}.mp4");
+            encode_chunk(frames_dir, &seg_path, this_chunk_frames);
 
-        // Append to segments list
-        writeln!(seg_list, "file '{seg_path}'").unwrap();
-        seg_list.flush().unwrap();
+            // Append to segments list
+            writeln!(seg_list, "file '{seg_path}'").unwrap();
+            seg_list.flush().unwrap();
 
-        // Delete PNGs
-        delete_frames(frames_dir);
+            // Delete PNGs
+            delete_frames(frames_dir);
+        }
 
         // Save checkpoint (next chunk index)
         sim.save_checkpoint(&canvas, chunk + 1, checkpoint_path);
