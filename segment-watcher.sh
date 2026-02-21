@@ -14,7 +14,7 @@ TOTAL=137
 LAST_TIME=$(date +%s)  # track time between segments
 PREVIEW_W=512
 PREVIEW_H=320
-CLIP_DUR=6
+CLIP_DUR=4
 GAP_DUR="0.125"  # 1/8 second
 
 make_preview() {
