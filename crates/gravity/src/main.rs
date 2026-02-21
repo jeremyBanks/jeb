@@ -1588,3 +1588,6 @@ use std::io::{BufWriter, Write};
 // [recovery] edit target not found, appending:
             let gx = self.cells[di].gx();
             let gy = self.cells[di].gy();
+
+// [recovery] edit target not found, appending:
+            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd });
