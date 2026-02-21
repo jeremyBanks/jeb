@@ -104,6 +104,66 @@ impl Cell {
     }
 }
 
+// ── Reverb (Schroeder-style: 4 parallel combs + 2 serial all-passes) ──────────
+// Delay times are prime multiples of SAMPLES_PER_FRAME (735 at 44100/60fps).
+// This syncs reverb tails to the video frame rate and avoids inter-line aliasing.
+struct CombFilter { buf: Vec<f32>, idx: usize, feedback: f32, lp: f32 }
+impl CombFilter {
+    fn new(n_frames: usize, feedback: f32) -> Self {
+        CombFilter { buf: vec![0.0; n_frames * SAMPLES_PER_FRAME], idx: 0, feedback, lp: 0.0 }
+    }
+    fn process(&mut self, inp: f32) -> f32 {
+        let out = self.buf[self.idx];
+        self.lp = out * 0.5 + self.lp * 0.5; // gentle HF rolloff in feedback
+        self.buf[self.idx] = inp + self.lp * self.feedback;
+        self.idx = (self.idx + 1) % self.buf.len();
+        out
+    }
+}
+
+struct AllPass { buf: Vec<f32>, idx: usize, feedback: f32 }
+impl AllPass {
+    fn new(n_frames: usize, feedback: f32) -> Self {
+        AllPass { buf: vec![0.0; n_frames * SAMPLES_PER_FRAME], idx: 0, feedback }
+    }
+    fn process(&mut self, inp: f32) -> f32 {
+        let delayed = self.buf[self.idx];
+        let out = delayed - self.feedback * inp;
+        self.buf[self.idx] = inp + self.feedback * delayed;
+        self.idx = (self.idx + 1) % self.buf.len();
+        out
+    }
+}
+
+struct Reverb {
+    combs: [CombFilter; 4],   // prime-frame delays: 11, 13, 17, 19
+    allpasses: [AllPass; 2],  // 5, 3 frames
+    wet: f32,
+}
+impl Reverb {
+    fn new() -> Self {
+        Reverb {
+            combs: [
+                CombFilter::new(11, 0.84),
+                CombFilter::new(13, 0.84),
+                CombFilter::new(17, 0.80),
+                CombFilter::new(19, 0.80),
+            ],
+            allpasses: [
+                AllPass::new(5, 0.5),
+                AllPass::new(3, 0.5),
+            ],
+            wet: 0.28,
+        }
+    }
+    fn process(&mut self, dry: f32) -> f32 {
+        let comb_sum = self.combs.iter_mut().map(|c| c.process(dry)).sum::<f32>() * 0.25;
+        let ap1 = self.allpasses[0].process(comb_sum);
+        let ap2 = self.allpasses[1].process(ap1);
+        dry * (1.0 - self.wet) + ap2 * self.wet
+    }
+}
+
 struct Sim {
     cells: Vec<Cell>,
     order: Vec<usize>,
