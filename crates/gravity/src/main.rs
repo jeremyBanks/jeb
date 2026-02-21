@@ -2312,3 +2312,7 @@ use std::io::{BufWriter, Write};
 // [recovery] edit target not found, appending:
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
+
+// [recovery] edit target not found, appending:
+        fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
+           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool, dampen: bool, init_vel: &str) -> Self {
