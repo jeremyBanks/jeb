@@ -1091,7 +1091,7 @@ impl Sim {
         self.order = (0..self.cells.len()).collect();
     }
 
-    fn paint_frame(&mut self, canvas: &mut Vec<f32>) {
+    fn paint_frame(&mut self, canvas: &mut Vec<f32>, palette: &PaletteMode) {
         for py in 0..H {
             for px in 0..W {
                 let i = (py * W + px) * 3;
