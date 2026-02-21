@@ -520,9 +520,18 @@ impl Sim {
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
             if live_nbrs.is_empty() { continue; }
-            let n_nbrs = live_nbrs.len() as f32;
-            let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
-            let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+            let (vx, vy) = if self.wrap {
+                // Wrap mode: inherit avg neighbour velocity for interesting dynamics
+                let n_nbrs = live_nbrs.len() as f32;
+                let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
+                let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+                (vx, vy)
+            } else {
+                // No-wrap: born at rest — gravity provides velocity organically.
+                // Inheriting neighbour velocity near walls continuously injects wall-facing
+                // momentum faster than gravity can correct it.
+                (0.0_f32, 0.0_f32)
+            };
             let birth_spd = (vx * vx + vy * vy).sqrt();
             let new_idx = self.cells.len();
             self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd });
@@ -537,9 +546,21 @@ impl Sim {
     fn gravity_step(&mut self) {
         let n = self.cells.len();
 
-        // Build quadtree over [0,W]×[0,H]
+        // Build quadtree centered on the actual bounding box of cells.
+        // A fixed [0,W]×[0,H] root creates a (0,0) corner bias because
+        // BH approximation errors don't cancel when the cluster is off-center.
+        // Using the actual cell bbox centers the first split on the data.
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
-        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        {
+            let min_px = self.cells.iter().map(|c| c.px).fold(f32::INFINITY, f32::min);
+            let max_px = self.cells.iter().map(|c| c.px).fold(f32::NEG_INFINITY, f32::max);
+            let min_py = self.cells.iter().map(|c| c.py).fold(f32::INFINITY, f32::min);
+            let max_py = self.cells.iter().map(|c| c.py).fold(f32::NEG_INFINITY, f32::max);
+            let cx = (min_px + max_px) * 0.5;
+            let cy = (min_py + max_py) * 0.5;
+            let half = ((max_px - min_px).max(max_py - min_py)) * 0.5 + 2.0;
+            nodes.push(QNode::empty(cx - half, cy - half, cx + half, cy + half));
+        }
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
             qt_insert(&mut nodes, 0, i, px, py, 0);
@@ -1085,7 +1106,8 @@ fn main() {
         .unwrap_or(0.048000_f32); // half previous
     let softening   = 1.5_f32;
     let speed_cap   = 1.5_f32; // cells/frame
-    let conway_every = FPS as usize / 4; // run Conway 4× per second → up to 4 births + 4 deaths/sec
+    let conway_every = if args.iter().any(|a| a == "--no-conway") { 0 }
+        else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
