@@ -1874,9 +1874,18 @@ use std::io::{BufWriter, Write};
             }
         }
 
-        // ── 4. Spawn one-shot voices for Conway events ──────────────────────
+        // ── 4. Spawn one-shot voices for Conway events (rate-limited) ────────
+        // With rate_limit=32/tick, all events would spawn hundreds of voices per frame.
+        // Cap to a few representative pings/thuds — enough texture, no voice storm.
+        let mut birth_budget = 4usize;
+        let mut death_budget = 4usize;
         let events: Vec<AudioEvent> = self.audio_events.drain(..).collect();
         for ev in events {
+            match ev.kind {
+                VoiceKind::Birth => { if birth_budget == 0 { continue; } birth_budget -= 1; }
+                VoiceKind::Death => { if death_budget == 0 { continue; } death_budget -= 1; }
+                VoiceKind::Sustain => {}
+            }
             let (freq, cutoff, sin_th, amp) =
                 Self::audio_params(ev.vx, ev.vy, ev.px, ev.py, speed_cap);
             let (adj_freq, adj_sin, adj_amp) = match ev.kind {
