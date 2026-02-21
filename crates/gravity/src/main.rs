@@ -1654,3 +1654,7 @@ use std::io::{BufWriter, Write};
         let n = cells.len();
         let target_pop = W * H / 16;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
+
+// [recovery] edit target not found, appending:
+        let target_pop = W * H / 16;
+                        start_pop: target_pop, pop_band, rate_limit,
