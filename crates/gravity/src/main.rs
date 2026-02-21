@@ -558,19 +558,7 @@ impl Sim {
             c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
         }
 
-        // Momentum damping: nudge system average velocity toward zero by 1/128 per tick.
-        // Prevents the centre-of-mass from drifting due to simulation asymmetries in wrap mode.
-        // Not needed in no-wrap mode — hard walls already prevent runaway drift.
-        if self.wrap && !self.cells.is_empty() {
-            let n = self.cells.len() as f32;
-            let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
-            let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
-            let damp = 1.0 / 512.0;
-            for c in &mut self.cells {
-                c.vx -= avg_vx * damp;
-                c.vy -= avg_vy * damp;
-            }
-        }
+        // Momentum damping removed.
 
         // Movement: float positions, collision by grid square.
         // Process in shuffled order. Each cell computes its target float position (px+vx, py+vy).
