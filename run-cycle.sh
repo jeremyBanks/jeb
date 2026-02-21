@@ -1,7 +1,6 @@
 #!/bin/bash
-# run-cycle.sh — infinite loop: explore → render → copy → repeat
-# Each cycle: explore finds best params, kicks off full render,
-# while render runs the next explore round is queued.
+# run-cycle.sh — pipeline loop: render runs while next params are being explored
+# Cycle: [explore N] overlaps with [render from N-1 params] → copy → repeat
 # Usage: ./run-cycle.sh [starting_seed] [seconds_per_render]
 
 cd "$(dirname "$0")"
@@ -9,54 +8,51 @@ cd "$(dirname "$0")"
 SEED="${1:-100}"
 RENDER_SECONDS="${2:-4369}"
 SHARED_DIR="${GRAVITY_SHARED_DIR:-/Users/matte/.openclaw/workspace/shared/gravity}"
-EXPLORE_LOG="/tmp/gravity_explore_log.txt"
 ROUND=1
 
-echo "[cycle] Starting. seed=$SEED render=${RENDER_SECONDS}s"
-echo "[cycle] Shared dir: $SHARED_DIR"
+echo "[cycle] Starting pipeline. seed=$SEED render=${RENDER_SECONDS}s"
 
 # Kick off watcher if not already running
 if ! pgrep -f "segment-watcher.sh" > /dev/null; then
     bash segment-watcher.sh &>/tmp/watcher.log &
-    echo "[cycle] Started segment watcher (PID $!)"
+    echo "[cycle] Started watcher PID $!"
 fi
+
+# Phase 1: explore round 1 before any render (nothing to pipeline against yet)
+echo ""
+echo "=== Round 1: exploring to find first render params ==="
+bash explore.sh 300 1 2>&1 | tee /tmp/explore_round1.txt
+BEST_ARGS=$(head -1 best_config.txt 2>/dev/null || echo "--gravity 0.125 --softening 4")
+BEST_LABEL=$(grep "^label=" best_config.txt 2>/dev/null | cut -d= -f2 || echo "fallback")
+echo "[cycle] Round 1 best: [$BEST_LABEL] $BEST_ARGS"
 
 while true; do
     echo ""
-    echo "=========================================="
-    echo "[cycle] Round $ROUND | seed=$SEED"
-    echo "=========================================="
+    echo "=== Render seed=$SEED with [$BEST_LABEL]: $BEST_ARGS ==="
 
-    # Phase 1: headless exploration to find best params for NEXT render
-    echo "[cycle] Phase 1: exploring configs (round $ROUND)..."
-    bash explore.sh 300 "$ROUND" 2>&1 | tee "$EXPLORE_LOG"
-
-    # Read best config
-    BEST_FILE="$(pwd)/best_config.txt"
-    if [ ! -f "$BEST_FILE" ]; then
-        echo "[cycle] WARNING: no best_config.txt found, using defaults"
-        BEST_ARGS="--gravity 0.125 --softening 4"
-        BEST_LABEL="fallback"
-    else
-        BEST_ARGS=$(head -1 "$BEST_FILE")
-        BEST_LABEL=$(grep "^label=" "$BEST_FILE" | cut -d= -f2)
-    fi
-    echo "[cycle] Best config: [$BEST_LABEL] → $BEST_ARGS"
-
-    # Phase 2: full render with best params
-    echo "[cycle] Phase 2: starting full render (seed=$SEED, ${RENDER_SECONDS}s)..."
-    echo "[cycle] Extra args: $BEST_ARGS"
+    # Start render in background
     rm -f state/checkpoint.bin state/orig_state.bin state/run_info.txt \
           segments.txt /tmp/gravity_segments_seen.txt
     rm -f segments/seg_*.mp4 2>/dev/null
 
-    # Run render — this blocks until done
-    ./run-loop.sh "$SEED" "$RENDER_SECONDS" --pop-target 5120 --wrap --speed-cap 6.0 $BEST_ARGS
-    RENDER_EXIT=$?
+    ./run-loop.sh "$SEED" "$RENDER_SECONDS" --pop-target 5120 --wrap --speed-cap 6.0 $BEST_ARGS &
+    RENDER_PID=$!
+    echo "[cycle] Render started (PID=$RENDER_PID)"
 
-    echo "[cycle] Render finished (exit=$RENDER_EXIT)"
+    # While render runs, explore next round
+    NEXT_ROUND=$(( ROUND + 1 ))
+    echo "[cycle] Exploring round $NEXT_ROUND in parallel..."
+    bash explore.sh 300 "$NEXT_ROUND" 2>&1 | tee "/tmp/explore_round${NEXT_ROUND}.txt"
+    NEXT_ARGS=$(head -1 best_config.txt 2>/dev/null || echo "--gravity 0.125 --softening 4")
+    NEXT_LABEL=$(grep "^label=" best_config.txt 2>/dev/null | cut -d= -f2 || echo "fallback")
+    echo "[cycle] Round $NEXT_ROUND best: [$NEXT_LABEL] $NEXT_ARGS"
 
-    # Phase 3: copy completed video to shared volume if it exists
+    # Wait for render to finish
+    echo "[cycle] Exploration done. Waiting for render (PID=$RENDER_PID) to finish..."
+    wait "$RENDER_PID"
+    echo "[cycle] Render complete."
+
+    # Copy to shared volume if mounted
     VOLUME="/Volumes/My Shared Files/shared"
     if [ -d "$VOLUME" ]; then
         LATEST=$(ls -t "$SHARED_DIR"/gravity_*.mp4 2>/dev/null | head -1)
@@ -65,10 +61,11 @@ while true; do
         fi
     fi
 
-    # Increment seed and round for next cycle
+    # Advance: use next explore's best params for next render
+    BEST_ARGS="$NEXT_ARGS"
+    BEST_LABEL="$NEXT_LABEL"
     SEED=$(( SEED + 1 ))
-    ROUND=$(( ROUND + 1 ))
-
-    echo "[cycle] Cycle complete. Next: round=$ROUND seed=$SEED"
+    ROUND="$NEXT_ROUND"
+    echo "[cycle] Next: seed=$SEED round=$ROUND label=$BEST_LABEL"
     sleep 2
 done
