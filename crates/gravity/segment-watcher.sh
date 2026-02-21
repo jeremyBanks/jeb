@@ -82,7 +82,7 @@ while true; do
 
         preview="${PREVIEW_DIR}/preview_chunk${chunk_num}.mp4"
 
-        if make_preview "$seg" "$preview"; then
+        if make_preview "$seg" "$preview" "$chunk_num"; then
             NOW=$(date +%s)
             ELAPSED=$(( NOW - LAST_TIME ))
             MINS=$(( ELAPSED / 60 ))
