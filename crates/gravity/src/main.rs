@@ -42,8 +42,9 @@ struct Sim {
     rate_limit: usize,
     tick_count: usize,
     prev_live: Vec<bool>,
-    wrap: bool,   // toroidal wrapping (false = hard walls)
-    steer: bool,  // counter-rotate velocity to compensate discrete-move angular error
+    wrap: bool,    // toroidal wrapping (false = hard walls)
+    steer: bool,   // counter-rotate velocity to compensate discrete-move angular error
+    dampen: bool,  // nudge system COM velocity toward zero each tick (--dampen flag)
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
 }
@@ -197,7 +198,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, seed_density_inv: usize, wrap: bool, steer: bool) -> Self {
+           rate_limit: usize, seed_density_inv: usize, wrap: bool, steer: bool, dampen: bool) -> Self {
         let mut rng = rng_seed;
         let mut cells: Vec<Cell> = Vec::new();
 
@@ -249,7 +250,7 @@ impl Sim {
         let n = cells.len();
         let target_pop = W * H / 8;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer,
+              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
               conway_births: 0, conway_deaths: 0 }
     }
 
@@ -283,7 +284,7 @@ impl Sim {
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
                        pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
-                       wrap: bool, steer: bool)
+                       wrap: bool, steer: bool, dampen: bool)
         -> Option<(Self, Vec<f32>, usize)>
     {
         let buf = fs::read(path).ok()?;
@@ -329,7 +330,7 @@ impl Sim {
         let target_pop = W * H / 8;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit,
-                        tick_count, prev_live: prev_live_rebuilt, wrap, steer,
+                        tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen,
                         conway_births: 0, conway_deaths: 0 };
         Some((sim, canvas, chunk_index))
     }
@@ -558,7 +559,18 @@ impl Sim {
             c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
         }
 
-        // Momentum damping removed.
+        // Momentum damping: nudge system COM velocity toward zero by 1/512 per tick.
+        // Only active when --dampen flag is set (useful for wrap mode to prevent COM drift).
+        if self.dampen && !self.cells.is_empty() {
+            let n = self.cells.len() as f32;
+            let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
+            let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
+            let damp = 1.0 / 512.0;
+            for c in &mut self.cells {
+                c.vx -= avg_vx * damp;
+                c.vy -= avg_vy * damp;
+            }
+        }
 
         // Movement: float positions, collision by grid square.
         // Process in shuffled order. Each cell computes its target float position (px+vx, py+vy).
@@ -1057,8 +1069,9 @@ fn main() {
         .expect("Usage: gravity --seconds <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
     let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
-    let wrap  = args.iter().any(|a| a == "--wrap");  // default: hard walls (no wrap)
-    let steer = args.iter().any(|a| a == "--steer");     // default: off
+    let wrap   = args.iter().any(|a| a == "--wrap");    // default: hard walls (no wrap)
+    let steer  = args.iter().any(|a| a == "--steer");   // default: off
+    let dampen = args.iter().any(|a| a == "--dampen");  // default: off
     let rng_seed: u64 = parse_arg("--seed")
         .and_then(|s| s.parse().ok())
         .unwrap_or(44);
@@ -1105,14 +1118,14 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, wrap, steer)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, wrap, steer, dampen)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
         })
         .unwrap_or_else(|| {
             println!("Fresh start (seed={rng_seed}, seed_density=1/{seed_density_inv})");
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, wrap, steer);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, wrap, steer, dampen);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
