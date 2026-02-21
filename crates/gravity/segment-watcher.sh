@@ -107,12 +107,13 @@ while true; do
                 G=$(    grep "^gravity:"    state/run_info.txt | awk '{print $2}')
                 S=$(    grep "^softening:"  state/run_info.txt | awk '{print $2}')
                 SC=$(   grep "^speed_cap:"  state/run_info.txt | awk '{print $2}')
+                POP=$(  grep "^pop_target:" state/run_info.txt | awk '{print $2}')
                 BAND=$( grep "^pop_band:"   state/run_info.txt | awk '{print $2}')
                 RATE=$( grep "^rate_limit:" state/run_info.txt | awk '{print $2}')
                 WRAP=$( grep "^wrap:"       state/run_info.txt | awk '{print $2}')
                 INITV=$(grep "^init_vel:"   state/run_info.txt | awk '{print $2}')
                 CMT=$(  grep "^commit:"     state/run_info.txt | awk '{print $2}')
-                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} band=${BAND} rate=${RATE} wrap=${WRAP} vel=${INITV}"
+                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} rate=${RATE} wrap=${WRAP} vel=${INITV}"
             fi
 
             if openclaw message send --channel discord \
