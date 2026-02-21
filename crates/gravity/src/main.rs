@@ -1338,6 +1338,7 @@ fn main() {
     let output_file = format!("{}/gravity_{}.mp4", shared_dir, run_id);
 
     // Write settings file alongside video and run_info for the watcher
+    let init_pop = if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
     let settings = format!(
         "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
          commit:        {commit_id}\n\
