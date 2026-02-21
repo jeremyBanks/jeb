@@ -24,13 +24,10 @@ done)
 
 # Clean up state from previous run
 rm -f state/checkpoint.bin state/orig_state.bin state/run_info.txt segments.txt
-rm -f /tmp/gravity_segments_seen.txt
 rm -rf segments/ && mkdir -p segments frames/chunk
 
-# Restart watcher cleanly
+# Kill any stale watchers — new one starts after run_info.txt is written
 pkill -f "segment-watcher" 2>/dev/null; sleep 1
-nohup bash segment-watcher.sh > /tmp/watcher.log 2>&1 &
-echo "[start-render] watcher PID=$!"
 
 # Launch the render
 COMMIT=$(git -C "$(dirname "$0")" rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
