@@ -1669,7 +1669,7 @@ use std::io::{BufWriter, Write};
         // Canvas stores Oklab (L, a, b) as f32 per channel.
         // Fade only L (brightness): multiplicative + constant drain so L always reaches 0.
         // a and b (chroma) are left intact — they become invisible as L→0.
-        const FADE_SLOW: f32 = 0.999534;
+        const FADE_SLOW: f32 = 0.999068; // 0.999534² — doubled fade speed
         // Epsilon ensures L hits 0 within ~28s at 60fps (not stuck at grey asymptote).
         // At FADE_SLOW, without epsilon, a cell starting at L=0.75 would asymptote to ~0.32.
         const FADE_EPSILON: f32 = 0.0003;
