@@ -2023,32 +2023,31 @@ use std::io::{BufWriter, Write};
             !(v.releasing && v.release_samples >= v.release_total)
         });
 
-        // ── 6. Synthesise SAMPLES_PER_FRAME samples ────────────────────────
-        // No pool-size normalization — more movers = louder, tanh handles headroom.
+        // ── 6. Synthesise SAMPLES_PER_FRAME stereo pairs (interleaved L, R) ──
         for _ in 0..SAMPLES_PER_FRAME {
-            let mut sum = 0.0_f32;
+            let mut sum_l = 0.0_f32;
+            let mut sum_r = 0.0_f32;
             for v in self.voice_pool.values_mut() {
                 // Temporal spread: stagger event voices across the frame by their X position
-                // Each sample we count down; voice produces nothing until delay hits zero
                 if v.init_delay > 0 { v.init_delay -= 1; continue; }
 
-                // Slew (events skip freq slew — they're one-shot and pitch-dropping)
+                // Slew (sustain only — events are one-shot)
                 if v.kind == VoiceKind::Sustain {
                     v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
                     v.current_cutoff += (v.target_cutoff - v.current_cutoff) * AUDIO_SLEW;
                     v.current_amp    += (v.target_amp    - v.current_amp)    * 0.01;
+                    v.current_pan    += (v.target_pan    - v.current_pan)    * 0.02;
                 }
-                // Death glide: frequency drops each sample
+                // Death glide
                 v.current_freq *= v.pitch_drop;
 
                 // Phase advance
                 v.phase = (v.phase + v.current_freq / SAMPLE_RATE as f32).rem_euclid(1.0);
 
-                // Waveform: sin_angle=-1 → pure sine (thin/up), +1 → triangle (warm/down)
-                // Triangle instead of saw: same directional variety, far softer harmonics
+                // Waveform: sin_angle=-1 → pure sine, +1 → triangle
                 let blend  = (v.sin_angle + 1.0) * 0.5;
                 let sine_s = (v.phase * 2.0 * PI).sin();
-                let tri_s  = 1.0 - 4.0 * (v.phase - 0.5).abs(); // triangle: -1..+1
+                let tri_s  = 1.0 - 4.0 * (v.phase - 0.5).abs();
                 let raw    = blend * tri_s + (1.0 - blend) * sine_s;
 
                 // One-pole LP filter
@@ -2066,16 +2065,26 @@ use std::io::{BufWriter, Write};
                     t
                 } else { 1.0 };
 
-                sum += v.filter_state * env * v.current_amp;
+                // Equal-power panning: cos(θ)=right moves image right, left moves left
+                let angle = (v.current_pan + 1.0) * 0.5 * PI * 0.5;  // -1..+1 → 0..π/2
+                let gain_l = angle.cos();
+                let gain_r = angle.sin();
+                let s = v.filter_state * env * v.current_amp;
+                sum_l += s * gain_l;
+                sum_r += s * gain_r;
 
-                // Event voices (Birth/Death): start releasing once attack ramp finishes
+                // Event voices: start releasing once attack ramp finishes
                 if v.kind != VoiceKind::Sustain && !v.releasing && v.attack_samples >= AUDIO_ATTACK {
                     v.releasing = true;
                 }
             }
-            let dry = sum.tanh() * 0.7;
-            let out = self.reverb.process(dry);
-            chunk_audio.push(out);
+
+            // Mid-side reverb: wet reverb on mono mid, dry stereo width preserved
+            let mid  = (sum_l + sum_r) * 0.5;
+            let side = (sum_l - sum_r) * 0.5;
+            let wet  = self.reverb.process(mid.tanh() * 0.7);
+            chunk_audio.push(wet + side);  // L
+            chunk_audio.push(wet - side);  // R
         }
     }
 
