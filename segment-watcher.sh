@@ -91,12 +91,18 @@ while true; do
             PARAMS=""
             if [ -f "state/run_info.txt" ]; then
                 RUN_ID=$(grep "^run_id=" state/run_info.txt | cut -d= -f2)
+                COMMIT=$(grep "^commit:" state/run_info.txt | awk '{print $2}')
                 G=$(grep "^gravity:" state/run_info.txt | awk '{print $2}')
                 S=$(grep "^softening:" state/run_info.txt | awk '{print $2}')
                 SC=$(grep "^speed_cap:" state/run_info.txt | awk '{print $2}')
                 POP_T=$(grep "^pop_target:" state/run_info.txt | awk '{print $2}')
+                BAND=$(grep "^pop_band:" state/run_info.txt | awk '{print $2}')
+                RATE=$(grep "^rate_limit:" state/run_info.txt | awk '{print $2}')
                 WRAP=$(grep "^wrap:" state/run_info.txt | awk '{print $2}')
-                PARAMS="G=${G} soft=${S} cap=${SC} pop=${POP_T} wrap=${WRAP}"
+                DAMPEN=$(grep "^dampen:" state/run_info.txt | awk '{print $2}')
+                INITV=$(grep "^init_vel:" state/run_info.txt | awk '{print $2}')
+                PARAMS="G=${G} soft=${S} cap=${SC} pop=${POP_T} band=${BAND} rate=${RATE} wrap=${WRAP} dampen=${DAMPEN} vel=${INITV}"
+                [ -n "$COMMIT" ] && PARAMS="commit=${COMMIT} ${PARAMS}"
             fi
             if [ -f "state/last_stats.txt" ]; then
                 POP=$(grep "^pop=" state/last_stats.txt | cut -d= -f2)
