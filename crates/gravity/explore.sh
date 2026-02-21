@@ -195,3 +195,19 @@ echo "Written → $BEST_FILE"
 
 // [recovery] edit target not found, appending:
 SIM_SECONDS="${1:-120}"
+
+// [recovery] edit target not found, appending:
+    # Compare settled state (skip first 15 lines of ramp-up)
+    local settled
+    settled=$(echo "$stat_lines" | tail -n +16)
+    local first_line last_line
+    first_line=$(echo "$settled" | head -1)
+    last_line=$(echo  "$settled" | tail -1)
+    [ -z "$first_line" ] && first_line=$(echo "$stat_lines" | head -1)
+    [ -z "$last_line"  ] && last_line=$(echo  "$stat_lines" | tail -1)
+
+    local hot_start hot_end
+    hot_start=$(echo "$first_line" | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
+    hot_end=$(echo   "$last_line"  | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
+    local blob_moved=0
+    [ "$hot_start" != "$hot_end" ] && blob_moved=1
