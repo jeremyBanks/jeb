@@ -498,7 +498,7 @@ impl Sim {
                         Some((c.vx * c.vx + c.vy * c.vy).sqrt())
                     } else { None }
                 }).sum();
-                let w = spd_sum + BIRTH_SOFT;
+                let w = spd_sum + birth_soft;
                 let u = xorf32(&mut self.rng).max(f32::EPSILON); // avoid u=0
                 Some((u.powf(1.0 / w), i))
             })
