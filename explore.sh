@@ -126,7 +126,7 @@ for entry in "${CONFIGS[@]}"; do
     i=0
     while IFS= read -r line; do
         i=$(( i + 1 ))
-        if [ $(( (i-1) % 30 )) -eq 0 ] || [ "$i" -eq "$n_samples" ]; do
+        if [ $(( (i-1) % 30 )) -eq 0 ] || [ "$i" -eq "$n_samples" ]; then
             spd=$(echo   "$line" | grep -oE 'avg_spd=[0-9.]+' | cut -d= -f2)
             p10=$(echo   "$line" | grep -oE 'p10=[0-9.]+'     | cut -d= -f2)
             blk=$(echo   "$line" | grep -oE 'blk=[0-9]+'      | cut -d= -f2)
