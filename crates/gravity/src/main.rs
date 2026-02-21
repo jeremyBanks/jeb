@@ -216,11 +216,29 @@ impl Sim {
             let yi = (xoru64(&mut rng) as usize) % H;
             let idx = yi * W + xi;
             if !occupied[idx] {
-                // Tiny random initial velocity: speed ~ U[0, 0.003% of speed_cap], gravity does the work
-                let spd   = xorf32(&mut rng) * speed_cap * 0.00003125; // 0.001 / 32
-                let angle = xorf32(&mut rng) * 2.0 * std::f32::consts::PI;
-                let vx    = angle.cos() * spd;
-                let vy    = angle.sin() * spd;
+                let (vx, vy) = if xi < W / 2 && yi < H / 2 {
+                    // Top-left: biased right, vx = U[-0.25, +0.5], vy = U[-0.125, +0.125]
+                    let vx = xorf32(&mut rng) * 0.75 - 0.25;
+                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
+                    (vx, vy)
+                } else if xi >= W / 2 && yi >= H / 2 {
+                    // Bottom-right: 180° opposite of top-left → biased left
+                    // vx = U[-0.5, +0.25], vy = U[-0.125, +0.125]
+                    let vx = xorf32(&mut rng) * 0.75 - 0.5;
+                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
+                    (vx, vy)
+                } else if xi >= W / 2 && yi < H / 2 {
+                    // Top-right: no directional bias, U[-0.125, +0.125] each axis
+                    let vx = (xorf32(&mut rng) - 0.5) * 0.25;
+                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
+                    (vx, vy)
+                } else {
+                    // Bottom-left: similar magnitude, dominant direction points down
+                    // vx = U[-0.125, +0.125], vy = U[0, +0.25] → avg = (0, +0.125)
+                    let vx = (xorf32(&mut rng) - 0.5) * 0.25;
+                    let vy = xorf32(&mut rng) * 0.25;
+                    (vx, vy)
+                };
                 cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
                 occupied[idx] = true;
                 seeded += 1;
