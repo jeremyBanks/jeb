@@ -1794,6 +1794,24 @@ use std::io::{BufWriter, Write};
     // Called once per video frame. Appends SAMPLES_PER_FRAME f32 samples to chunk_audio.
     // Only cells that moved (changed grid square) this tick sustain a voice.
     // Stationary/blocked cells let their voice release.
+    // ── Pentatonic scale quantization ─────────────────────────────────────
+    // Maps t ∈ [0,1] → nearest note in C major pentatonic over 3 octaves (C3→C6).
+    // Any combination of simultaneously-playing voices is guaranteed consonant.
+    fn pentatonic_freq(t: f32) -> f32 {
+        // Semitone offsets for C major pentatonic: C D E G A (per octave)
+        const DEGREES: &[f32] = &[
+            0., 2., 4., 7., 9.,
+            12., 14., 16., 19., 21.,
+            24., 26., 28., 31., 33.,
+            36., // C6 cap
+        ];
+        let target = t.clamp(0.0, 1.0) * 36.0; // 3 octaves in semitones
+        let nearest = DEGREES.iter().copied()
+            .min_by(|&a, &b| (a - target).abs().partial_cmp(&(b - target).abs()).unwrap())
+            .unwrap_or(0.0);
+        AUDIO_BASE_FREQ * 2.0_f32.powf(nearest / 12.0)
+    }
+
     // ── Audio parameter helper ─────────────────────────────────────────────
     // Shared by both sustain voices and event voices.
     fn audio_params(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32)
@@ -1806,22 +1824,19 @@ use std::io::{BufWriter, Write};
             (vx / speed, vy / speed)
         } else { (0.0, 0.0) };
 
-        // Pitch: |sin(θ)| → coarse (horizontal=C3, vertical=C6)
-        //        speed → ±0.25 oct fine-tune
-        let coarse = AUDIO_BASE_FREQ * 2.0_f32.powf(sin_th.abs() * AUDIO_OCTAVE_SPAN);
-        let fine   = 2.0_f32.powf(t * 0.5 - 0.25);
-        // Position detune: ±5 cents, prevents robotic unison in clusters
+        // Pitch: |sin(θ)| → pentatonic scale degree (horizontal=C3, vertical=C6)
+        // Position detune: ±5 cents shimmer — keeps clusters from sounding robotic
         let px_a = px / W as f32 * 2.0 * PI;
         let py_a = py / H as f32 * 2.0 * PI;
         let detune = 2.0_f32.powf((px_a.cos() * 5.0 + py_a.sin() * 3.0) / 1200.0);
-        let target_freq = coarse * fine * detune;
+        let target_freq = Self::pentatonic_freq(sin_th.abs()) * detune;
 
         // Filter: cos(θ) → brightness (right=bright, left=dark), base 600 Hz ±2 oct
         let cutoff_hz = 600.0 * 2.0_f32.powf(cos_th * 2.0);
         let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
 
-        // Amplitude: sqrt(speed) curve
-        let target_amp = (t.sqrt() * 0.018).max(0.002);
+        // Amplitude: proportional to move magnitude (speed), sqrt curve
+        let target_amp = t.sqrt() * AUDIO_AMP_SCALE;
 
         (target_freq, target_cutoff, sin_th, target_amp)
     }
