@@ -7,8 +7,8 @@ const W: usize = 256;
 const H: usize = 160; // raw sim grid; upscaled to 3840×2400 at concat time
 
 // Output video settings
-const OUT_W: u32 = 1920; // 192 × 10
-const OUT_H: u32 = 1200; // 120 × 10
+const OUT_W: u32 = 256; // raw — ffmpeg upscales to 3840×2400 at concat
+const OUT_H: u32 = 160;
 const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
