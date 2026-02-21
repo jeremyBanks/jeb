@@ -41,9 +41,11 @@ trap "rm -rf $WORKDIR" EXIT
 
 # ── BASE PARAMS (explicitly set; configs override individual flags) ────────────
 # These match the known-good production config. Override any in CONFIGS entries.
-BASE_ARGS="--pop-target 5120 --pop-band 160 --rate-limit 4 --seed-density 128 --speed-cap 4.5 --gravity 0.03125 --softening 6 --init-vel zero"
-# Baseline = 3am known-good params. Note: --wrap is NOT in BASE_ARGS so we can
-# test both modes. Add --wrap explicitly in any config entry that needs it.
+BASE_ARGS="--gravity 0.075 --softening 3 --speed-cap 2 --pop-target 768 --pop-band 256 --rate-limit 16 --seed-density 128 --init-vel swirl --wrap --dampen"
+# GOOD SETTINGS baseline (local optimum, Feb 21 2026).
+# eff_spd≈2.2, moved≈68-75%, p10≈2.4, spread≈50-70 — genuinely interesting dynamics.
+# Override individual flags in CONFIGS entries to explore around this point.
+# Try radically different values too — escape local optima.
 
 echo "=== Explore round $ROUND | sim=${SIM_SECONDS}s | seed=$SEED ==="
 echo "=== Base: $BASE_ARGS ==="
