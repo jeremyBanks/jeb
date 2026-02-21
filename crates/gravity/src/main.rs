@@ -198,7 +198,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, seed_density_inv: usize, wrap: bool, steer: bool) -> Self {
+           rate_limit: usize, seed_density_inv: usize, wrap: bool, steer: bool, dampen: bool) -> Self {
         let mut rng = rng_seed;
         let mut cells: Vec<Cell> = Vec::new();
 
