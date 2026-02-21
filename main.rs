@@ -484,7 +484,7 @@ impl Sim {
         //
         // weight = sum of live-neighbour speeds (post-deaths) + BIRTH_SOFT
         // BIRTH_SOFT ensures every valid candidate has a nonzero base probability.
-        const BIRTH_SOFT: f32 = 0.15; // ~1/10 of speed_cap (1.5); baseline birth weight
+        const BIRTH_SOFT: f32 = 0.6; // ~1/10 of speed_cap (6.0); baseline birth weight
 
         let mut birth_keys: Vec<(f32, usize)> = desired_births.iter()
             .enumerate()
