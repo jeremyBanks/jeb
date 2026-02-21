@@ -1564,8 +1564,8 @@ use std::io::{BufWriter, Write};
                 new_py = (c.py + c.vy).rem_euclid(H as f32);
             } else {
                 let rx = c.px + c.vx; let ry = c.py + c.vy;
-                if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 { continue; }
-                new_px = rx; new_py = ry;
+                new_px = rx.clamp(0.0, W as f32 - 1.0);
+                new_py = ry.clamp(0.0, H as f32 - 1.0);
             }
             let tgx = (new_px.round() as i32).rem_euclid(W as i32) as usize;
             let tgy = (new_py.round() as i32).rem_euclid(H as i32) as usize;
