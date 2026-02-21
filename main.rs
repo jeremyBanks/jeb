@@ -326,6 +326,7 @@ impl Sim {
         let rng     = read_u64!();
         let tick_count = read_u64!() as usize;
         let chunk_index = read_u64!() as usize;
+        let next_id = read_u64!();
 
         let mut cells = Vec::with_capacity(n_cells);
         for _ in 0..n_cells {
@@ -334,7 +335,8 @@ impl Sim {
             let vx = read_f32!();
             let vy = read_f32!();
             let ps = read_f32!();
-            cells.push(Cell { px, py, vx, vy, prev_speed: ps });
+            let id = read_u64!();
+            cells.push(Cell { px, py, vx, vy, prev_speed: ps, id, moved: false });
         }
 
         let mut prev_live = vec![false; W * H];
