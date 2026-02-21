@@ -1974,8 +1974,11 @@ use std::io::{BufWriter, Write};
                 },
                 VoiceKind::Sustain => unreachable!(),
             };
+            // Temporal spreading: X position offsets event start across the frame
+            // Left=early, right=late — staggers simultaneous events, kills constructive buzzing
+            let delay = (x_t * (SAMPLES_PER_FRAME - 1) as f32) as usize;
             let id = self.next_id; self.next_id += 1;
-            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp));
+            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp, delay));
         }
 
         // ── 5. Remove fully-released voices ────────────────────────────────
