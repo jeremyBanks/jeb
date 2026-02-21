@@ -982,19 +982,15 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
     }
 }
 
-fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
+// Returns Oklab (L, a, b) for a cell's velocity — stored directly in canvas, no RGB conversion here.
+// L: 0.45 (still) → 0.75 (fast); C: 0.0 (still) → 0.20 (fast); H: velocity direction angle.
+fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32) -> (f32, f32, f32) {
     let spd = (vx * vx + vy * vy).sqrt();
     let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
-    // Oklch: perceptually uniform — equal speed = equal brightness regardless of direction
-    // L: 0.45 (still, ~sRGB 64) → 0.75 (fast, bright)
-    // C: 0.0 (still, achromatic) → 0.20 (fast, saturated)
-    // H: velocity direction angle
     let l = 0.45 + 0.30 * t;
     let c = 0.20 * t;
     let h = vy.atan2(vx);
-    let a = c * h.cos();
-    let b = c * h.sin();
-    oklab_to_srgb(l, a, b)
+    (l, c * h.cos(), c * h.sin())
 }
 
 fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
