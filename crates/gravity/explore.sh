@@ -112,7 +112,7 @@ for entry in "${CONFIGS[@]}"; do
     local_out="$WORKDIR/${label}.txt"
     ( cd "$WORKDIR" && GRAVITY_SHARED_DIR="$WORKDIR" \
         "$BIN" --seconds "$SIM_SECONDS" --headless --seed "$SEED" \
-        --pop-target 5120 --wrap --speed-cap 6.0 \
+        --pop-target 5120 --speed-cap 1.125 \
         $extra_args ) > "$local_out" 2>&1
 
     stat_lines=$(grep "avg_spd" "$local_out")
