@@ -2461,3 +2461,51 @@ use std::io::{BufWriter, Write};
             sim.paint_frame(&mut canvas, &palette);
             let global_frame = total_frames + ep_frame;
             let path = format!("{frames_dir}/f{global_frame:013}.png");
+
+// [recovery] edit target not found, appending:
+// ── Colour system ────────────────────────────────────────────────────────────
+//
+// "Radical" (default): perceptual hue-wheel interpolation.
+//   • Velocity direction θ → position on a circular interpolation of the 9
+//     palette colours (sorted by OKLCH hue; achromatic colours with C < 0.02
+//     are excluded from the wheel).
+//   • Speed ramp: #061B31 dark navy at t=0 → interpolated palette colour at
+//     t=1 (speed_cap).  Linear in OKLab all the way through.
+//   • t > 1 (beyond speed_cap, up to 2×): extrapolate — push L toward 0.92
+//     and scale C outward, both with a √-taper for diminishing returns.
+//   • Out-of-gamut handling: OKLCH binary-search chroma reduction (8
+//     iterations) — hue and lightness are preserved, only C is squeezed.
+//     This is the CSS Color Level 4 gamut-mapping algorithm.
+//
+// "Classic" (write "classic" to /tmp/gravity_palette): original uniform wheel.
+//
+// Hot-reload: binary reads /tmp/gravity_palette at each chunk boundary.
+// Default (file absent or unrecognised): "radical".
+
+/// One anchor on the hue wheel (OKLab + precomputed OKLCH hue).
+#[derive(Clone)]
+struct HueAnchor { l: f32, a: f32, b: f32, h: f32 }
+
+/// The 9 palette colours (#061B31 also serves as the zero-speed anchor).
+const PALETTE_SRGB: [(u8, u8, u8); 9] = [
+    (0x53, 0x3A, 0xFD), // #533AFD — violet
+    (0x06, 0x1B, 0x31), // #061B31 — dark navy  (also slow anchor)
+    (0x50, 0x61, 0x7A), // #50617A — steel blue-gray
+    (0xF6, 0xF9, 0xFC), // #F6F9FC — near white  (skipped: C < 0.02)
+    (0xFF, 0xC0, 0x1F), // #FFC01F — golden yellow
+    (0xFF, 0x61, 0x18), // #FF6118 — orange
+    (0xF4, 0x4B, 0xCC), // #F44BCC — hot pink
+    (0xEA, 0x22, 0x61), // #EA2261 — crimson
+    (0x63, 0x5B, 0xFF), // #635BFF — periwinkle
+];
+
+/// Zero-speed (still) anchor colour — dark navy.
+const SLOW_RGB: (u8, u8, u8) = (0x06, 0x1B, 0x31);
+
+fn srgb_u8_to_linear(x: u8) -> f32 {
+    let x = x as f32 / 255.0;
+    if x <= 0.04045 { x / 12.92 } else { ((x + 0.055) / 1.055).powf(2.4) }
+}
+
+fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    let (rl, gl, bl) = (srgb_u8_to_linear(r), s
