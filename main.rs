@@ -1327,7 +1327,10 @@ fn main() {
         .unwrap_or(6.0_f32);
     let speed_cap: f32 = parse_arg("--speed-cap")
         .and_then(|v| v.parse().ok()).unwrap_or(1.125); // cells/frame
-    let target_pop_default = W * H / 16; // 2560 for 256×160 (half of W*H/8)
+    let target_pop_default = W * H / 16; // 2560 for 256×160
+    let target_pop: usize = parse_arg("--pop-target")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(target_pop_default);
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
         .unwrap_or(1280.0); // ±1280 around target → range [1280, 3840]
