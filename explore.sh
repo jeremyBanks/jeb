@@ -165,7 +165,6 @@ for entry in "${CONFIGS[@]}"; do
         echo "  (not enough settled samples)"
     fi
 
-    local p10s p10e
     p10s=$(echo "$first_line" | grep -oE 'p10=[0-9.]+' | cut -d= -f2)
     p10e=$(echo "$last_line"  | grep -oE 'p10=[0-9.]+' | cut -d= -f2)
     echo "  p10: $p10s → $p10e"
