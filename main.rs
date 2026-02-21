@@ -11,7 +11,7 @@ const OUT_W: u32 = 256; // raw — ffmpeg upscales to 3840×2400 at concat
 const OUT_H: u32 = 160;
 const FPS: u32 = 60;
 const CRF: u32 = 12;
-const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
+const CHUNK_FRAMES: usize = 1920; // 32s at 60fps
 
 struct Cell {
     px: f32,   // continuous world position, x ∈ [0, W)
