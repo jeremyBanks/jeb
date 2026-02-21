@@ -482,8 +482,8 @@ impl Sim {
         // proportionally more likely to be born. Uses Efraimidis-Spirakis reservoir
         // sampling: key = u^(1/w), sort descending, take top max_births.
         //
-        // weight = sum of live-neighbour speeds (post-deaths) + BIRTH_SOFT
-        // BIRTH_SOFT ensures every valid candidate has a nonzero base probability.
+        // weight = sum of live-neighbour speeds (post-deaths) + birth_soft
+        // birth_soft ensures every valid candidate has a nonzero base probability.
         let birth_soft: f32 = self.speed_cap; // baseline birth weight = max speed
 
         let mut birth_keys: Vec<(f32, usize)> = desired_births.iter()
