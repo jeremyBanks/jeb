@@ -1081,7 +1081,7 @@ fn concat_segments(segments_file: &str, output: &str) {
         .args([
             "-y", "-f", "concat", "-safe", "0", "-i", segments_file,
             "-vf", "scale=3840:2400:flags=neighbor",
-            "-c:v", "libx264", "-crf", "12", "-preset", "slow",
+            "-c:v", "libx264", "-crf", "12", "-preset", "fast",
             "-pix_fmt", "yuv420p",
             output,
         ])
