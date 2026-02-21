@@ -1605,20 +1605,8 @@ use std::io::{BufWriter, Write};
             self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd });
 
 // [recovery] edit target not found, appending:
-        // Build quadtree; for no-wrap use dynamic root covering all cell positions
+        // Build quadtree over [0,W]×[0,H]
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
-        if self.wrap || n == 0 {
-            nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
-        } else {
-            let mut x0 = self.cells[0].px; let mut x1 = x0;
-            let mut y0 = self.cells[0].py; let mut y1 = y0;
-            for c in &self.cells {
-                x0 = x0.min(c.px); x1 = x1.max(c.px);
-                y0 = y0.min(c.py); y1 = y1.max(c.py);
-            }
-            let m = self.softening + 1.0;
-            nodes.push(QNode::empty(x0 - m, y0 - m, x1 + m, y1 + m));
-        }
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
             qt_insert(&mut nodes, 0, i, px, py, 0);
