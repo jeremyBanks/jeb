@@ -170,3 +170,6 @@ echo "round=$ROUND" >> "$BEST_FILE"
 echo "label=$BEST_LABEL" >> "$BEST_FILE"
 echo "score=$BEST_SCORE" >> "$BEST_FILE"
 echo "Written → $BEST_FILE"
+
+// [recovery] edit target not found, appending:
+SIM_SECONDS="${1:-120}"
