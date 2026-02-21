@@ -457,36 +457,17 @@ impl Sim {
             grid2[c.gy() * W + c.gx()] = i;
         }
 
-        // Weighted birth selection: candidates with faster-moving neighbours are
-        // proportionally more likely to be born. Uses Efraimidis-Spirakis reservoir
-        // sampling: key = u^(1/w), sort descending, take top max_births.
-        //
-        // weight = sum of live-neighbour speeds (post-deaths) + birth_soft
-        // birth_soft ensures every valid candidate has a nonzero base probability.
-        let birth_soft: f32 = self.speed_cap * 0.5; // baseline birth weight = half max speed
-
-        let mut birth_keys: Vec<(f32, usize)> = desired_births.iter()
+        // Uniform birth selection: shuffle candidates, take first max_births.
+        let mut birth_indices: Vec<usize> = desired_births.iter()
             .enumerate()
             .filter_map(|(i, (gy, gx, _))| {
-                if grid2[gy * W + gx] != usize::MAX { return None; } // already occupied
-                let spd_sum: f32 = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                    let (ny, nx) = resolve_nbr(*gy, *gx, dy, dx)?;
-                    let idx = grid2[ny * W + nx];
-                    if idx != usize::MAX {
-                        let c = &self.cells[idx];
-                        Some((c.vx * c.vx + c.vy * c.vy).sqrt())
-                    } else { None }
-                }).sum();
-                let w = spd_sum + birth_soft;
-                let u = xorf32(&mut self.rng).max(f32::EPSILON); // avoid u=0
-                Some((u.powf(1.0 / w), i))
+                if grid2[gy * W + gx] != usize::MAX { return None; }
+                Some(i)
             })
             .collect();
+        shuffle_vec(&mut birth_indices, &mut self.rng);
 
-        // Sort descending by key — highest key = most likely to be selected
-        birth_keys.sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-
-        for (_, bi) in birth_keys.into_iter().take(max_births) {
+        for bi in birth_indices.into_iter().take(max_births) {
             let (gy, gx, _) = desired_births[bi];
             if grid2[gy * W + gx] != usize::MAX { continue; } // double-check: may have been filled
             let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
@@ -1089,10 +1070,10 @@ fn main() {
     let target_pop_default = W * H / 8; // 5120 for 256×160
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
-        .unwrap_or((target_pop_default / 128) as f32); // default: target/128 = 40
+        .unwrap_or((target_pop_default / 32) as f32); // default: target/32 = 160
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(1); // default: 1 per tick (~0.02% of target, up to 60/sec at 60fps)
+        .unwrap_or(4); // default: 4 per tick, 240/sec at 60fps
 
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
