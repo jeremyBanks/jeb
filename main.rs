@@ -38,7 +38,6 @@ struct Sim {
     softening: f32,
     speed_cap: f32,
     start_pop: usize,
-    conway_every: usize,
     pop_band: f32,
     rate_limit: usize,
     tick_count: usize,
