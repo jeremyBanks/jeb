@@ -1129,7 +1129,13 @@ fn main() {
     let speed_cap   = 6.0_f32; // cells/frame
     let conway_every = if args.iter().any(|a| a == "--no-conway") { 0 }
         else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
-    let pop_band    = 16.0_f32; // doubled: wider target population band
+    let target_pop_default = W * H / 8; // 5120 for 256×160
+    let pop_band: f32 = parse_arg("--pop-band")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or((target_pop_default / 128) as f32); // default: target/128 = 40
+    let rate_limit: usize = parse_arg("--rate-limit")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or((target_pop_default + 1) / 2); // default: ceil(target/2) = 2560
 
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
