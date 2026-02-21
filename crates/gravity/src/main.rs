@@ -1556,12 +1556,11 @@ use std::io::{BufWriter, Write};
 // [recovery] edit target not found, appending:
         // Movement: float positions, collision by grid square.
         // Process in shuffled order. Each cell computes its target float position (px+vx, py+vy).
-        // In wrap mode: positions wrap toroidally.
-        // In no-wrap mode: cells move freely (open boundary). Only in-bounds cells participate
-        // in grid collision; out-of-bounds cells roam freely and re-enter when gravity pulls them back.
+        // If the target grid square is free: move (update both float pos and grid).
+        // If occupied or same square: stay put entirely — no float accumulation.
+        // In no-wrap mode: if target would be out of bounds, stay put — gravity must pull back.
         let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            if !self.wrap && !c.in_bounds() { continue; }
             grid[c.gy() * W + c.gx()] = i;
         }
         let n = self.order.len();
@@ -1576,66 +1575,25 @@ use std::io::{BufWriter, Write};
                 new_px = (c.px + c.vx).rem_euclid(W as f32);
                 new_py = (c.py + c.vy).rem_euclid(H as f32);
             } else {
-                // Open boundary: cells move freely, no wrapping, no clamping
-                new_px = c.px + c.vx;
-                new_py = c.py + c.vy;
+                let rx = c.px + c.vx; let ry = c.py + c.vy;
+                if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 { continue; }
+                new_px = rx; new_py = ry;
             }
-
-            if !self.wrap {
-                // Determine old/new in-bounds status
-                let was_in = c.in_bounds();
-                let txi = new_px.round() as i32;
-                let tyi = new_py.round() as i32;
-                let now_in = txi >= 0 && txi < W as i32 && tyi >= 0 && tyi < H as i32;
-                let tgx = txi.rem_euclid(W as i32) as usize;
-                let tgy = tyi.rem_euclid(H as i32) as usize;
-                let old_gx = c.gx(); let old_gy = c.gy();
-                if !was_in {
-                    // Out-of-bounds → move freely; if re-entering, claim grid square if free
-                    if now_in {
-                        if grid[tgy * W + tgx] == usize::MAX {
-                            grid[tgy * W + tgx] = idx;
-                            self.cells[idx].px = new_px;
-                            self.cells[idx].py = new_py;
-                        }
-                        // else: target occupied — stay out-of-bounds (float pos unchanged)
-                    } else {
-                        self.cells[idx].px = new_px;
-                        self.cells[idx].py = new_py;
-                    }
-                } else if now_in {
-                    // In-bounds → in-bounds: normal grid collision
-                    if tgx == old_gx && tgy == old_gy {
-                        self.cells[idx].px = new_px;
-                        self.cells[idx].py = new_py;
-                    } else if grid[tgy * W + tgx] == usize::MAX {
-                        grid[old_gy * W + old_gx] = usize::MAX;
-                        grid[tgy * W + tgx] = idx;
-                        self.cells[idx].px = new_px;
-                        self.cells[idx].py = new_py;
-                    }
-                    // else: target occupied — stay put
-                } else {
-                    // In-bounds → out-of-bounds: leave the grid, move freely
-                    grid[old_gy * W + old_gx] = usize::MAX;
-                    self.cells[idx].px = new_px;
-                    self.cells[idx].py = new_py;
-                }
-            } else {
-                let tgx = (new_px.round() as i32).rem_euclid(W as i32) as usize;
-                let tgy = (new_py.round() as i32).rem_euclid(H as i32) as usize;
-                let old_gx = c.gx(); let old_gy = c.gy();
-                if tgx == old_gx && tgy == old_gy {
-                    self.cells[idx].px = new_px;
-                    self.cells[idx].py = new_py;
-                } else if grid[tgy * W + tgx] == usize::MAX {
-                    grid[old_gy * W + old_gx] = usize::MAX;
-                    grid[tgy * W + tgx] = idx;
-                    self.cells[idx].px = new_px;
-                    self.cells[idx].py = new_py;
-                }
-                // else: target occupied — stay put
+            let tgx = (new_px.round() as i32).rem_euclid(W as i32) as usize;
+            let tgy = (new_py.round() as i32).rem_euclid(H as i32) as usize;
+            let old_gx = c.gx(); let old_gy = c.gy();
+            if tgx == old_gx && tgy == old_gy {
+                // Same grid square — update float position freely
+                self.cells[idx].px = new_px;
+                self.cells[idx].py = new_py;
+            } else if grid[tgy * W + tgx] == usize::MAX {
+                // Target square free — move
+                grid[old_gy * W + old_gx] = usize::MAX;
+                grid[tgy * W + tgx] = idx;
+                self.cells[idx].px = new_px;
+                self.cells[idx].py = new_py;
             }
+            // else: target occupied — stay put
         }
     }
 
