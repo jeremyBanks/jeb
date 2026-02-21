@@ -2433,3 +2433,25 @@ use std::io::{BufWriter, Write};
 // [recovery] edit target not found, appending:
         fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool, dampen: bool, init_vel: &str) -> Self {
+
+// [recovery] edit target not found, appending:
+        println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
+        // Hot-reload palette at chunk boundary — drop a file to change mid-run.
+        let palette = load_palette();
+        if !headless { println!("  palette: {:?}", palette); }
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2); // stereo interleaved
+
+        // Render frames for this chunk — check signal each frame
+        let sim_t0 = std::time::Instant::now();
+        for local_frame in 0..this_chunk_frames {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Discard partial chunk and stop immediately
+                println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
+                    chunk + 1, local_frame);
+                delete_frames(frames_dir);
+                break 'chunks;
+            }
+            let global_frame = chunk_start_frame + local_frame;
+            if !headless {
+                sim.paint_frame(&mut canvas, &palette);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
