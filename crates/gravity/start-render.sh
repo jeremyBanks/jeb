@@ -7,18 +7,20 @@ cd "$(dirname "$0")"
 
 BIN="/Users/matte/jeb/target/release/gravity"
 
-# Kill any running non-headless gravity renders
+# Kill ALL non-headless gravity renders (force-kill, no SIGTERM)
 EXISTING=$(pgrep -f "gravity.*--seconds" 2>/dev/null | while read pid; do
-    if ! ps -p "$pid" -o args= 2>/dev/null | grep -q "\-\-headless"; then
-        echo "$pid"
-    fi
+    ps -p "$pid" -o args= 2>/dev/null | grep -q "\-\-headless" || echo "$pid"
 done)
-
 if [ -n "$EXISTING" ]; then
-    echo "[start-render] killing existing render(s): $EXISTING"
+    echo "[start-render] force-killing existing render(s): $EXISTING"
     kill -9 $EXISTING 2>/dev/null
-    sleep 2
+    sleep 3  # give time for file handles to close
 fi
+# Verify they're dead
+STILL=$(pgrep -f "gravity.*--seconds" 2>/dev/null | while read pid; do
+    ps -p "$pid" -o args= 2>/dev/null | grep -q "\-\-headless" || echo "$pid"
+done)
+[ -n "$STILL" ] && { echo "[start-render] ERROR: processes still alive: $STILL"; exit 1; }
 
 # Clean up state from previous run
 rm -f state/checkpoint.bin state/orig_state.bin state/run_info.txt segments.txt
