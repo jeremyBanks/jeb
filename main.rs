@@ -300,17 +300,14 @@ impl Sim {
         let tick_count = read_u64!() as usize;
         let chunk_index = read_u64!() as usize;
 
-        macro_rules! read_u32 {
-            () => {{ let v = u32::from_le_bytes(buf[pos..pos+4].try_into().unwrap()); pos += 4; v }};
-        }
         let mut cells = Vec::with_capacity(n_cells);
         for _ in 0..n_cells {
-            let x  = read_u32!() as usize;
-            let y  = read_u32!() as usize;
+            let px = read_f32!();
+            let py = read_f32!();
             let vx = read_f32!();
             let vy = read_f32!();
             let ps = read_f32!();
-            cells.push(Cell { x, y, vx, vy, prev_speed: ps });
+            cells.push(Cell { px, py, vx, vy, prev_speed: ps });
         }
 
         let mut prev_live = vec![false; W * H];
