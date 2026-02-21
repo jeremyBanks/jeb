@@ -1764,3 +1764,14 @@ use std::io::{BufWriter, Write};
             self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd, id, moved: false });
             grid2[gy * W + gx] = new_idx;
             self.conway_births += 1;
+
+// [recovery] edit target not found, appending:
+        for &(ox, oy) in &orig.positions {
+            if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                let id = self.next_id; self.next_id += 1;
+                self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
+                                       vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
+            }
+        }
+
+        // Lerp velocities of live-original cells 3.125% closer to their original velocity each tick (4× slower)
