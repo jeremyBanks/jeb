@@ -1293,6 +1293,7 @@ fn main() {
                 Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
             }
             sim.tick();
+            sim.generate_audio(&mut chunk_audio);
 
             let log_every = if headless { FPS as usize } else { 480 };
             if local_frame % log_every == 0 {
