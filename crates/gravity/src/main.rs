@@ -1563,6 +1563,7 @@ fn main() {
 
     // ── Epilogue phase ────────────────────────────────────────────────────
     if do_epilogue {
+        let palette = load_palette();
         println!("\n[epilogue] converging to original {} cells...", orig.count);
         const MAX_EPILOGUE_TICKS: usize = 240; // 4s hard cap
         let mut ep_tick = 0usize;
