@@ -1614,9 +1614,18 @@ use std::io::{BufWriter, Write};
             self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd });
 
 // [recovery] edit target not found, appending:
-        // Build quadtree over [0,W]×[0,H]
+        // Build quadtree centered on the actual COM of all cells.
+        // Geometric split at [0,W/2,W]×[0,H/2,H] creates a (0,0) corner bias:
+        // approximation errors don't cancel when the cluster is off-center.
+        // Centering the root on the true COM makes errors symmetric around the cluster.
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
-        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        {
+            let cx = self.cells.iter().map(|c| c.px).sum::<f32>() / n as f32;
+            let cy = self.cells.iter().map(|c| c.py).sum::<f32>() / n as f32;
+            // Radius: large enough that all cells in [0,W]×[0,H] fit inside root
+            let r = (cx.max(W as f32 - cx)).max(cy.max(H as f32 - cy)) + 2.0;
+            nodes.push(QNode::empty(cx - r, cy - r, cx + r, cy + r));
+        }
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
             qt_insert(&mut nodes, 0, i, px, py, 0);
