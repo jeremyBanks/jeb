@@ -1107,7 +1107,7 @@ fn main() {
     let target_pop_default = W * H / 16; // 2560 for 256×160 (half of W*H/8)
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(640.0); // fixed band: same ±640 around new target
+        .unwrap_or(1280.0); // ±1280 around target → range [1280, 3840]
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
         .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
