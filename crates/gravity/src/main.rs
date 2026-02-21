@@ -1775,3 +1775,17 @@ use std::io::{BufWriter, Write};
         }
 
         // Lerp velocities of live-original cells 3.125% closer to their original velocity each tick (4× slower)
+
+// [recovery] edit target not found, appending:
+            let mut grid2 = vec![usize::MAX; W * H];
+            for (i, c) in self.cells.iter().enumerate() {
+                grid2[c.gy() * W + c.gx()] = i;
+            }
+            for &(ox, oy) in &orig.positions {
+                if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                    let id = self.next_id; self.next_id += 1;
+                    self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
+                                           vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
+                }
+            }
+        }
