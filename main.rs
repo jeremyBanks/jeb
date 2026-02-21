@@ -1138,25 +1138,6 @@ fn main() {
         else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 16.0_f32; // doubled: wider target population band
 
-    // Four clockwise blobs — radius from --radius (0 = no blobs)
-    let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
-        // 6 blobs at random positions with random cardinal-ish directions, speed=0.010
-        let mut rng2: u64 = 12345;
-        let speed = 0.010_f32;
-        (0..6).map(|_| {
-            let x = (xoru64(&mut rng2) as usize % (W - 2 * blob_radius as usize - 2)) as f32 + blob_radius + 1.0;
-            let y = (xoru64(&mut rng2) as usize % (H - 2 * blob_radius as usize - 2)) as f32 + blob_radius + 1.0;
-            // random angle
-            let angle = (xoru64(&mut rng2) as f32 / u64::MAX as f32) * 2.0 * std::f32::consts::PI;
-            let vx = angle.cos() * speed;
-            let vy = angle.sin() * speed;
-            (x, y, blob_radius, vx, vy, 0)
-        }).collect()
-    } else {
-        vec![]
-    };
-    let clumps: &[(f32, f32, f32, f32, f32, usize)] = &clumps_owned;
-
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
     let frames_dir      = "frames/chunk";
