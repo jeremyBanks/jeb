@@ -1997,16 +1997,8 @@ use std::io::{BufWriter, Write};
 
         // ── 4. Spawn one-shot voices for Conway events ────────────────────────
         // Events use position-based pitch/timbre — NOT velocity.
-        // Amplitude scales with average cell speed: when things are slow (Conway churning),
-        // events are nearly silent. Movement is the primary sound driver.
-        let avg_speed = if self.cells.is_empty() { 0.0 } else {
-            self.cells.iter().map(|c| (c.vx*c.vx + c.vy*c.vy).sqrt()).sum::<f32>()
-                / self.cells.len() as f32
-        };
-        let speed_factor = (avg_speed / self.speed_cap).clamp(0.0, 1.0);
-        // sqrt curve so even moderate movement gives some event texture
-        let event_scale = speed_factor.sqrt();
-
+        // Fixed low amplitude: always audible as subtle texture, but when cells are
+        // moving the sustain voices naturally dominate the soundscape.
         let events: Vec<AudioEvent> = self.audio_events.drain(..).collect();
         for ev in events {
             use std::f32::consts::PI;
@@ -2018,14 +2010,14 @@ use std::io::{BufWriter, Write};
                     let freq = Self::pentatonic_freq(t);
                     let cutoff_hz = 400.0 * 2.0_f32.powf(x_t * 3.0);
                     let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-                    (freq, cutoff, -1.0_f32, AUDIO_AMP_SCALE * 0.03_f32 * event_scale)
+                    (freq, cutoff, -1.0_f32, AUDIO_AMP_SCALE * 0.03_f32)
                 },
                 VoiceKind::Death => {
                     let t = x_t * 0.45;
                     let freq = Self::pentatonic_freq(t);
                     let cutoff_hz = 700.0 * 2.0_f32.powf((1.0 - y_t) * -2.0);
                     let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-                    (freq, cutoff, 1.0_f32, AUDIO_AMP_SCALE * 0.02_f32 * event_scale)
+                    (freq, cutoff, 1.0_f32, AUDIO_AMP_SCALE * 0.02_f32)
                 },
                 VoiceKind::Sustain => unreachable!(),
             };
