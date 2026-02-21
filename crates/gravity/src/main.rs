@@ -66,12 +66,13 @@ impl Voice {
             phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop: 1.0,
             filter_state: 0.0, current_cutoff: 0.02, target_cutoff: 0.02,
             sin_angle: 0.0, current_amp: 0.0, target_amp: 0.0,
+            current_pan: 0.0, target_pan: 0.0,
             attack_samples: 0, releasing: false,
             release_samples: 0, release_total: AUDIO_RELEASE, refreshed: true,
             init_delay: 0,
         }
     }
-    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32, delay: usize) -> Self {
+    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32, pan: f32, delay: usize) -> Self {
         let (release_total, pitch_drop) = match kind {
             VoiceKind::Birth => (6615_usize,  1.0_f32),         // 150ms
             VoiceKind::Death => (3087_usize,  0.9997_f32),      // 70ms, drops ~half-step
@@ -82,6 +83,7 @@ impl Voice {
             phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop,
             filter_state: 0.0, current_cutoff: cutoff, target_cutoff: cutoff,
             sin_angle, current_amp: amp, target_amp: amp,
+            current_pan: pan, target_pan: pan,
             attack_samples: 0,              // ramp up through attack before releasing
             releasing: false,               // attack first, then release kicks in
             release_samples: 0, release_total, refreshed: true,
