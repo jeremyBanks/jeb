@@ -16,12 +16,14 @@ export GRAVITY_SHARED_DIR="${GRAVITY_SHARED_DIR:-/Users/matte/.openclaw/workspac
 mkdir -p "$GRAVITY_SHARED_DIR"
 
 while true; do
-    echo "=== Starting run seed=$SEED, ${SECONDS_PER_RUN}s → $GRAVITY_SHARED_DIR ==="
+    RUN_ID="$(date +%Y%m%d_%H%M%S)_seed${SEED}"
+    echo "=== Starting run $RUN_ID, ${SECONDS_PER_RUN}s → $GRAVITY_SHARED_DIR ==="
     rm -f segments.txt state/checkpoint.bin state/orig_state.bin
     rm -f segments/*.mp4 2>/dev/null || true
 
-    cargo run --release -- --seconds "$SECONDS_PER_RUN" --epilogue --seed "$SEED" "${EXTRA_ARGS[@]}"
+    cargo run --release -- --seconds "$SECONDS_PER_RUN" --epilogue --seed "$SEED" \
+        --run-id "$RUN_ID" "${EXTRA_ARGS[@]}"
 
-    echo "=== Done seed=$SEED ==="
+    echo "=== Done $RUN_ID ==="
     SEED=$((SEED + 1))
 done
