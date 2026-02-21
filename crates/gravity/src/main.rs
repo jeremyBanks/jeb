@@ -1633,3 +1633,6 @@ use std::io::{BufWriter, Write};
                     (vx, vy)
                 };
                 cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
+
+// [recovery] edit target not found, appending:
+        // Momentum damping removed.
