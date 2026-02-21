@@ -21,7 +21,7 @@ const AUDIO_BASE_FREQ: f32  = 130.81; // C3
 const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
 const AUDIO_SLEW: f32       = 0.05;   // per-sample freq snap (fast — less glide between scale degrees)
 const AUDIO_AMP_SCALE: f32  = 0.0015; // per-voice amplitude scale; tanh handles headroom
-const AUDIO_ATTACK: usize   = 882;    // 20 ms — softer onset, less click
+const AUDIO_ATTACK: usize   = 1058;   // 24 ms — softer onset, less click
 const AUDIO_RELEASE: usize  = 88200;  // 2 seconds — long enough to outlive Conway deaths smoothly
 
 #[derive(Clone, Copy, PartialEq)]
@@ -80,8 +80,8 @@ impl Voice {
             phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop,
             filter_state: 0.0, current_cutoff: cutoff, target_cutoff: cutoff,
             sin_angle, current_amp: amp, target_amp: amp,
-            attack_samples: AUDIO_ATTACK,   // start fully in attack state = already at amp
-            releasing: true,                // one-shot: immediately releasing
+            attack_samples: 0,              // ramp up through attack before releasing
+            releasing: false,               // attack first, then release kicks in
             release_samples: 0, release_total, refreshed: true,
             init_delay: delay,
         }
@@ -1247,6 +1247,11 @@ impl Sim {
                 } else { 1.0 };
 
                 sum += v.filter_state * env * v.current_amp;
+
+                // Event voices (Birth/Death): start releasing once attack ramp finishes
+                if v.kind != VoiceKind::Sustain && !v.releasing && v.attack_samples >= AUDIO_ATTACK {
+                    v.releasing = true;
+                }
             }
             let dry = sum.tanh() * 0.7;
             let out = self.reverb.process(dry);
