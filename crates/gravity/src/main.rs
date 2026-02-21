@@ -2819,3 +2819,17 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
     let (rs, gs, bs) = oklab_to_linear_rgb(l, a_s, b_s);
     (linear_to_srgb_u8(rs), linear_to_srgb_u8(gs), linear_to_srgb_u8(bs))
 }
+
+// [recovery] edit target not found, appending:
+            let idx = yi * W + xi;
+            if !occupied[idx] {
+                let (vx, vy) = make_vel(xi, yi, &mut rng);
+                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                  prev_speed: 0.0, id: next_id, moved: false });
+                next_id += 1;
+                occupied[idx] = true;
+                seeded += 1;
+            }
+        }
+        } // end else (random scatter)
+        shuffle_vec(&mut cells, &mut rng);
