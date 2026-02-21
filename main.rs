@@ -1152,7 +1152,8 @@ fn main() {
         .unwrap_or(0.048000_f32); // half previous
     let softening   = 1.5_f32;
     let speed_cap   = 1.5_f32; // cells/frame
-    let conway_every = FPS as usize / 4; // run Conway 4× per second → up to 4 births + 4 deaths/sec
+    let conway_every = if args.iter().any(|a| a == "--no-conway") { 0 }
+        else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
