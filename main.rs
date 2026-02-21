@@ -1157,13 +1157,94 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
 
 // Returns Oklab (L, a, b) for a cell's velocity — stored directly in canvas, no RGB conversion here.
 // L: 0.45 (still) → 0.75 (fast); C: 0.0 (still) → 0.20 (fast); H: velocity direction angle.
-fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32) -> (f32, f32, f32) {
+// ── Palette system ────────────────────────────────────────────────────────────
+// Hot-reload: binary reads /tmp/gravity_palette at the start of each chunk.
+// File contains a single palette name: "classic" | "jeremy"
+// If file is absent or unrecognised, falls back to "classic".
+// "classic" = original uniform hue wheel (exact same behaviour as before).
+// "jeremy"  = gravity-well hue biasing toward a curated palette; same L/C ramp.
+
+#[derive(Clone, Debug)]
+enum PaletteMode {
+    /// Original: speed→L/C, direction→hue uniformly.
+    Classic,
+    /// Gravity-well hue biasing toward Jeremy's palette anchors.
+    /// pull ∈ [0,1]: 0 = classic, 1 = maximum bias.
+    /// sigma_rad: angular half-width of each well in radians (~0.7 ≈ 40°).
+    Jeremy { pull: f32, sigma_rad: f32 },
+}
+
+fn load_palette() -> PaletteMode {
+    let raw = std::fs::read_to_string("/tmp/gravity_palette")
+        .unwrap_or_default();
+    let s = raw.trim().to_lowercase();
+    if s.starts_with("jeremy") {
+        // Optional: "jeremy pull=0.8 sigma=0.6"
+        let pull = s.split("pull=").nth(1)
+            .and_then(|v| v.split_whitespace().next())
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0.85_f32);
+        let sigma = s.split("sigma=").nth(1)
+            .and_then(|v| v.split_whitespace().next())
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0.70_f32);  // ~40°
+        PaletteMode::Jeremy { pull, sigma_rad: sigma }
+    } else {
+        PaletteMode::Classic
+    }
+}
+
+fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
+    use std::f32::consts::PI;
     let spd = (vx * vx + vy * vy).sqrt();
-    let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
-    let l = 0.45 + 0.30 * t;
-    let c = 0.20 * t;
-    let h = vy.atan2(vx);
-    (l, c * h.cos(), c * h.sin())
+
+    match palette {
+        PaletteMode::Classic => {
+            // Original behaviour — unchanged.
+            let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
+            let l = 0.45 + 0.30 * t;
+            let c = 0.20 * t;
+            let h = vy.atan2(vx);
+            (l, c * h.cos(), c * h.sin())
+        }
+
+        PaletteMode::Jeremy { pull, sigma_rad } => {
+            // Anchor hues in radians (Oklch atan2 convention, −π..π).
+            // Derived from Jeremy's palette: FF6118 FFC01F 635BFF 533AFD F44BCC EA2261
+            //   orange≈40°  gold≈80°  periwinkle≈274°  violet≈280°  pink≈325°  rose≈5°
+            const ANCHORS: [f32; 6] = [
+                 0.698,   // FF6118  orange  ~40°
+                 1.396,   // FFC01F  gold    ~80°
+                -1.501,   // 635BFF  periwinkle  ~274° (= −86°)
+                -1.396,   // 533AFD  violet  ~280° (= −80°)
+                -0.611,   // F44BCC  pink    ~325° (= −35°)
+                 0.087,   // EA2261  rose    ~5°
+            ];
+
+            let h_nat = vy.atan2(vx);   // natural hue from velocity direction
+            let s2    = sigma_rad * sigma_rad;
+
+            // Each anchor exerts a pull ∝ weight × angular displacement.
+            // No snapping: force is continuous and zero when sitting on an anchor.
+            let force: f32 = ANCHORS.iter().map(|&h_i| {
+                let mut d = h_i - h_nat;
+                // Wrap angular distance to [−π, π]
+                if d >  PI { d -= 2.0 * PI; }
+                if d < -PI { d += 2.0 * PI; }
+                let w = s2 / (d * d + s2);
+                w * d
+            }).sum();
+
+            let h_biased = h_nat + pull * force;
+
+            // Speed ramp: dark navy (061B31, L≈0.15) → full chroma at speed_cap.
+            // Slightly brighter and more saturated than classic to suit the palette.
+            let t = (spd / speed_cap).clamp(0.0, 1.0);
+            let l = 0.15 + 0.60 * t;
+            let c = 0.24 * t;
+            (l, c * h_biased.cos(), c * h_biased.sin())
+        }
+    }
 }
 
 fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
