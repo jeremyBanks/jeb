@@ -41,7 +41,7 @@ trap "rm -rf $WORKDIR" EXIT
 
 # ── BASE PARAMS (explicitly set; configs override individual flags) ────────────
 # These match the known-good production config. Override any in CONFIGS entries.
-BASE_ARGS="--pop-target 5120 --pop-band 160 --rate-limit 4 --seed-density 128 --speed-cap 4.5 --gravity 0.03125 --softening 6 --init-vel zero"
+BASE_ARGS="--pop-target 5120 --pop-band 160 --rate-limit 4 --seed-density 128 --speed-cap 4.5 --gravity 0.03125 --softening 6 --init-vel zero --dampen"
 # Baseline = 3am known-good params. Note: --wrap is NOT in BASE_ARGS so we can
 # test both modes. Add --wrap explicitly in any config entry that needs it.
 
