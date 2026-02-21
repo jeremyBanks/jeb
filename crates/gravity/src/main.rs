@@ -1794,22 +1794,25 @@ use std::io::{BufWriter, Write};
     // Called once per video frame. Appends SAMPLES_PER_FRAME f32 samples to chunk_audio.
     // Only cells that moved (changed grid square) this tick sustain a voice.
     // Stationary/blocked cells let their voice release.
-    // ── Pentatonic scale quantization ─────────────────────────────────────
-    // Maps t ∈ [0,1] → nearest note in C major pentatonic over 3 octaves (C3→C6).
-    // Any combination of simultaneously-playing voices is guaranteed consonant.
+    // ── Gravity-well pentatonic quantization ──────────────────────────────
+    // Pitch is attracted toward the nearest C major pentatonic degree but not
+    // fully snapped — like a gravity well. Close to a note = nearly there.
+    // Between two notes = pulled toward the nearer one, but still audibly between.
     fn pentatonic_freq(t: f32) -> f32 {
-        // Semitone offsets for C major pentatonic: C D E G A (per octave)
+        const PULL: f32 = 0.82; // attraction strength: 0=continuous, 1=full snap
         const DEGREES: &[f32] = &[
             0., 2., 4., 7., 9.,
             12., 14., 16., 19., 21.,
             24., 26., 28., 31., 33.,
-            36., // C6 cap
+            36.,
         ];
-        let target = t.clamp(0.0, 1.0) * 36.0; // 3 octaves in semitones
+        let semitone = t.clamp(0.0, 1.0) * 36.0;
         let nearest = DEGREES.iter().copied()
-            .min_by(|&a, &b| (a - target).abs().partial_cmp(&(b - target).abs()).unwrap())
+            .min_by(|&a, &b| (a - semitone).abs().partial_cmp(&(b - semitone).abs()).unwrap())
             .unwrap_or(0.0);
-        AUDIO_BASE_FREQ * 2.0_f32.powf(nearest / 12.0)
+        // Pull semitone toward nearest degree — gravity well, not hard snap
+        let attracted = semitone + (nearest - semitone) * PULL;
+        AUDIO_BASE_FREQ * 2.0_f32.powf(attracted / 12.0)
     }
 
     // ── Audio parameter helper ─────────────────────────────────────────────
