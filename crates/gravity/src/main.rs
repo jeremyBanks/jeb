@@ -3,12 +3,12 @@ use std::io::{BufWriter, Write};
 use std::process::Command;
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
-const W: usize = 192;
-const H: usize = 120; // 192×120 × 10 = 1920×1200 exactly (square pixels)
+const W: usize = 256;
+const H: usize = 160; // raw sim grid; upscaled to 3840×2400 at concat time
 
 // Output video settings
-const OUT_W: u32 = 1920; // 192 × 10
-const OUT_H: u32 = 1200; // 120 × 10
+const OUT_W: u32 = 256; // raw — ffmpeg upscales to 3840×2400 at concat
+const OUT_H: u32 = 160;
 const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
@@ -197,33 +197,9 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
-           clumps: &[(f32, f32, f32, f32, f32, usize)], seed_density_inv: usize,
-           wrap: bool, steer: bool) -> Self {
+           seed_density_inv: usize, wrap: bool, steer: bool) -> Self {
         let mut rng = rng_seed;
-        let mut cells = Vec::new();
-
-        for &(cx, cy, r, ivx, ivy, _count) in clumps {
-            let ri = r.ceil() as i32;
-            for dy in -ri..=ri {
-                for dx in -ri..=ri {
-                    if (dx as f32).powi(2) + (dy as f32).powi(2) > r * r { continue; }
-                    let x = (cx + dx as f32).rem_euclid(W as f32);
-                    let y = (cy + dy as f32).rem_euclid(H as f32);
-                    let xi = x as usize;
-                    let yi = y as usize;
-                    // Checkerboard 50%, then randomly discard half ×3 → ~6.25% density
-                    if xi % 2 != 0 || yi % 2 != 0 { continue; }
-                    if xoru64(&mut rng) % 2 != 0 { continue; }
-                    if xoru64(&mut rng) % 2 != 0 { continue; }
-                    if xoru64(&mut rng) % 2 != 0 { continue; }
-                    if cells.iter().any(|c: &Cell| c.gx() == xi && c.gy() == yi) {
-                        continue;
-                    }
-                    cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx: ivx, vy: ivy, prev_speed: 0.0 });
-                }
-            }
-        }
-        shuffle_vec(&mut cells, &mut rng);
+        let mut cells: Vec<Cell> = Vec::new();
 
         // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
         let mut occupied = vec![false; W * H];
@@ -1063,8 +1039,15 @@ fn delete_frames(frames_dir: &str) {
 }
 
 fn concat_segments(segments_file: &str, output: &str) {
+    // Re-encode with nearest-neighbour upscale to 3840×2400
     let status = Command::new("ffmpeg")
-        .args(["-y", "-f", "concat", "-safe", "0", "-i", segments_file, "-c", "copy", output])
+        .args([
+            "-y", "-f", "concat", "-safe", "0", "-i", segments_file,
+            "-vf", "scale=3840:2400:flags=neighbor",
+            "-c:v", "libx264", "-crf", "12", "-preset", "slow",
+            "-pix_fmt", "yuv420p",
+            output,
+        ])
         .status()
         .expect("ffmpeg concat failed");
     assert!(status.success(), "ffmpeg concat failed");
@@ -1078,20 +1061,16 @@ fn main() {
     };
     let seconds: usize = parse_arg("--seconds")
         .and_then(|s| s.parse().ok())
-        .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>] [--epilogue]");
+        .expect("Usage: gravity --seconds <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
     let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
     let wrap  = args.iter().any(|a| a == "--wrap");  // default: hard walls (no wrap)
     let steer = args.iter().any(|a| a == "--steer");     // default: off
-    // --radius: circle radius (0 = no blobs), default 4
     let rng_seed: u64 = parse_arg("--seed")
         .and_then(|s| s.parse().ok())
         .unwrap_or(44);
-    let blob_radius: f32 = parse_arg("--radius")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0.0); // no blobs by default
     // --seed-density: random cells as 1/N of empty cells (0 = none)
-    // Default 128 = 1/128 of empty cells (half as dense again)
+    // Default 128 = 1/128 of empty cells
     let seed_density_inv: usize = parse_arg("--seed-density")
         .and_then(|s| s.parse().ok())
         .unwrap_or(128);
@@ -1111,25 +1090,6 @@ fn main() {
     let conway_every = if args.iter().any(|a| a == "--no-conway") { 0 }
         else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 16.0_f32; // doubled: wider target population band
-
-    // Four clockwise blobs — radius from --radius (0 = no blobs)
-    let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
-        // 6 blobs at random positions with random cardinal-ish directions, speed=0.010
-        let mut rng2: u64 = 12345;
-        let speed = 0.010_f32;
-        (0..6).map(|_| {
-            let x = (xoru64(&mut rng2) as usize % (W - 2 * blob_radius as usize - 2)) as f32 + blob_radius + 1.0;
-            let y = (xoru64(&mut rng2) as usize % (H - 2 * blob_radius as usize - 2)) as f32 + blob_radius + 1.0;
-            // random angle
-            let angle = (xoru64(&mut rng2) as f32 / u64::MAX as f32) * 2.0 * std::f32::consts::PI;
-            let vx = angle.cos() * speed;
-            let vy = angle.sin() * speed;
-            (x, y, blob_radius, vx, vy, 0)
-        }).collect()
-    } else {
-        vec![]
-    };
-    let clumps: &[(f32, f32, f32, f32, f32, usize)] = &clumps_owned;
 
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
@@ -1152,8 +1112,8 @@ fn main() {
             (s, c, ci)
         })
         .unwrap_or_else(|| {
-            println!("Fresh start (radius={blob_radius}, seed_density=1/{seed_density_inv})");
-            let s = Sim::new(rng_seed, g, softening, speed_cap, conway_every, pop_band, clumps, seed_density_inv, wrap, steer);
+            println!("Fresh start (seed={rng_seed}, seed_density=1/{seed_density_inv})");
+            let s = Sim::new(rng_seed, g, softening, speed_cap, conway_every, pop_band, seed_density_inv, wrap, steer);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
