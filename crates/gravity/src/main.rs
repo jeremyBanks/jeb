@@ -1293,6 +1293,7 @@ fn main() {
         .expect("Usage: gravity --seconds <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
     let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
+    let no_audio    = headless || args.iter().any(|a| a == "--no-audio"); // skip audio synthesis
     let wrap   = args.iter().any(|a| a == "--wrap");    // default: hard walls (no wrap)
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
     let dampen = args.iter().any(|a| a == "--dampen");  // default: off
