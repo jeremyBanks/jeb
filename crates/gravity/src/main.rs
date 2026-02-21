@@ -54,6 +54,7 @@ struct Voice {
     release_samples: usize,
     release_total: usize,      // varies by kind
     refreshed: bool,
+    init_delay: usize,         // samples to skip before voice starts (event temporal spreading)
 }
 
 impl Voice {
@@ -65,9 +66,10 @@ impl Voice {
             sin_angle: 0.0, current_amp: 0.0, target_amp: 0.0,
             attack_samples: 0, releasing: false,
             release_samples: 0, release_total: AUDIO_RELEASE, refreshed: true,
+            init_delay: 0,
         }
     }
-    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32) -> Self {
+    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32, delay: usize) -> Self {
         let (release_total, pitch_drop) = match kind {
             VoiceKind::Birth => (6615_usize,  1.0_f32),         // 150ms
             VoiceKind::Death => (3087_usize,  0.9997_f32),      // 70ms, drops ~half-step
@@ -81,6 +83,7 @@ impl Voice {
             attack_samples: AUDIO_ATTACK,   // start fully in attack state = already at amp
             releasing: true,                // one-shot: immediately releasing
             release_samples: 0, release_total, refreshed: true,
+            init_delay: delay,
         }
     }
 }
@@ -1181,8 +1184,11 @@ impl Sim {
                 },
                 VoiceKind::Sustain => unreachable!(),
             };
+            // Temporal spreading: X position offsets event start across the frame
+            // Left=early, right=late — staggers simultaneous events, kills constructive buzzing
+            let delay = (x_t * (SAMPLES_PER_FRAME - 1) as f32) as usize;
             let id = self.next_id; self.next_id += 1;
-            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp));
+            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp, delay));
         }
 
         // ── 5. Remove fully-released voices ────────────────────────────────
@@ -1195,6 +1201,10 @@ impl Sim {
         for _ in 0..SAMPLES_PER_FRAME {
             let mut sum = 0.0_f32;
             for v in self.voice_pool.values_mut() {
+                // Temporal spread: stagger event voices across the frame by their X position
+                // Each sample we count down; voice produces nothing until delay hits zero
+                if v.init_delay > 0 { v.init_delay -= 1; continue; }
+
                 // Slew (events skip freq slew — they're one-shot and pitch-dropping)
                 if v.kind == VoiceKind::Sustain {
                     v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
