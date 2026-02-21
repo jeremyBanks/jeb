@@ -1913,7 +1913,7 @@ use std::io::{BufWriter, Write};
     // ── Audio parameter helper ─────────────────────────────────────────────
     // Shared by both sustain voices and event voices.
     fn audio_params(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32)
-        -> (f32, f32, f32, f32)  // (target_freq, target_cutoff, sin_angle, target_amp)
+        -> (f32, f32, f32, f32, f32)  // (target_freq, target_cutoff, sin_angle, target_amp, pan)
     {
         use std::f32::consts::PI;
         let speed = (vx * vx + vy * vy).sqrt();
@@ -1930,14 +1930,16 @@ use std::io::{BufWriter, Write};
         let target_freq = Self::pentatonic_freq(sin_th.abs()) * detune;
 
         // Filter: cos(θ) → brightness (right=bright, left=dark), base 400 Hz ±1.5 oct
-        // Ceiling ~1130Hz (was 2400Hz) — warmer, less shrill on fast rightward movers
         let cutoff_hz = 400.0 * 2.0_f32.powf(cos_th * 1.5);
         let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
 
-        // Amplitude: proportional to move magnitude (speed), sqrt curve
+        // Amplitude: proportional to speed, sqrt curve
         let target_amp = t.sqrt() * AUDIO_AMP_SCALE;
 
-        (target_freq, target_cutoff, sin_th, target_amp)
+        // Pan: cos(θ) — rightward=+1 (right), leftward=-1 (left), vertical=0 (center)
+        let pan = cos_th;
+
+        (target_freq, target_cutoff, sin_th, target_amp, pan)
     }
 
     fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
