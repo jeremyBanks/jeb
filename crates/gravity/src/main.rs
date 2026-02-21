@@ -444,8 +444,8 @@ impl Sim {
         // Births: weighted by neighbour speed — handled below after grid2 is built
 
         // Rate-limit: max births/deaths per Conway call, independent of pop_band.
-        // With conway_every=FPS/4 (4 calls/sec) and rate_limit=4: up to 16 births+deaths/sec.
-        let rate_limit = 4_usize;
+        // With conway_every=FPS/4 (4 calls/sec) and rate_limit=8: up to 32 births+deaths/sec.
+        let rate_limit = 8_usize;
         let max_births = pop_max.saturating_sub(n).min(rate_limit);
         let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         // desired_births NOT truncated here — weighted selection happens post-deaths
