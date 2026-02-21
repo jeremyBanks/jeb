@@ -142,6 +142,7 @@ struct Reverb {
     combs: [CombFilter; 4],   // prime-frame delays: 11, 13, 17, 19
     allpasses: [AllPass; 2],  // 5, 3 frames
     wet: f32,
+    out_lp: f32,              // global warmth LP — rolls off harshness above ~2.5kHz
 }
 impl Reverb {
     fn new() -> Self {
@@ -156,14 +157,19 @@ impl Reverb {
                 AllPass::new(5, 0.5),
                 AllPass::new(3, 0.5),
             ],
-            wet: 0.28,
+            wet: 0.40,   // was 0.28 — more space/softness
+            out_lp: 0.0,
         }
     }
     fn process(&mut self, dry: f32) -> f32 {
         let comb_sum = self.combs.iter_mut().map(|c| c.process(dry)).sum::<f32>() * 0.25;
         let ap1 = self.allpasses[0].process(comb_sum);
         let ap2 = self.allpasses[1].process(ap1);
-        dry * (1.0 - self.wet) + ap2 * self.wet
+        let mixed = dry * (1.0 - self.wet) + ap2 * self.wet;
+        // One-pole LP at ~2.5kHz: coeff = 1 - exp(-2π×2500/44100) ≈ 0.30
+        // Rolls off harshness, makes everything warmer without killing clarity
+        self.out_lp += (mixed - self.out_lp) * 0.30;
+        self.out_lp
     }
 }
 
