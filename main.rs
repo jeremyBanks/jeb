@@ -1131,8 +1131,6 @@ fn main() {
         .unwrap_or(0.048000_f32); // half previous
     let softening   = 1.5_f32;
     let speed_cap   = 6.0_f32; // cells/frame
-    let conway_every = if args.iter().any(|a| a == "--no-conway") { 0 }
-        else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let target_pop_default = W * H / 8; // 5120 for 256×160
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
