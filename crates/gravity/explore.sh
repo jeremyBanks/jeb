@@ -151,7 +151,6 @@ for entry in "${CONFIGS[@]}"; do
         hs=$(echo "$settled_first" | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
         he=$(echo "$settled_last"  | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
         # Count unique hot block positions across settled snapshots
-        local unique_hots
         unique_hots=$(echo "$settled_lines" | grep -oE 'hot=\[[^]]*\]' | sort -u | wc -l | tr -d ' ')
         if [ "$hs" = "$he" ]; then
             echo "  ⚠️  STATIC after settling: hot always [$hs] ($unique_hots unique patterns)"
