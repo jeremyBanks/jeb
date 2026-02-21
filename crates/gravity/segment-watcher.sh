@@ -117,10 +117,22 @@ while true; do
                 EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} rate=${RATE} wrap=${WRAP} dampen=${DAMP} vel=${INITV}"
             fi
 
+            # Current state from render log (last stats line before chunk boundary)
+            STATE_LINE=$(grep "avg_spd" /tmp/gravity_render.log 2>/dev/null | tail -1)
+            CUR_POP=$(  echo "$STATE_LINE" | grep -oE 'pop=[0-9]+'     | cut -d= -f2)
+            CUR_SPD=$(  echo "$STATE_LINE" | grep -oE 'avg_spd=[0-9.]+' | cut -d= -f2)
+            CUR_P10=$(  echo "$STATE_LINE" | grep -oE 'p10=[0-9.]+'     | cut -d= -f2)
+            STATE_MSG=""
+            [ -n "$CUR_POP" ] && STATE_MSG="pop=${CUR_POP} avg_spd=${CUR_SPD} p10=${CUR_P10}"
+
+            MSG="chunk ${chunk_num}/${TOTAL} | ${META}${EXTRA}"
+            [ -n "$STATE_MSG" ] && MSG="${MSG}
+${STATE_MSG}"
+
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
-                -m "chunk ${chunk_num}/${TOTAL} | ${META}${EXTRA}"; then
+                -m "$MSG"; then
                 echo "[watcher] sent chunk $chunk_num ($META)"
                 echo "$seg" >> "$SEEN_FILE"
                 LAST_TIME=$NOW
