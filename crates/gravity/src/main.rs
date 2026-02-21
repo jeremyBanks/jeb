@@ -1530,7 +1530,8 @@ fn main() {
     let softening: f32 = parse_arg("--softening")
         .and_then(|s| s.parse().ok())
         .unwrap_or(6.0_f32);
-    let speed_cap   = 1.125_f32; // cells/frame
+    let speed_cap: f32 = parse_arg("--speed-cap")
+        .and_then(|v| v.parse().ok()).unwrap_or(1.125); // cells/frame
     let target_pop_default = W * H / 16; // 2560 for 256×160 (half of W*H/8)
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
