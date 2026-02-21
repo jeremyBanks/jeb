@@ -310,7 +310,7 @@ impl Sim {
         let order = (0..cells.len()).collect();
         let target_pop = W * H / 32;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
-                        start_pop: target_pop, conway_every, pop_band, rate_limit,
+                        start_pop: target_pop, pop_band, rate_limit,
                         tick_count, prev_live: prev_live_rebuilt, wrap, steer,
                         conway_births: 0, conway_deaths: 0 };
         Some((sim, canvas, chunk_index))
