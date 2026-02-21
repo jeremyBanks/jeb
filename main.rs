@@ -349,18 +349,125 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool, dampen: bool, init_vel: &str) -> Self {
+           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool,
+           dampen: bool, init_vel: &str, circles: usize) -> Self {
+        use std::f32::consts::PI;
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
         let mut cells: Vec<Cell> = Vec::new();
-
-        // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
         let mut occupied = vec![false; W * H];
-        for c in &cells {
-            occupied[c.gy() * W + c.gx()] = true;
-        }
+
+        // Helper: compute velocity for a seeded cell at grid (xi, yi).
+        let cx_global = W as f32 / 2.0;
+        let cy_global = H as f32 / 2.0;
+        let mut make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
+            match init_vel {
+                "swirl" => {
+                    if xi < W / 2 && yi < H / 2 {
+                        (xorf32(rng) * 0.75 - 0.25, (xorf32(rng) - 0.5) * 0.25)
+                    } else if xi >= W / 2 && yi >= H / 2 {
+                        (xorf32(rng) * 0.75 - 0.5,  (xorf32(rng) - 0.5) * 0.25)
+                    } else if xi >= W / 2 {
+                        ((xorf32(rng) - 0.5) * 0.25, (xorf32(rng) - 0.5) * 0.25)
+                    } else {
+                        ((xorf32(rng) - 0.5) * 0.25, xorf32(rng) * 0.25)
+                    }
+                }
+                "random" => ((xorf32(rng) - 0.5) * 0.5, (xorf32(rng) - 0.5) * 0.5),
+                "spin" => {
+                    let dx = xi as f32 + 0.5 - cx_global;
+                    let dy = yi as f32 + 0.5 - cy_global;
+                    let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                    let scale = (r / (cx_global.min(cy_global))).min(1.0) * 0.5;
+                    (-dy/r * scale + (xorf32(rng)-0.5)*0.1, dx/r * scale + (xorf32(rng)-0.5)*0.1)
+                }
+                "spin-ccw" => {
+                    let dx = xi as f32 + 0.5 - cx_global;
+                    let dy = yi as f32 + 0.5 - cy_global;
+                    let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                    let scale = (r / (cx_global.min(cy_global))).min(1.0) * 0.5;
+                    (dy/r * scale + (xorf32(rng)-0.5)*0.1, -dx/r * scale + (xorf32(rng)-0.5)*0.1)
+                }
+                "radial-out" => {
+                    let dx = xi as f32 + 0.5 - cx_global;
+                    let dy = yi as f32 + 0.5 - cy_global;
+                    let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                    (dx/r * 0.4 + (xorf32(rng)-0.5)*0.1, dy/r * 0.4 + (xorf32(rng)-0.5)*0.1)
+                }
+                "zero" | _ => (0.0, 0.0),
+            }
+        };
+
+        if circles > 0 {
+            // ── Circle placement ────────────────────────────────────────────
+            // Each circle is a filled disk containing target_pop/circles cells.
+            // Radius is derived so cells fill the disk at natural density.
+            // Circle centres are chosen greedily to maximise minimum distance
+            // from canvas walls and from each other (tie-break: closer to centre).
+            let cells_per_circle = (target_pop / circles).max(1);
+            let radius = ((cells_per_circle as f32 / PI).sqrt()).max(4.0)
+                          .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
+            let margin = radius + 1.0;
+
+            // Candidate grid (every 2 px inside the margin zone).
+            let mut candidates: Vec<(f32, f32)> = Vec::new();
+            let mut cx = margin;
+            while cx <= W as f32 - margin {
+                let mut cy = margin;
+                while cy <= H as f32 - margin {
+                    candidates.push((cx, cy));
+                    cy += 2.0;
+                }
+                cx += 2.0;
+            }
+
+            // Score: min(wall-clearance, min-dist-to-chosen) — tie-break toward canvas centre.
+            let score = |px: f32, py: f32, chosen: &[(f32, f32)]| -> f32 {
+                let wall = px.min(W as f32 - px).min(py.min(H as f32 - py));
+                let nbr  = chosen.iter()
+                    .map(|&(qx, qy)| ((px-qx).powi(2)+(py-qy).powi(2)).sqrt())
+                    .fold(f32::INFINITY, f32::min);
+                let centre_pen = ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001;
+                wall.min(nbr) - centre_pen
+            };
+
+            let mut centres: Vec<(f32, f32)> = Vec::with_capacity(circles);
+            for _ in 0..circles {
+                if let Some(&best) = candidates.iter()
+                    .max_by(|&&a, &&b| score(a.0, a.1, &centres)
+                        .partial_cmp(&score(b.0, b.1, &centres)).unwrap())
+                {
+                    centres.push(best);
+                }
+            }
+
+            // Fill each disk with cells_per_circle cells (random uniform in disk).
+            for &(disk_cx, disk_cy) in &centres {
+                let mut placed = 0;
+                for _ in 0..cells_per_circle * 200 {
+                    if placed >= cells_per_circle { break; }
+                    // Uniform random point in disk: sqrt for area-uniform radial sampling.
+                    let angle = xorf32(&mut rng) * 2.0 * PI;
+                    let r     = xorf32(&mut rng).sqrt() * radius;
+                    let fpx   = disk_cx + r * angle.cos();
+                    let fpy   = disk_cy + r * angle.sin();
+                    let xi    = fpx as usize;
+                    let yi    = fpy as usize;
+                    if xi >= W || yi >= H { continue; }
+                    let idx = yi * W + xi;
+                    if occupied[idx] { continue; }
+                    let (vx, vy) = make_vel(xi, yi, &mut rng);
+                    cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                      prev_speed: 0.0, id: next_id, moved: false });
+                    next_id += 1;
+                    occupied[idx] = true;
+                    placed += 1;
+                }
+            }
+        } else {
+        // ── Default: random scatter (original behaviour) ─────────────────────
         let seed_count = if seed_density_inv > 0 {
-            occupied.iter().filter(|&&v| !v).count() / seed_density_inv
+            (W * H) / seed_density_inv
         } else { 0 };
         let mut seeded = 0;
         for _ in 0..W * H * 4 {
