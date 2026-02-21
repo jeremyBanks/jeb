@@ -223,7 +223,7 @@ impl Sim {
         // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
         let mut occupied = vec![false; W * H];
         for c in &cells {
-            occupied[c.y * W + c.x] = true;
+            occupied[c.gy() * W + c.gx()] = true;
         }
         let seed_count = if seed_density_inv > 0 {
             occupied.iter().filter(|&&v| !v).count() / seed_density_inv
