@@ -349,18 +349,125 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool, dampen: bool, init_vel: &str) -> Self {
+           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool,
+           dampen: bool, init_vel: &str, circles: usize) -> Self {
+        use std::f32::consts::PI;
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
         let mut cells: Vec<Cell> = Vec::new();
-
-        // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
         let mut occupied = vec![false; W * H];
-        for c in &cells {
-            occupied[c.gy() * W + c.gx()] = true;
-        }
+
+        // Helper: compute velocity for a seeded cell at grid (xi, yi).
+        let cx_global = W as f32 / 2.0;
+        let cy_global = H as f32 / 2.0;
+        let mut make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
+            match init_vel {
+                "swirl" => {
+                    if xi < W / 2 && yi < H / 2 {
+                        (xorf32(rng) * 0.75 - 0.25, (xorf32(rng) - 0.5) * 0.25)
+                    } else if xi >= W / 2 && yi >= H / 2 {
+                        (xorf32(rng) * 0.75 - 0.5,  (xorf32(rng) - 0.5) * 0.25)
+                    } else if xi >= W / 2 {
+                        ((xorf32(rng) - 0.5) * 0.25, (xorf32(rng) - 0.5) * 0.25)
+                    } else {
+                        ((xorf32(rng) - 0.5) * 0.25, xorf32(rng) * 0.25)
+                    }
+                }
+                "random" => ((xorf32(rng) - 0.5) * 0.5, (xorf32(rng) - 0.5) * 0.5),
+                "spin" => {
+                    let dx = xi as f32 + 0.5 - cx_global;
+                    let dy = yi as f32 + 0.5 - cy_global;
+                    let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                    let scale = (r / (cx_global.min(cy_global))).min(1.0) * 0.5;
+                    (-dy/r * scale + (xorf32(rng)-0.5)*0.1, dx/r * scale + (xorf32(rng)-0.5)*0.1)
+                }
+                "spin-ccw" => {
+                    let dx = xi as f32 + 0.5 - cx_global;
+                    let dy = yi as f32 + 0.5 - cy_global;
+                    let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                    let scale = (r / (cx_global.min(cy_global))).min(1.0) * 0.5;
+                    (dy/r * scale + (xorf32(rng)-0.5)*0.1, -dx/r * scale + (xorf32(rng)-0.5)*0.1)
+                }
+                "radial-out" => {
+                    let dx = xi as f32 + 0.5 - cx_global;
+                    let dy = yi as f32 + 0.5 - cy_global;
+                    let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                    (dx/r * 0.4 + (xorf32(rng)-0.5)*0.1, dy/r * 0.4 + (xorf32(rng)-0.5)*0.1)
+                }
+                "zero" | _ => (0.0, 0.0),
+            }
+        };
+
+        if circles > 0 {
+            // ── Circle placement ────────────────────────────────────────────
+            // Each circle is a filled disk containing target_pop/circles cells.
+            // Radius is derived so cells fill the disk at natural density.
+            // Circle centres are chosen greedily to maximise minimum distance
+            // from canvas walls and from each other (tie-break: closer to centre).
+            let cells_per_circle = (target_pop / circles).max(1);
+            let radius = ((cells_per_circle as f32 / PI).sqrt()).max(4.0)
+                          .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
+            let margin = radius + 1.0;
+
+            // Candidate grid (every 2 px inside the margin zone).
+            let mut candidates: Vec<(f32, f32)> = Vec::new();
+            let mut cx = margin;
+            while cx <= W as f32 - margin {
+                let mut cy = margin;
+                while cy <= H as f32 - margin {
+                    candidates.push((cx, cy));
+                    cy += 2.0;
+                }
+                cx += 2.0;
+            }
+
+            // Score: min(wall-clearance, min-dist-to-chosen) — tie-break toward canvas centre.
+            let score = |px: f32, py: f32, chosen: &[(f32, f32)]| -> f32 {
+                let wall = px.min(W as f32 - px).min(py.min(H as f32 - py));
+                let nbr  = chosen.iter()
+                    .map(|&(qx, qy)| ((px-qx).powi(2)+(py-qy).powi(2)).sqrt())
+                    .fold(f32::INFINITY, f32::min);
+                let centre_pen = ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001;
+                wall.min(nbr) - centre_pen
+            };
+
+            let mut centres: Vec<(f32, f32)> = Vec::with_capacity(circles);
+            for _ in 0..circles {
+                if let Some(&best) = candidates.iter()
+                    .max_by(|&&a, &&b| score(a.0, a.1, &centres)
+                        .partial_cmp(&score(b.0, b.1, &centres)).unwrap())
+                {
+                    centres.push(best);
+                }
+            }
+
+            // Fill each disk with cells_per_circle cells (random uniform in disk).
+            for &(disk_cx, disk_cy) in &centres {
+                let mut placed = 0;
+                for _ in 0..cells_per_circle * 200 {
+                    if placed >= cells_per_circle { break; }
+                    // Uniform random point in disk: sqrt for area-uniform radial sampling.
+                    let angle = xorf32(&mut rng) * 2.0 * PI;
+                    let r     = xorf32(&mut rng).sqrt() * radius;
+                    let fpx   = disk_cx + r * angle.cos();
+                    let fpy   = disk_cy + r * angle.sin();
+                    let xi    = fpx as usize;
+                    let yi    = fpy as usize;
+                    if xi >= W || yi >= H { continue; }
+                    let idx = yi * W + xi;
+                    if occupied[idx] { continue; }
+                    let (vx, vy) = make_vel(xi, yi, &mut rng);
+                    cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                      prev_speed: 0.0, id: next_id, moved: false });
+                    next_id += 1;
+                    occupied[idx] = true;
+                    placed += 1;
+                }
+            }
+        } else {
+        // ── Default: random scatter (original behaviour) ─────────────────────
         let seed_count = if seed_density_inv > 0 {
-            occupied.iter().filter(|&&v| !v).count() / seed_density_inv
+            (W * H) / seed_density_inv
         } else { 0 };
         let mut seeded = 0;
         for _ in 0..W * H * 4 {
@@ -369,70 +476,15 @@ impl Sim {
             let yi = (xoru64(&mut rng) as usize) % H;
             let idx = yi * W + xi;
             if !occupied[idx] {
-                let cx = W as f32 / 2.0;
-                let cy = H as f32 / 2.0;
-                let (vx, vy) = match init_vel {
-                    "swirl" => {
-                        // Asymmetric quadrant bias — creates net angular momentum.
-                        // Top-left biased right, bottom-right biased left,
-                        // bottom-left biased down, top-right unbiased.
-                        if xi < W / 2 && yi < H / 2 {
-                            (xorf32(&mut rng) * 0.75 - 0.25, (xorf32(&mut rng) - 0.5) * 0.25)
-                        } else if xi >= W / 2 && yi >= H / 2 {
-                            (xorf32(&mut rng) * 0.75 - 0.5,  (xorf32(&mut rng) - 0.5) * 0.25)
-                        } else if xi >= W / 2 {
-                            ((xorf32(&mut rng) - 0.5) * 0.25, (xorf32(&mut rng) - 0.5) * 0.25)
-                        } else {
-                            ((xorf32(&mut rng) - 0.5) * 0.25, xorf32(&mut rng) * 0.25)
-                        }
-                    }
-                    "random" => {
-                        // Isotropic random — no net angular momentum or linear drift.
-                        ((xorf32(&mut rng) - 0.5) * 0.5, (xorf32(&mut rng) - 0.5) * 0.5)
-                    }
-                    "spin" => {
-                        // Clockwise tangential velocity field.
-                        // Speed proportional to distance from centre, capped at 0.5.
-                        let dx = xi as f32 + 0.5 - cx;
-                        let dy = yi as f32 + 0.5 - cy;
-                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
-                        let scale = (r / (cx.min(cy))).min(1.0) * 0.5;
-                        // Clockwise tangent: (-dy/r, dx/r)
-                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
-                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
-                        (-dy / r * scale + noise_x, dx / r * scale + noise_y)
-                    }
-                    "spin-ccw" => {
-                        // Counter-clockwise tangential velocity field.
-                        let dx = xi as f32 + 0.5 - cx;
-                        let dy = yi as f32 + 0.5 - cy;
-                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
-                        let scale = (r / (cx.min(cy))).min(1.0) * 0.5;
-                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
-                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
-                        (dy / r * scale + noise_x, -dx / r * scale + noise_y)
-                    }
-                    "radial-out" => {
-                        // Radially outward from centre — dramatic infall after reversal.
-                        let dx = xi as f32 + 0.5 - cx;
-                        let dy = yi as f32 + 0.5 - cy;
-                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
-                        let scale = 0.4;
-                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
-                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
-                        (dx / r * scale + noise_x, dy / r * scale + noise_y)
-                    }
-                    "zero" | _ => {
-                        // All seeded cells start stationary — pure gravity collapse from rest.
-                        (0.0, 0.0)
-                    }
-                };
-                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0, id: next_id, moved: false });
+                let (vx, vy) = make_vel(xi, yi, &mut rng);
+                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                  prev_speed: 0.0, id: next_id, moved: false });
                 next_id += 1;
                 occupied[idx] = true;
                 seeded += 1;
             }
         }
+        } // end else (random scatter)
         shuffle_vec(&mut cells, &mut rng);
 
         let n = cells.len();
@@ -1470,10 +1522,6 @@ const PALETTE_SRGB: &[(u8, u8, u8)] = &[
 /// Zero-speed (still cell) colour — dark navy.
 const SLOW_RGB: (u8, u8, u8) = (0x06, 0x1B, 0x31);
 
-/// One entry on the hue wheel: a palette colour plus its OKLab coords and OKLCH hue.
-#[derive(Clone, Debug)]
-struct HueAnchor { l: f32, a: f32, b: f32, h: f32 }
-
 fn srgb_u8_to_linear(x: u8) -> f32 {
     let x = x as f32 / 255.0;
     if x <= 0.04045 { x / 12.92 } else { ((x + 0.055) / 1.055).powf(2.4) }
@@ -1491,54 +1539,55 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (lab_l, lab_a, lab_b)
 }
 
-/// Build hue-sorted anchors from PALETTE_SRGB, skipping near-achromatic entries (C < 0.02).
-fn build_hue_anchors() -> Vec<HueAnchor> {
-    let mut anchors: Vec<HueAnchor> = PALETTE_SRGB.iter().filter_map(|&(r, g, b)| {
-        let (l, a, b_) = rgb_to_oklab(r, g, b);
-        let c = (a * a + b_ * b_).sqrt();
-        if c < 0.02 { return None; }   // skip near-achromatic (e.g. #F6F9FC)
-        let h = b_.atan2(a);
-        Some(HueAnchor { l, a, b: b_, h })
-    }).collect();
-    anchors.sort_by(|x, y| x.h.partial_cmp(&y.h).unwrap());
-    anchors
+/// Directional colour anchors (OKLab).  Velocity components select four basis colours
+/// via squared-clamp weights that always sum to 1 on the unit circle:
+///   w_right = max(ux,0)²   w_left = max(−ux,0)²
+///   w_down  = max(uy,0)²   w_up   = max(−uy,0)²
+/// (ux²+uy²=1 guarantees Σwᵢ=1.)
+///
+/// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
+/// down  / up    → warm family (#FF6118 orange      / #EA2261 crimson)
+/// diagonal blends give intermediate colours (hot-pink, gold, etc.).
+/// zero-speed anchor: #061B31 dark navy.
+#[derive(Clone, Debug)]
+struct DirectionalPalette {
+    dark:    (f32, f32, f32),  // #061B31
+    c_right: (f32, f32, f32),  // #635BFF  periwinkle — +x
+    c_left:  (f32, f32, f32),  // #533AFD  violet     — −x
+    c_down:  (f32, f32, f32),  // #FF6118  orange     — +y (screen-down)
+    c_up:    (f32, f32, f32),  // #EA2261  crimson    — −y (screen-up)
 }
 
-/// Circularly interpolate palette anchors in OKLab for velocity direction θ.
-/// Returns the target (L, a, b) that a cell at speed_cap in direction θ should have.
-fn palette_for_angle(theta: f32, anchors: &[HueAnchor]) -> (f32, f32, f32) {
-    use std::f32::consts::TAU;
-    let n = anchors.len();
-    if n == 0 { return (0.5, 0.0, 0.0); }
-    if n == 1 { return (anchors[0].l, anchors[0].a, anchors[0].b); }
+impl DirectionalPalette {
+    fn build() -> Self {
+        DirectionalPalette {
+            dark:    rgb_to_oklab(0x06, 0x1B, 0x31),
+            c_right: rgb_to_oklab(0x63, 0x5B, 0xFF),
+            c_left:  rgb_to_oklab(0x53, 0x3A, 0xFD),
+            c_down:  rgb_to_oklab(0xFF, 0x61, 0x18),
+            c_up:    rgb_to_oklab(0xEA, 0x22, 0x61),
+        }
+    }
 
-    // Find the two anchors that bracket θ on the circle.
-    let idx = anchors.partition_point(|a| a.h < theta);
-    let i0  = if idx == 0 { n - 1 } else { idx - 1 };
-    let i1  = idx % n;
-
-    let h0 = anchors[i0].h;
-    // Ensure h1 is ahead of h0 (wrap around TAU if needed).
-    let h1 = { let h = anchors[i1].h; if h > h0 { h } else { h + TAU } };
-    let th = if theta >= h0 { theta } else { theta + TAU };
-    let t  = ((th - h0) / (h1 - h0)).clamp(0.0, 1.0);
-
-    // Interpolate in OKLab — perceptually smooth, no hue kinks.
-    let l = anchors[i0].l + (anchors[i1].l - anchors[i0].l) * t;
-    let a = anchors[i0].a + (anchors[i1].a - anchors[i0].a) * t;
-    let b = anchors[i0].b + (anchors[i1].b - anchors[i0].b) * t;
-    (l, a, b)
+    /// Blend the four directional anchors for a unit velocity (ux, uy).
+    fn directional_color(&self, ux: f32, uy: f32) -> (f32, f32, f32) {
+        let w_r = ux.max(0.0).powi(2);
+        let w_l = (-ux).max(0.0).powi(2);
+        let w_d = uy.max(0.0).powi(2);
+        let w_u = (-uy).max(0.0).powi(2);
+        let l = w_r*self.c_right.0 + w_l*self.c_left.0 + w_d*self.c_down.0 + w_u*self.c_up.0;
+        let a = w_r*self.c_right.1 + w_l*self.c_left.1 + w_d*self.c_down.1 + w_u*self.c_up.1;
+        let b = w_r*self.c_right.2 + w_l*self.c_left.2 + w_d*self.c_down.2 + w_u*self.c_up.2;
+        (l, a, b)
+    }
 }
 
 #[derive(Clone, Debug)]
 enum PaletteMode {
     /// Original: speed→L/C, direction→hue uniformly (fallback).
     Classic,
-    /// Perceptual hue-wheel: palette colours at speed_cap, extrapolates beyond.
-    Radical {
-        anchors: Vec<HueAnchor>,
-        dark: (f32, f32, f32),  // OKLab of SLOW_RGB (#061B31)
-    },
+    /// 4-directional weights: left/right=blue, up/down=warm, zero-speed=dark navy.
+    Radical(DirectionalPalette),
 }
 
 fn load_palette() -> PaletteMode {
@@ -1547,10 +1596,7 @@ fn load_palette() -> PaletteMode {
     if s.starts_with("classic") {
         PaletteMode::Classic
     } else {
-        // Default (no file, "radical", or anything else) → Radical.
-        let anchors = build_hue_anchors();
-        let dark = rgb_to_oklab(SLOW_RGB.0, SLOW_RGB.1, SLOW_RGB.2);
-        PaletteMode::Radical { anchors, dark }
+        PaletteMode::Radical(DirectionalPalette::build())
     }
 }
 
@@ -1559,7 +1605,6 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
 
     match palette {
         PaletteMode::Classic => {
-            // Original behaviour — unchanged.
             let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
             let l = 0.45 + 0.30 * t;
             let c = 0.20 * t;
@@ -1567,33 +1612,31 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
             (l, c * h.cos(), c * h.sin())
         }
 
-        PaletteMode::Radical { anchors, dark: (dl, da, db) } => {
-            let theta = vy.atan2(vx);
-            let (tgt_l, tgt_a, tgt_b) = palette_for_angle(theta, anchors);
-
-            // t = 0 → still (dark navy), t = 1 → speed_cap (palette colour).
-            // Cells can reach up to 2× speed_cap, so t can be as high as ~2.
+        PaletteMode::Radical(dp) => {
+            // t = 0 → still (dark navy), t = 1 → speed_cap, up to ~2.0 beyond.
             let t = spd / speed_cap;
 
+            // Directional blend: unit velocity selects among four palette colours.
+            let (dl, da, db) = dp.dark;
+            let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
+                dp.directional_color(vx / spd, vy / spd)
+            } else {
+                (dl, da, db)
+            };
+
             if t <= 1.0 {
-                // Linear blend in OKLab: dark navy → palette colour.
+                // Linear blend in OKLab: dark navy → directional palette colour.
                 let l = dl + (tgt_l - dl) * t;
                 let a = da + (tgt_a - da) * t;
                 let b = db + (tgt_b - db) * t;
                 (l, a, b)
             } else {
-                // Extrapolation: beyond speed_cap push L brighter and C more saturated.
-                // √-taper gives rapid initial gain with diminishing returns toward 2×.
-                let t_over = (t - 1.0).clamp(0.0, 1.0);
-                let extra  = t_over.sqrt();
-
-                // L drifts toward 0.92 (bright but not blown-out white).
+                // Beyond speed_cap: push L brighter and C more saturated.
+                // √-taper gives fast initial gain, diminishing returns toward 2×.
+                let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
                 let l = (tgt_l + (0.92 - tgt_l) * extra * 0.45).min(0.93);
-                // C scales outward: up to +40 % at 2× speed_cap.
                 let c_scale = 1.0 + extra * 0.40;
-                let a = tgt_a * c_scale;
-                let b = tgt_b * c_scale;
-                (l, a, b)
+                (l, tgt_a * c_scale, tgt_b * c_scale)
             }
         }
     }
@@ -1800,6 +1843,13 @@ fn main() {
     let init_vel: String = parse_arg("--init-vel")
         .unwrap_or_else(|| "swirl".to_string());
 
+    // --circles N: place N filled disks instead of random scatter.
+    // Each disk gets target_pop/N cells; radius derived from cell count.
+    // Disk centres maximise min-distance from walls and each other.
+    let circles: usize = parse_arg("--circles")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+
     // --commit HASH: git commit ID for reproducibility logging (passed by run-loop.sh)
     let commit_id: String = parse_arg("--commit")
         .unwrap_or_else(|| "unknown".to_string());
@@ -1817,13 +1867,21 @@ fn main() {
     let output_file = format!("{}/gravity_{}.mp4", shared_dir, run_id);
 
     // Write settings file alongside video and run_info for the watcher
-    let init_pop = if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
+    let init_pop = if circles > 0 {
+        use std::f32::consts::PI;
+        let cells_per = (target_pop / circles).max(1);
+        let r = ((cells_per as f32 / PI).sqrt()).max(4.0)
+                 .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
+        (PI * r * r) as usize * circles
+    } else if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
+    let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
         "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
          commit:        {commit_id}\n\
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
+         circles:       {circles_str}\n\
          wrap:          {wrap}\ndampen:        {dampen}\nsteer:         {steer}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
@@ -1844,8 +1902,12 @@ fn main() {
             (s, c, ci)
         })
         .unwrap_or_else(|| {
-            println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen, &init_vel);
+            if circles > 0 {
+                println!("Fresh start [{run_id}] seed={rng_seed} circles={circles}");
+            } else {
+                println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
+            }
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen, &init_vel, circles);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
