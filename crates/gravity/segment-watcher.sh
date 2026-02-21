@@ -85,10 +85,17 @@ while true; do
             SIZE_MB=$(du -m "$seg" | cut -f1)
             META="${MINS}m${SECS}s | ${SIZE_MB}MB"
 
+            # Include current population from stats file if available
+            POP_INFO=""
+            if [ -f "state/last_stats.txt" ]; then
+                POP=$(grep "^pop=" state/last_stats.txt | cut -d= -f2)
+                [ -n "$POP" ] && POP_INFO=" | pop=${POP}"
+            fi
+
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
-                -m "chunk ${chunk_num}/${TOTAL} | ${META}"; then
+                -m "chunk ${chunk_num}/${TOTAL} | ${META}${POP_INFO}"; then
                 echo "[watcher] sent chunk $chunk_num (${META})"
                 echo "$seg" >> "$SEEN_FILE"
                 LAST_TIME=$NOW
