@@ -1119,7 +1119,7 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .expect("Usage: gravity --seconds <N> [--radius <r>] [--seed-density <1/N>] [--epilogue]");
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
-    let wrap  = !args.iter().any(|a| a == "--no-wrap");  // default: toroidal wrap
+    let wrap  = args.iter().any(|a| a == "--wrap");  // default: hard walls (no wrap)
     let steer = args.iter().any(|a| a == "--steer");     // default: off
     // --radius: circle radius (0 = no blobs), default 4
     let rng_seed: u64 = parse_arg("--seed")
