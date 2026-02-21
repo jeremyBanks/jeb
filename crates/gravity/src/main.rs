@@ -1665,3 +1665,25 @@ use std::io::{BufWriter, Write};
             let (px, py) = (self.cells[i].px, self.cells[i].py);
             qt_insert(&mut nodes, 0, i, px, py, 0);
         }
+
+// [recovery] edit target not found, appending:
+    fn stats(&self) -> String {
+        let total = self.cells.len() as f32;
+        let in_bounds: Vec<&Cell> = if self.wrap {
+            self.cells.iter().collect()
+        } else {
+            self.cells.iter().filter(|c| c.in_bounds()).collect()
+        };
+        let pop = in_bounds.len();
+        let n = total;
+        let avg_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).sum::<f32>() / n;
+        let max_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).fold(0.0f32, f32::max);
+        let cx = self.cells.iter().map(|c| c.px).sum::<f32>() / n;
+        let cy = self.cells.iter().map(|c| c.py).sum::<f32>() / n;
+        let spread = self.cells.iter().map(|c| {
+            let dx = c.px - cx; let dy = c.py - cy;
+            (dx*dx+dy*dy).sqrt()
+        }).sum::<f32>() / n;
+        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.1},{cy:.1})",
+            self.conway_births, self.conway_deaths)
+    }
