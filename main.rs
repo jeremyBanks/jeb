@@ -46,9 +46,11 @@ struct Voice {
     filter_state: f32,         // one-pole LP memory
     current_cutoff: f32,
     target_cutoff: f32,
-    sin_angle: f32,            // waveform blend: -1=pure sine, +1=pure saw
+    sin_angle: f32,            // waveform blend: -1=pure sine, +1=triangle
     current_amp: f32,
     target_amp: f32,
+    current_pan: f32,          // stereo position: -1=full left, 0=center, +1=full right
+    target_pan: f32,
     attack_samples: usize,
     releasing: bool,
     release_samples: usize,
