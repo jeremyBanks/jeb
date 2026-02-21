@@ -1338,6 +1338,9 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
 
+    let run_id: String = parse_arg("--run-id")
+        .unwrap_or_else(|| format!("seed{}", rng_seed));
+
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
     let frames_dir      = "frames/chunk";
@@ -1345,7 +1348,20 @@ fn main() {
     let shared_dir = std::env::var("GRAVITY_SHARED_DIR")
         .unwrap_or_else(|_| String::from("/Users/matte/.openclaw/workspace/shared/gravity"));
     fs::create_dir_all(&shared_dir).ok();
-    let output_file = format!("{}/gravity_{}s_seed{}.mp4", shared_dir, seconds, rng_seed);
+    let output_file = format!("{}/gravity_{}.mp4", shared_dir, run_id);
+
+    // Write settings file alongside video and run_info for the watcher
+    let settings = format!(
+        "run_id:      {run_id}\nseed:        {rng_seed}\nseconds:     {seconds}\n\
+         gravity:     {g}\nsoftening:   {softening}\nspeed_cap:   {speed_cap}\n\
+         pop_target:  {target_pop}\npop_band:    {pop_band}\nrate_limit:  {rate_limit}\n\
+         wrap:        {wrap}\ndampen:      {dampen}\n\
+         resolution:  {}x{} → 2048x1280\n",
+        OUT_W * 2, OUT_H * 2
+    );
+    let settings_file = format!("{}/gravity_{}.txt", shared_dir, run_id);
+    let _ = fs::write(&settings_file, &settings);
+    let _ = fs::write("state/run_info.txt", format!("run_id={run_id}\n{settings}"));
 
     fs::create_dir_all(segments_dir).unwrap();
     fs::create_dir_all(frames_dir).unwrap();
