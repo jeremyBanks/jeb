@@ -7,28 +7,27 @@ cd "$(dirname "$0")"
 
 BIN="/Users/matte/jeb/target/release/gravity"
 
-# Kill any running non-headless gravity renders
+# Kill ALL non-headless gravity renders (force-kill, no SIGTERM)
 EXISTING=$(pgrep -f "gravity.*--seconds" 2>/dev/null | while read pid; do
-    if ! ps -p "$pid" -o args= 2>/dev/null | grep -q "\-\-headless"; then
-        echo "$pid"
-    fi
+    ps -p "$pid" -o args= 2>/dev/null | grep -q "\-\-headless" || echo "$pid"
 done)
-
 if [ -n "$EXISTING" ]; then
-    echo "[start-render] killing existing render(s): $EXISTING"
+    echo "[start-render] force-killing existing render(s): $EXISTING"
     kill -9 $EXISTING 2>/dev/null
-    sleep 2
+    sleep 3  # give time for file handles to close
 fi
+# Verify they're dead
+STILL=$(pgrep -f "gravity.*--seconds" 2>/dev/null | while read pid; do
+    ps -p "$pid" -o args= 2>/dev/null | grep -q "\-\-headless" || echo "$pid"
+done)
+[ -n "$STILL" ] && { echo "[start-render] ERROR: processes still alive: $STILL"; exit 1; }
 
 # Clean up state from previous run
 rm -f state/checkpoint.bin state/orig_state.bin state/run_info.txt segments.txt
-rm -f /tmp/gravity_segments_seen.txt
 rm -rf segments/ && mkdir -p segments frames/chunk
 
-# Restart watcher cleanly
+# Kill any stale watchers — new one starts after run_info.txt is written
 pkill -f "segment-watcher" 2>/dev/null; sleep 1
-nohup bash segment-watcher.sh > /tmp/watcher.log 2>&1 &
-echo "[start-render] watcher PID=$!"
 
 # Launch the render
 COMMIT=$(git -C "$(dirname "$0")" rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
@@ -40,7 +39,13 @@ nohup "$BIN" \
     --seed "$SEED" --run-id "$RUN_ID" --commit "$COMMIT" \
     "$@" \
     > /tmp/gravity_render.log 2>&1 &
+RENDER_PID=$!
+echo "[start-render] render PID=$RENDER_PID"
 
-echo "[start-render] render PID=$!"
-sleep 5
+# Wait for run_info.txt before starting watcher
+for i in $(seq 15); do sleep 1; [ -f state/run_info.txt ] && break; done
 grep "gravity:\|softening:\|speed_cap:\|pop_band:\|rate_limit:\|init_vel:\|wrap:\|dampen:" state/run_info.txt 2>/dev/null || echo "run_info not yet written"
+
+# Start watcher AFTER run_info exists so it reads correct run_id
+nohup bash segment-watcher.sh > /tmp/watcher.log 2>&1 &
+echo "[start-render] watcher PID=$!"
