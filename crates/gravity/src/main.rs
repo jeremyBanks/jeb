@@ -21,7 +21,7 @@ const AUDIO_BASE_FREQ: f32  = 130.81; // C3
 const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
 const AUDIO_SLEW: f32       = 0.05;   // per-sample freq snap (fast — less glide between scale degrees)
 const AUDIO_AMP_SCALE: f32  = 0.0015; // per-voice amplitude scale; tanh handles headroom
-const AUDIO_ATTACK: usize   = 220;    // 5 ms
+const AUDIO_ATTACK: usize   = 882;    // 20 ms — softer onset, less click
 const AUDIO_RELEASE: usize  = 88200;  // 2 seconds — long enough to outlive Conway deaths smoothly
 
 #[derive(Clone, Copy, PartialEq)]
@@ -142,6 +142,7 @@ struct Reverb {
     combs: [CombFilter; 4],   // prime-frame delays: 11, 13, 17, 19
     allpasses: [AllPass; 2],  // 5, 3 frames
     wet: f32,
+    out_lp: f32,              // global warmth LP — rolls off harshness above ~2.5kHz
 }
 impl Reverb {
     fn new() -> Self {
@@ -156,14 +157,19 @@ impl Reverb {
                 AllPass::new(5, 0.5),
                 AllPass::new(3, 0.5),
             ],
-            wet: 0.28,
+            wet: 0.40,   // was 0.28 — more space/softness
+            out_lp: 0.0,
         }
     }
     fn process(&mut self, dry: f32) -> f32 {
         let comb_sum = self.combs.iter_mut().map(|c| c.process(dry)).sum::<f32>() * 0.25;
         let ap1 = self.allpasses[0].process(comb_sum);
         let ap2 = self.allpasses[1].process(ap1);
-        dry * (1.0 - self.wet) + ap2 * self.wet
+        let mixed = dry * (1.0 - self.wet) + ap2 * self.wet;
+        // One-pole LP at ~2.5kHz: coeff = 1 - exp(-2π×2500/44100) ≈ 0.30
+        // Rolls off harshness, makes everything warmer without killing clarity
+        self.out_lp += (mixed - self.out_lp) * 0.30;
+        self.out_lp
     }
 }
 
@@ -1108,8 +1114,9 @@ impl Sim {
         let detune = 2.0_f32.powf((px_a.cos() * 5.0 + py_a.sin() * 3.0) / 1200.0);
         let target_freq = Self::pentatonic_freq(sin_th.abs()) * detune;
 
-        // Filter: cos(θ) → brightness (right=bright, left=dark), base 600 Hz ±2 oct
-        let cutoff_hz = 600.0 * 2.0_f32.powf(cos_th * 2.0);
+        // Filter: cos(θ) → brightness (right=bright, left=dark), base 400 Hz ±1.5 oct
+        // Ceiling ~1130Hz (was 2400Hz) — warmer, less shrill on fast rightward movers
+        let cutoff_hz = 400.0 * 2.0_f32.powf(cos_th * 1.5);
         let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
 
         // Amplitude: proportional to move magnitude (speed), sqrt curve
