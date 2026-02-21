@@ -40,7 +40,9 @@ trap "rm -rf $WORKDIR" EXIT
 
 # ── BASE PARAMS (explicitly set; configs override individual flags) ────────────
 # These match the known-good production config. Override any in CONFIGS entries.
-BASE_ARGS="--pop-target 5120 --pop-band 1280 --rate-limit 32 --seed-density 128 --speed-cap 6.0 --gravity 0.03125 --softening 6 --wrap"
+BASE_ARGS="--pop-target 5120 --pop-band 1280 --rate-limit 32 --seed-density 128 --speed-cap 6.0 --gravity 0.03125 --softening 6"
+# Note: --wrap is NOT in BASE_ARGS so we can test both modes.
+# Add --wrap explicitly in any config entry that needs it.
 
 echo "=== Explore round $ROUND | sim=${SIM_SECONDS}s | seed=$SEED ==="
 echo "=== Base: $BASE_ARGS ==="
