@@ -20,15 +20,16 @@ export GRAVITY_SHARED_DIR="${GRAVITY_SHARED_DIR:-/Users/matte/.openclaw/workspac
 mkdir -p "$GRAVITY_SHARED_DIR"
 
 while true; do
-    # Fresh random seed each run
+    # Fresh random seed each run — seed is not a tuning param
     SEED=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
     RUN_ID="$(date +%Y%m%d_%H%M%S)"
-    echo "=== Starting run $RUN_ID, seed=$SEED, ${SECONDS_PER_RUN}s → $GRAVITY_SHARED_DIR ==="
+    COMMIT=$(git -C "$(dirname "$0")" rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
+    echo "=== Starting run $RUN_ID commit=$COMMIT seed=$SEED, ${SECONDS_PER_RUN}s → $GRAVITY_SHARED_DIR ==="
     rm -f segments.txt state/checkpoint.bin state/orig_state.bin
     rm -f segments/*.mp4 2>/dev/null || true
 
     cargo run --release -- --seconds "$SECONDS_PER_RUN" --epilogue --seed "$SEED" \
-        --run-id "$RUN_ID" "${EXTRA_ARGS[@]}"
+        --run-id "$RUN_ID" --commit "$COMMIT" "${EXTRA_ARGS[@]}"
 
     echo "=== Done $RUN_ID ==="
 done
