@@ -1623,11 +1623,11 @@ use std::io::{BufWriter, Write};
         // criterion is identical for x and y — no directional bias.
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
         {
-            let half = (W as f32).max(H as f32) * 0.5; // = 96 for 192×120
-            let cx = W as f32 * 0.5; // = 96
-            let cy = H as f32 * 0.5; // = 60
+            let half = 128.0_f32; // 256×256 square, power-of-2 subdivisions
+            let cx = W as f32 * 0.5; // 96
+            let cy = H as f32 * 0.5; // 60
+            // Root: [-32, 224] × [-68, 188] — 256×256, centred on grid centre
             nodes.push(QNode::empty(cx - half, cy - half, cx + half, cy + half));
-            // Root: [0, 192] × [-36, 156] — square 192×192 centred on grid centre
         }
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
