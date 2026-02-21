@@ -11,7 +11,7 @@ const OUT_W: u32 = 256; // raw — ffmpeg upscales to 3840×2400 at concat
 const OUT_H: u32 = 160;
 const FPS: u32 = 60;
 const CRF: u32 = 12;
-const CHUNK_FRAMES: usize = 3840; // 64s at 60fps
+const CHUNK_FRAMES: usize = 1920; // 32s at 60fps
 
 struct Cell {
     px: f32,   // continuous world position, x ∈ [0, W)
@@ -912,9 +912,9 @@ impl Sim {
                     canvas[i + 1] *= 0.5;
                     canvas[i + 2] *= 0.5;
                 } else {
-                    canvas[i]     *= 0.999767; // half fade rate vs 0.999534
-                    canvas[i + 1] *= 0.999767;
-                    canvas[i + 2] *= 0.999767;
+                    canvas[i]     *= 0.999534; // fade rate (doubled from 0.999767)
+                    canvas[i + 1] *= 0.999534;
+                    canvas[i + 2] *= 0.999534;
                 }
             }
         }
@@ -1094,14 +1094,14 @@ fn main() {
     let softening: f32 = parse_arg("--softening")
         .and_then(|s| s.parse().ok())
         .unwrap_or(6.0_f32);
-    let speed_cap   = 4.5_f32; // cells/frame
+    let speed_cap   = 2.25_f32; // cells/frame
     let target_pop_default = W * H / 8; // 5120 for 256×160
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
         .unwrap_or((target_pop_default / 8) as f32); // default: target/8 = 640
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(16); // default: 16 per tick, 960/sec at 60fps
+        .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
 
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
@@ -1273,7 +1273,7 @@ fn main() {
 
             // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
             let t = (ep_tick as f32 / 600.0_f32).min(1.0);
-            let fade = 0.999767_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
+            let fade = 0.999534_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
             for v in canvas.iter_mut() { *v *= fade; }
             sim.paint_frame(&mut canvas);
             let global_frame = total_frames + ep_frame;

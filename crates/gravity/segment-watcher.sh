@@ -10,11 +10,11 @@ touch "$SEEN_FILE"
 
 echo "[watcher] started, watching segments/"
 
-TOTAL=69
+TOTAL=137
 LAST_TIME=$(date +%s)  # track time between segments
 PREVIEW_W=512
 PREVIEW_H=320
-CLIP_DUR=6
+CLIP_DUR=4
 GAP_DUR="0.125"  # 1/8 second
 
 make_preview() {
@@ -73,7 +73,7 @@ while true; do
         seg_name=$(basename "$seg" .mp4)
         frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
         frame_offset=${frame_offset:-0}
-        chunk_num=$(( frame_offset / 3840 + 1 ))
+        chunk_num=$(( frame_offset / 1920 + 1 ))
 
         preview="${PREVIEW_DIR}/preview_chunk${chunk_num}.mp4"
 
