@@ -1147,7 +1147,7 @@ fn main() {
     let speed_cap   = 1.5_f32; // cells/frame
     let conway_every = if args.iter().any(|a| a == "--no-conway") { 0 }
         else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
-    let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
+    let pop_band    = 16.0_f32; // doubled: wider target population band
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
     let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
