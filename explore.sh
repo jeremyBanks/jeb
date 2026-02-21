@@ -49,57 +49,60 @@ echo "=== Base: $BASE_ARGS ==="
 declare -a CONFIGS
 case "$ROUND" in
 1)
-  # Base: G=0.03125, s=6, cap=1.125, no wrap — the known-good config.
-  # Round 1: vary G and softening one at a time around the baseline.
+  # Round 1: vary the Conway activity parameters.
+  # Key insight: the dynamic rate formula shuts Conway off when p90 ≈ speed_cap.
+  # rate_limit controls max churn; pop_band controls how aggressively it steers pop.
+  # Start by understanding how these affect long-term dynamics.
   CONFIGS=(
     "baseline:--gravity 0.03125 --softening 6"
-    "G×2:--gravity 0.0625 --softening 6"
-    "G×4:--gravity 0.125 --softening 6"
-    "G/2:--gravity 0.015625 --softening 6"
-    "soft=4:--gravity 0.03125 --softening 4"
-    "soft=8:--gravity 0.03125 --softening 8"
-    "soft=12:--gravity 0.03125 --softening 12"
-    "G×2+s4:--gravity 0.0625 --softening 4"
+    "rate=8:--gravity 0.03125 --softening 6 --rate-limit 8"
+    "rate=128:--gravity 0.03125 --softening 6 --rate-limit 128"
+    "band=256:--gravity 0.03125 --softening 6 --pop-band 256"
+    "band=2560:--gravity 0.03125 --softening 6 --pop-band 2560"
+    "cap=2:--gravity 0.03125 --softening 6 --speed-cap 2"
+    "cap=12:--gravity 0.03125 --softening 6 --speed-cap 12"
+    "nowrap:--gravity 0.03125 --softening 6 --wrap"  # note: --wrap in BASE, this overrides nothing — add a nowrap version
   )
+  # nowrap is tricky since --wrap is in BASE_ARGS; handled by score_config noting it
   ;;
 2)
-  # Round 2: winner from R1 + vary speed_cap and pop_target.
-  # Base params still: cap=1.125, no wrap.
+  # Round 2: vary gravity + softening, holding Conway params at baseline.
   CONFIGS=(
     "baseline:--gravity 0.03125 --softening 6"
-    "cap0.75:--gravity 0.03125 --softening 6 --speed-cap 0.75"
-    "cap1.5:--gravity 0.03125 --softening 6 --speed-cap 1.5"
-    "cap2.0:--gravity 0.03125 --softening 6 --speed-cap 2.0"
-    "pop2560:--gravity 0.03125 --softening 6 --pop-target 2560"
-    "pop7680:--gravity 0.03125 --softening 6 --pop-target 7680"
-    "wrap:--gravity 0.03125 --softening 6 --wrap"
-    "G×2+cap1.5:--gravity 0.0625 --softening 6 --speed-cap 1.5"
+    "G/2+s6:--gravity 0.015 --softening 6"
+    "G×2+s6:--gravity 0.0625 --softening 6"
+    "G×4+s6:--gravity 0.125 --softening 6"
+    "G×1+s3:--gravity 0.03125 --softening 3"
+    "G×1+s12:--gravity 0.03125 --softening 12"
+    "G×2+s3:--gravity 0.0625 --softening 3"
+    "G×2+s12:--gravity 0.0625 --softening 12"
   )
   ;;
 3)
-  # Round 3: zoom in on best G/s combo from R1, vary both together.
+  # Round 3: vary initial conditions (seed_density, pop_target).
+  # Different starting densities → different initial cluster topologies.
   CONFIGS=(
-    "G×2+s6:--gravity 0.0625 --softening 6"
-    "G×2+s8:--gravity 0.0625 --softening 8"
-    "G×2+s4:--gravity 0.0625 --softening 4"
-    "G×4+s8:--gravity 0.125 --softening 8"
-    "G×4+s6:--gravity 0.125 --softening 6"
-    "G×4+s4:--gravity 0.125 --softening 4"
-    "G×3+s6:--gravity 0.09375 --softening 6"
-    "G×3+s8:--gravity 0.09375 --softening 8"
+    "baseline:--gravity 0.03125 --softening 6"
+    "dense=1/64:--gravity 0.03125 --softening 6 --seed-density 64"
+    "dense=1/256:--gravity 0.03125 --softening 6 --seed-density 256"
+    "pop=1280:--gravity 0.03125 --softening 6 --pop-target 1280"
+    "pop=2560:--gravity 0.03125 --softening 6 --pop-target 2560"
+    "pop=10240:--gravity 0.03125 --softening 6 --pop-target 10240"
+    "dampen:--gravity 0.03125 --softening 6 --dampen"
+    "rate=8+band=512:--gravity 0.03125 --softening 6 --rate-limit 8 --pop-band 512"
   )
   ;;
 *)
-  # Round 4+: fine-tune around R3 winner
+  # Round 4+: cross-product of best findings from R1-R3
   CONFIGS=(
-    "r${ROUND}a:--gravity 0.05 --softening 6"
-    "r${ROUND}b:--gravity 0.05 --softening 7"
-    "r${ROUND}c:--gravity 0.07 --softening 6"
-    "r${ROUND}d:--gravity 0.07 --softening 8"
-    "r${ROUND}e:--gravity 0.04 --softening 6"
-    "r${ROUND}f:--gravity 0.04 --softening 8"
-    "r${ROUND}g:--gravity 0.05 --softening 5"
-    "r${ROUND}h:--gravity 0.06 --softening 7"
+    "r${ROUND}a:--gravity 0.0625 --softening 6 --rate-limit 8"
+    "r${ROUND}b:--gravity 0.0625 --softening 6 --rate-limit 128"
+    "r${ROUND}c:--gravity 0.03125 --softening 12 --rate-limit 8"
+    "r${ROUND}d:--gravity 0.03125 --softening 12 --rate-limit 128"
+    "r${ROUND}e:--gravity 0.125 --softening 6 --rate-limit 8"
+    "r${ROUND}f:--gravity 0.125 --softening 12 --rate-limit 8"
+    "r${ROUND}g:--gravity 0.0625 --softening 12 --pop-band 512"
+    "r${ROUND}h:--gravity 0.03125 --softening 6 --speed-cap 2 --rate-limit 8"
   )
   ;;
 esac
