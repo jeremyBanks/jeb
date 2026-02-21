@@ -52,19 +52,18 @@ echo "=== Base: $BASE_ARGS ==="
 declare -a CONFIGS
 case "$ROUND" in
 1)
-  # Round 1: vary the Conway activity parameters.
-  # Key insight: the dynamic rate formula shuts Conway off when p90 ≈ speed_cap.
-  # rate_limit controls max churn; pop_band controls how aggressively it steers pop.
-  # Start by understanding how these affect long-term dynamics.
+  # Round 1: vary around 3am known-good baseline (BASE_ARGS).
+  # Baseline: G=0.03125 soft=6 cap=4.5 pop_band=160 rate=4 init_vel=zero
+  # Test wrap/nowrap, rate_limit, pop_band, and init_vel modes.
   CONFIGS=(
-    "wrap+base:--gravity 0.03125 --softening 6 --wrap"
-    "nowrap+base:--gravity 0.03125 --softening 6"
-    "wrap+rate=8:--gravity 0.03125 --softening 6 --wrap --rate-limit 8"
-    "wrap+rate=128:--gravity 0.03125 --softening 6 --wrap --rate-limit 128"
-    "wrap+band=256:--gravity 0.03125 --softening 6 --wrap --pop-band 256"
-    "wrap+band=2560:--gravity 0.03125 --softening 6 --wrap --pop-band 2560"
-    "wrap+cap=2:--gravity 0.03125 --softening 6 --wrap --speed-cap 2"
-    "wrap+cap=12:--gravity 0.03125 --softening 6 --wrap --speed-cap 12"
+    "wrap+base:--wrap"
+    "nowrap+base:"
+    "wrap+rate=1:--wrap --rate-limit 1"
+    "wrap+rate=8:--wrap --rate-limit 8"
+    "wrap+band=80:--wrap --pop-band 80"
+    "wrap+band=320:--wrap --pop-band 320"
+    "wrap+swirl:--wrap --init-vel swirl"
+    "wrap+spin:--wrap --init-vel spin"
   )
   ;;
 2)
