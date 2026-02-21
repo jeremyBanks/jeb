@@ -2545,10 +2545,6 @@ const PALETTE_SRGB: &[(u8, u8, u8)] = &[
 /// Zero-speed (still cell) colour — dark navy.
 const SLOW_RGB: (u8, u8, u8) = (0x06, 0x1B, 0x31);
 
-/// One entry on the hue wheel: a palette colour plus its OKLab coords and OKLCH hue.
-#[derive(Clone, Debug)]
-struct HueAnchor { l: f32, a: f32, b: f32, h: f32 }
-
 fn srgb_u8_to_linear(x: u8) -> f32 {
     let x = x as f32 / 255.0;
     if x <= 0.04045 { x / 12.92 } else { ((x + 0.055) / 1.055).powf(2.4) }
@@ -2566,54 +2562,55 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (lab_l, lab_a, lab_b)
 }
 
-/// Build hue-sorted anchors from PALETTE_SRGB, skipping near-achromatic entries (C < 0.02).
-fn build_hue_anchors() -> Vec<HueAnchor> {
-    let mut anchors: Vec<HueAnchor> = PALETTE_SRGB.iter().filter_map(|&(r, g, b)| {
-        let (l, a, b_) = rgb_to_oklab(r, g, b);
-        let c = (a * a + b_ * b_).sqrt();
-        if c < 0.02 { return None; }   // skip near-achromatic (e.g. #F6F9FC)
-        let h = b_.atan2(a);
-        Some(HueAnchor { l, a, b: b_, h })
-    }).collect();
-    anchors.sort_by(|x, y| x.h.partial_cmp(&y.h).unwrap());
-    anchors
+/// Directional colour anchors (OKLab).  Velocity components select four basis colours
+/// via squared-clamp weights that always sum to 1 on the unit circle:
+///   w_right = max(ux,0)²   w_left = max(−ux,0)²
+///   w_down  = max(uy,0)²   w_up   = max(−uy,0)²
+/// (ux²+uy²=1 guarantees Σwᵢ=1.)
+///
+/// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
+/// down  / up    → warm family (#FF6118 orange      / #EA2261 crimson)
+/// diagonal blends give intermediate colours (hot-pink, gold, etc.).
+/// zero-speed anchor: #061B31 dark navy.
+#[derive(Clone, Debug)]
+struct DirectionalPalette {
+    dark:    (f32, f32, f32),  // #061B31
+    c_right: (f32, f32, f32),  // #635BFF  periwinkle — +x
+    c_left:  (f32, f32, f32),  // #533AFD  violet     — −x
+    c_down:  (f32, f32, f32),  // #FF6118  orange     — +y (screen-down)
+    c_up:    (f32, f32, f32),  // #EA2261  crimson    — −y (screen-up)
 }
 
-/// Circularly interpolate palette anchors in OKLab for velocity direction θ.
-/// Returns the target (L, a, b) that a cell at speed_cap in direction θ should have.
-fn palette_for_angle(theta: f32, anchors: &[HueAnchor]) -> (f32, f32, f32) {
-    use std::f32::consts::TAU;
-    let n = anchors.len();
-    if n == 0 { return (0.5, 0.0, 0.0); }
-    if n == 1 { return (anchors[0].l, anchors[0].a, anchors[0].b); }
+impl DirectionalPalette {
+    fn build() -> Self {
+        DirectionalPalette {
+            dark:    rgb_to_oklab(0x06, 0x1B, 0x31),
+            c_right: rgb_to_oklab(0x63, 0x5B, 0xFF),
+            c_left:  rgb_to_oklab(0x53, 0x3A, 0xFD),
+            c_down:  rgb_to_oklab(0xFF, 0x61, 0x18),
+            c_up:    rgb_to_oklab(0xEA, 0x22, 0x61),
+        }
+    }
 
-    // Find the two anchors that bracket θ on the circle.
-    let idx = anchors.partition_point(|a| a.h < theta);
-    let i0  = if idx == 0 { n - 1 } else { idx - 1 };
-    let i1  = idx % n;
-
-    let h0 = anchors[i0].h;
-    // Ensure h1 is ahead of h0 (wrap around TAU if needed).
-    let h1 = { let h = anchors[i1].h; if h > h0 { h } else { h + TAU } };
-    let th = if theta >= h0 { theta } else { theta + TAU };
-    let t  = ((th - h0) / (h1 - h0)).clamp(0.0, 1.0);
-
-    // Interpolate in OKLab — perceptually smooth, no hue kinks.
-    let l = anchors[i0].l + (anchors[i1].l - anchors[i0].l) * t;
-    let a = anchors[i0].a + (anchors[i1].a - anchors[i0].a) * t;
-    let b = anchors[i0].b + (anchors[i1].b - anchors[i0].b) * t;
-    (l, a, b)
+    /// Blend the four directional anchors for a unit velocity (ux, uy).
+    fn directional_color(&self, ux: f32, uy: f32) -> (f32, f32, f32) {
+        let w_r = ux.max(0.0).powi(2);
+        let w_l = (-ux).max(0.0).powi(2);
+        let w_d = uy.max(0.0).powi(2);
+        let w_u = (-uy).max(0.0).powi(2);
+        let l = w_r*self.c_right.0 + w_l*self.c_left.0 + w_d*self.c_down.0 + w_u*self.c_up.0;
+        let a = w_r*self.c_right.1 + w_l*self.c_left.1 + w_d*self.c_down.1 + w_u*self.c_up.1;
+        let b = w_r*self.c_right.2 + w_l*self.c_left.2 + w_d*self.c_down.2 + w_u*self.c_up.2;
+        (l, a, b)
+    }
 }
 
 #[derive(Clone, Debug)]
 enum PaletteMode {
     /// Original: speed→L/C, direction→hue uniformly (fallback).
     Classic,
-    /// Perceptual hue-wheel: palette colours at speed_cap, extrapolates beyond.
-    Radical {
-        anchors: Vec<HueAnchor>,
-        dark: (f32, f32, f32),  // OKLab of SLOW_RGB (#061B31)
-    },
+    /// 4-directional weights: left/right=blue, up/down=warm, zero-speed=dark navy.
+    Radical(DirectionalPalette),
 }
 
 fn load_palette() -> PaletteMode {
@@ -2622,10 +2619,7 @@ fn load_palette() -> PaletteMode {
     if s.starts_with("classic") {
         PaletteMode::Classic
     } else {
-        // Default (no file, "radical", or anything else) → Radical.
-        let anchors = build_hue_anchors();
-        let dark = rgb_to_oklab(SLOW_RGB.0, SLOW_RGB.1, SLOW_RGB.2);
-        PaletteMode::Radical { anchors, dark }
+        PaletteMode::Radical(DirectionalPalette::build())
     }
 }
 
@@ -2634,7 +2628,6 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
 
     match palette {
         PaletteMode::Classic => {
-            // Original behaviour — unchanged.
             let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
             let l = 0.45 + 0.30 * t;
             let c = 0.20 * t;
@@ -2642,33 +2635,31 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
             (l, c * h.cos(), c * h.sin())
         }
 
-        PaletteMode::Radical { anchors, dark: (dl, da, db) } => {
-            let theta = vy.atan2(vx);
-            let (tgt_l, tgt_a, tgt_b) = palette_for_angle(theta, anchors);
-
-            // t = 0 → still (dark navy), t = 1 → speed_cap (palette colour).
-            // Cells can reach up to 2× speed_cap, so t can be as high as ~2.
+        PaletteMode::Radical(dp) => {
+            // t = 0 → still (dark navy), t = 1 → speed_cap, up to ~2.0 beyond.
             let t = spd / speed_cap;
 
+            // Directional blend: unit velocity selects among four palette colours.
+            let (dl, da, db) = dp.dark;
+            let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
+                dp.directional_color(vx / spd, vy / spd)
+            } else {
+                (dl, da, db)
+            };
+
             if t <= 1.0 {
-                // Linear blend in OKLab: dark navy → palette colour.
+                // Linear blend in OKLab: dark navy → directional palette colour.
                 let l = dl + (tgt_l - dl) * t;
                 let a = da + (tgt_a - da) * t;
                 let b = db + (tgt_b - db) * t;
                 (l, a, b)
             } else {
-                // Extrapolation: beyond speed_cap push L brighter and C more saturated.
-                // √-taper gives rapid initial gain with diminishing returns toward 2×.
-                let t_over = (t - 1.0).clamp(0.0, 1.0);
-                let extra  = t_over.sqrt();
-
-                // L drifts toward 0.92 (bright but not blown-out white).
+                // Beyond speed_cap: push L brighter and C more saturated.
+                // √-taper gives fast initial gain, diminishing returns toward 2×.
+                let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
                 let l = (tgt_l + (0.92 - tgt_l) * extra * 0.45).min(0.93);
-                // C scales outward: up to +40 % at 2× speed_cap.
                 let c_scale = 1.0 + extra * 0.40;
-                let a = tgt_a * c_scale;
-                let b = tgt_b * c_scale;
-                (l, a, b)
+                (l, tgt_a * c_scale, tgt_b * c_scale)
             }
         }
     }
