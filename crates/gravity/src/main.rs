@@ -1789,95 +1789,122 @@ use std::io::{BufWriter, Write};
     // Called once per video frame. Appends SAMPLES_PER_FRAME f32 samples to chunk_audio.
     // Only cells that moved (changed grid square) this tick sustain a voice.
     // Stationary/blocked cells let their voice release.
+    // ── Audio parameter helper ─────────────────────────────────────────────
+    // Shared by both sustain voices and event voices.
+    fn audio_params(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32)
+        -> (f32, f32, f32, f32)  // (target_freq, target_cutoff, sin_angle, target_amp)
+    {
+        use std::f32::consts::PI;
+        let speed = (vx * vx + vy * vy).sqrt();
+        let t = (speed / speed_cap).clamp(0.0, 1.0);
+        let (cos_th, sin_th) = if speed > 1e-6 {
+            (vx / speed, vy / speed)
+        } else { (0.0, 0.0) };
+
+        // Pitch: |sin(θ)| → coarse (horizontal=C3, vertical=C6)
+        //        speed → ±0.25 oct fine-tune
+        let coarse = AUDIO_BASE_FREQ * 2.0_f32.powf(sin_th.abs() * AUDIO_OCTAVE_SPAN);
+        let fine   = 2.0_f32.powf(t * 0.5 - 0.25);
+        // Position detune: ±5 cents, prevents robotic unison in clusters
+        let px_a = px / W as f32 * 2.0 * PI;
+        let py_a = py / H as f32 * 2.0 * PI;
+        let detune = 2.0_f32.powf((px_a.cos() * 5.0 + py_a.sin() * 3.0) / 1200.0);
+        let target_freq = coarse * fine * detune;
+
+        // Filter: cos(θ) → brightness (right=bright, left=dark), base 600 Hz ±2 oct
+        let cutoff_hz = 600.0 * 2.0_f32.powf(cos_th * 2.0);
+        let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
+
+        // Amplitude: sqrt(speed) curve
+        let target_amp = (t.sqrt() * 0.018).max(0.002);
+
+        (target_freq, target_cutoff, sin_th, target_amp)
+    }
+
     fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
         use std::f32::consts::PI;
 
-        // ── 1. Mark all voices as not yet refreshed this frame ─────────────
-        for v in self.voice_pool.values_mut() { v.refreshed = false; }
+        // ── 1. Mark all sustain voices not refreshed ───────────────────────
+        for v in self.voice_pool.values_mut() {
+            if v.kind == VoiceKind::Sustain { v.refreshed = false; }
+        }
 
-        // ── 2. Update/spawn voices from cells that moved ───────────────────
+        // ── 2. Update/spawn sustain voices from cells that moved ───────────
         let speed_cap = self.speed_cap;
         for c in &self.cells {
             if !c.moved { continue; }
-            let speed = (c.vx * c.vx + c.vy * c.vy).sqrt();
-            let t = (speed / speed_cap).clamp(0.0, 1.0);
-
-            // Pitch: C3 → C6 logarithmically with speed
-            let freq = AUDIO_BASE_FREQ * 2.0_f32.powf(t * AUDIO_OCTAVE_SPAN);
-
-            // Position detune: ±5 cents from spatial location (toroidal coords)
-            let px_angle = c.px / W as f32 * 2.0 * PI;
-            let py_angle = c.py / H as f32 * 2.0 * PI;
-            let detune_cents = px_angle.cos() * 5.0 + py_angle.sin() * 3.0;
-            let target_freq = freq * 2.0_f32.powf(detune_cents / 1200.0);
-
-            // Direction decomposition (sin/cos of velocity angle)
-            let (cos_th, sin_th) = if speed > 1e-6 {
-                (c.vx / speed, c.vy / speed)
-            } else { (0.0, 0.0) };
-
-            // Filter cutoff: rightward=bright (high), leftward=dark (low)
-            // Base 600 Hz, ±2 octaves from cos(θ)
-            let cutoff_hz = 600.0 * 2.0_f32.powf(cos_th * 2.0);
-            let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-
-            // Amplitude: sqrt(speed/cap) curve, scaled for reasonable mix level
-            let target_amp = (t.sqrt() * 0.018).max(0.002);
-
-            let v = self.voice_pool.entry(c.id).or_insert_with(|| Voice::new(target_freq));
-            v.target_freq   = target_freq;
-            v.target_cutoff = target_cutoff;
-            v.sin_angle     = sin_th;  // waveform blend
-            v.target_amp    = target_amp;
+            let (tfreq, tcutoff, sin_th, tamp) =
+                Self::audio_params(c.vx, c.vy, c.px, c.py, speed_cap);
+            let v = self.voice_pool.entry(c.id)
+                .or_insert_with(|| Voice::new_sustain(tfreq));
+            v.target_freq   = tfreq;
+            v.target_cutoff = tcutoff;
+            v.sin_angle     = sin_th;
+            v.target_amp    = tamp;
             v.refreshed     = true;
             if v.releasing { v.releasing = false; v.release_samples = 0; }
         }
 
-        // ── 3. Start release on voices whose cell didn't move ──────────────
+        // ── 3. Release sustain voices whose cell stopped moving ─────────────
         for v in self.voice_pool.values_mut() {
-            if !v.refreshed && !v.releasing {
+            if v.kind == VoiceKind::Sustain && !v.refreshed && !v.releasing {
                 v.releasing = true;
             }
         }
-        // Remove fully-released voices
+
+        // ── 4. Spawn one-shot voices for Conway events ──────────────────────
+        let events: Vec<AudioEvent> = self.audio_events.drain(..).collect();
+        for ev in events {
+            let (freq, cutoff, sin_th, amp) =
+                Self::audio_params(ev.vx, ev.vy, ev.px, ev.py, speed_cap);
+            let (adj_freq, adj_sin, adj_amp) = match ev.kind {
+                VoiceKind::Birth => (freq * 2.0, -1.0, amp * 1.5),   // octave up, pure sine, louder ping
+                VoiceKind::Death => (freq * 0.5,  1.0, amp * 1.2),   // octave down, pure saw, thud
+                VoiceKind::Sustain => (freq, sin_th, amp),
+            };
+            let id = self.next_id; self.next_id += 1;
+            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, cutoff, adj_sin, adj_amp));
+        }
+
+        // ── 5. Remove fully-released voices ────────────────────────────────
         self.voice_pool.retain(|_, v| {
-            !(v.releasing && v.release_samples >= AUDIO_RELEASE)
+            !(v.releasing && v.release_samples >= v.release_total)
         });
 
-        // ── 4. Synthesise SAMPLES_PER_FRAME samples ────────────────────────
+        // ── 6. Synthesise SAMPLES_PER_FRAME samples ────────────────────────
         let n_voices = self.voice_pool.len();
-        // Normalise mix: target RMS ~0.25 regardless of voice count
-        let mix_gain = if n_voices > 0 {
-            0.25 / (n_voices as f32).sqrt()
-        } else { 0.0 };
+        let mix_gain = if n_voices > 0 { 0.25 / (n_voices as f32).sqrt() } else { 0.0 };
 
         for _ in 0..SAMPLES_PER_FRAME {
             let mut sum = 0.0_f32;
             for v in self.voice_pool.values_mut() {
-                // Slew frequency and cutoff
-                v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
-                v.current_cutoff += (v.target_cutoff - v.current_cutoff) * AUDIO_SLEW;
-                v.current_amp    += (v.target_amp    - v.current_amp)    * 0.01;
+                // Slew (events skip freq slew — they're one-shot and pitch-dropping)
+                if v.kind == VoiceKind::Sustain {
+                    v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
+                    v.current_cutoff += (v.target_cutoff - v.current_cutoff) * AUDIO_SLEW;
+                    v.current_amp    += (v.target_amp    - v.current_amp)    * 0.01;
+                }
+                // Death glide: frequency drops each sample
+                v.current_freq *= v.pitch_drop;
 
                 // Phase advance
                 v.phase = (v.phase + v.current_freq / SAMPLE_RATE as f32).rem_euclid(1.0);
 
-                // Waveform: blend sine ↔ saw based on sin(θ)
-                // sin_angle=-1 (up): pure sine (thin); sin_angle=+1 (down): pure saw (thick)
-                let blend = (v.sin_angle + 1.0) * 0.5;  // 0..1
+                // Waveform: sin_angle=-1 → pure sine (birth/up), +1 → pure saw (death/down)
+                let blend  = (v.sin_angle + 1.0) * 0.5;
                 let sine_s = (v.phase * 2.0 * PI).sin();
                 let saw_s  = 2.0 * v.phase - 1.0;
                 let raw    = blend * saw_s + (1.0 - blend) * sine_s;
 
-                // One-pole low-pass filter
+                // One-pole LP filter
                 v.filter_state += v.current_cutoff * (raw - v.filter_state);
 
                 // Envelope
                 let env = if v.releasing {
-                    let t = v.release_samples as f32 / AUDIO_RELEASE as f32;
+                    let t = (v.release_samples as f32 / v.release_total as f32).min(1.0);
                     v.release_samples += 1;
-                    let decay = 1.0 - t;
-                    decay * decay  // quadratic = exponential feel
+                    let d = 1.0 - t;
+                    d * d
                 } else if v.attack_samples < AUDIO_ATTACK {
                     let t = v.attack_samples as f32 / AUDIO_ATTACK as f32;
                     v.attack_samples += 1;
@@ -1886,7 +1913,6 @@ use std::io::{BufWriter, Write};
 
                 sum += v.filter_state * env * v.current_amp;
             }
-            // Soft-clip with tanh then scale to comfortable level
             let out = (sum * mix_gain).tanh() * 0.7;
             chunk_audio.push(out);
         }
