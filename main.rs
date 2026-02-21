@@ -287,6 +287,7 @@ impl Sim {
         buf.extend_from_slice(&self.rng.to_le_bytes());
         buf.extend_from_slice(&(self.tick_count as u64).to_le_bytes());
         buf.extend_from_slice(&(chunk_index as u64).to_le_bytes());
+        buf.extend_from_slice(&self.next_id.to_le_bytes());
         // cells
         for c in &self.cells {
             buf.extend_from_slice(&c.px.to_le_bytes());
@@ -294,6 +295,7 @@ impl Sim {
             buf.extend_from_slice(&c.vx.to_le_bytes());
             buf.extend_from_slice(&c.vy.to_le_bytes());
             buf.extend_from_slice(&c.prev_speed.to_le_bytes());
+            buf.extend_from_slice(&c.id.to_le_bytes());
         }
         // prev_live (packed as u8 per bool for simplicity)
         for &b in &self.prev_live {
