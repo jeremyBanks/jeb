@@ -151,6 +151,7 @@ for entry in "${CONFIGS[@]}"; do
     local_out="$WORKDIR/${label}.txt"
     ( cd "$WORKDIR" && GRAVITY_SHARED_DIR="$WORKDIR" \
         "$BIN" --seconds "$SIM_SECONDS" --headless --seed "$SEED" \
+        --commit "$COMMIT" \
         $BASE_ARGS \
         $extra_args ) > "$local_out" 2>&1
 
