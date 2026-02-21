@@ -2299,7 +2299,7 @@ use std::io::{BufWriter, Write};
         for c in &self.cells {
             let xi = c.gx();
             let yi = c.gy();
-            let (l, a, b) = velocity_color_oklab(c.vx, c.vy, self.speed_cap);
+            let (l, a, b) = velocity_color_oklab(c.vx, c.vy, self.speed_cap, palette);
             let i = (yi * W + xi) * 3;
             canvas[i]     = l;
             canvas[i + 1] = a;
