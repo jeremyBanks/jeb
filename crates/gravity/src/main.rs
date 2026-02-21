@@ -1149,17 +1149,40 @@ impl Sim {
         }
 
         // ── 4. Spawn one-shot voices for Conway events ────────────────────────
+        // Events use position-based pitch/timbre — NOT velocity. This ensures:
+        //   • births and deaths at different screen locations sound distinctly different
+        //   • amplitude is fixed and low (not velocity-scaled), killing the buzzing
         let events: Vec<AudioEvent> = self.audio_events.drain(..).collect();
         for ev in events {
-            let (freq, cutoff, sin_th, amp) =
-                Self::audio_params(ev.vx, ev.vy, ev.px, ev.py, speed_cap);
-            let (adj_freq, adj_sin, adj_amp) = match ev.kind {
-                VoiceKind::Birth => (freq * 2.0, -1.0, amp * 1.5),   // octave up, pure sine, louder ping
-                VoiceKind::Death => (freq * 0.5,  1.0, amp * 1.2),   // octave down, pure saw, thud
-                VoiceKind::Sustain => (freq, sin_th, amp),
+            use std::f32::consts::PI;
+            let x_t = (ev.px / W as f32).clamp(0.0, 1.0); // 0=left … 1=right
+            let y_t = (ev.py / H as f32).clamp(0.0, 1.0); // 0=top  … 1=bottom
+            let (adj_freq, adj_cutoff, adj_sin, adj_amp) = match ev.kind {
+                VoiceKind::Birth => {
+                    // Pitch: top of screen = high (C5-C6), bottom = lower (C4-C5)
+                    // Y drives position in upper pentatonic register
+                    let t = 0.5 + (1.0 - y_t) * 0.5;  // 0.5..1.0
+                    let freq = Self::pentatonic_freq(t);
+                    // Filter: left=darker, right=brighter — X axis spatial brightness
+                    let cutoff_hz = 400.0 * 2.0_f32.powf(x_t * 3.0); // 400Hz..3200Hz
+                    let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
+                    // Pure sine — thin, light ping
+                    (freq, cutoff, -1.0_f32, AUDIO_AMP_SCALE * 0.12_f32)
+                },
+                VoiceKind::Death => {
+                    // Pitch: left=low (C3), right=higher (C4-C5) — X axis spatial
+                    let t = x_t * 0.45;  // 0.0..0.45 → stays in low register
+                    let freq = Self::pentatonic_freq(t);
+                    // Filter: top=bright, bottom=dark — Y axis timbral
+                    let cutoff_hz = 700.0 * 2.0_f32.powf((1.0 - y_t) * -2.0); // 700Hz..175Hz
+                    let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
+                    // Triangle — warm, thumpy
+                    (freq, cutoff, 1.0_f32, AUDIO_AMP_SCALE * 0.09_f32)
+                },
+                VoiceKind::Sustain => unreachable!(),
             };
             let id = self.next_id; self.next_id += 1;
-            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, cutoff, adj_sin, adj_amp));
+            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp));
         }
 
         // ── 5. Remove fully-released voices ────────────────────────────────
