@@ -110,7 +110,7 @@ while true; do
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
-                -m "chunk ${chunk_num}/${TOTAL} | ${META} | ${preview_label}${EXTRA}"; then
+                -m "chunk ${chunk_num}/${TOTAL} | ${META}${EXTRA}"; then
                 echo "[watcher] sent chunk $chunk_num (${META})"
                 echo "$seg" >> "$SEEN_FILE"
                 LAST_TIME=$NOW
