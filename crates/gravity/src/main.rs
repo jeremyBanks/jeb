@@ -1905,28 +1905,63 @@ use std::io::{BufWriter, Write};
 
 // [recovery] edit target not found, appending:
             if !occupied[idx] {
-                let (vx, vy) = if xi < W / 2 && yi < H / 2 {
-                    // Top-left: biased right, vx = U[-0.25, +0.5], vy = U[-0.125, +0.125]
-                    let vx = xorf32(&mut rng) * 0.75 - 0.25;
-                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
-                    (vx, vy)
-                } else if xi >= W / 2 && yi >= H / 2 {
-                    // Bottom-right: 180° opposite of top-left → biased left
-                    // vx = U[-0.5, +0.25], vy = U[-0.125, +0.125]
-                    let vx = xorf32(&mut rng) * 0.75 - 0.5;
-                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
-                    (vx, vy)
-                } else if xi >= W / 2 && yi < H / 2 {
-                    // Top-right: no directional bias, U[-0.125, +0.125] each axis
-                    let vx = (xorf32(&mut rng) - 0.5) * 0.25;
-                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
-                    (vx, vy)
-                } else {
-                    // Bottom-left: similar magnitude, dominant direction points down
-                    // vx = U[-0.125, +0.125], vy = U[0, +0.25] → avg = (0, +0.125)
-                    let vx = (xorf32(&mut rng) - 0.5) * 0.25;
-                    let vy = xorf32(&mut rng) * 0.25;
-                    (vx, vy)
+                let cx = W as f32 / 2.0;
+                let cy = H as f32 / 2.0;
+                let (vx, vy) = match init_vel {
+                    "swirl" => {
+                        // Asymmetric quadrant bias — creates net angular momentum.
+                        // Top-left biased right, bottom-right biased left,
+                        // bottom-left biased down, top-right unbiased.
+                        if xi < W / 2 && yi < H / 2 {
+                            (xorf32(&mut rng) * 0.75 - 0.25, (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else if xi >= W / 2 && yi >= H / 2 {
+                            (xorf32(&mut rng) * 0.75 - 0.5,  (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else if xi >= W / 2 {
+                            ((xorf32(&mut rng) - 0.5) * 0.25, (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else {
+                            ((xorf32(&mut rng) - 0.5) * 0.25, xorf32(&mut rng) * 0.25)
+                        }
+                    }
+                    "random" => {
+                        // Isotropic random — no net angular momentum or linear drift.
+                        ((xorf32(&mut rng) - 0.5) * 0.5, (xorf32(&mut rng) - 0.5) * 0.5)
+                    }
+                    "spin" => {
+                        // Clockwise tangential velocity field.
+                        // Speed proportional to distance from centre, capped at 0.5.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = (r / (cx.min(cy))).min(1.0) * 0.5;
+                        // Clockwise tangent: (-dy/r, dx/r)
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (-dy / r * scale + noise_x, dx / r * scale + noise_y)
+                    }
+                    "spin-ccw" => {
+                        // Counter-clockwise tangential velocity field.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = (r / (cx.min(cy))).min(1.0) * 0.5;
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (dy / r * scale + noise_x, -dx / r * scale + noise_y)
+                    }
+                    "radial-out" => {
+                        // Radially outward from centre — dramatic infall after reversal.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = 0.4;
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (dx / r * scale + noise_x, dy / r * scale + noise_y)
+                    }
+                    "zero" | _ => {
+                        // All seeded cells start stationary — pure gravity collapse from rest.
+                        (0.0, 0.0)
+                    }
                 };
                 cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
 
