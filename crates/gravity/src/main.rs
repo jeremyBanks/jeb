@@ -1881,8 +1881,9 @@ use std::io::{BufWriter, Write};
             .map(|(_, bx, by)| format!("({},{})", bx * BLK, by * BLK))
             .collect::<Vec<_>>().join(";");
 
-        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{BTOTAL} dense={max_in_block} hot=[{hot}] com=({cx:.1},{cy:.1})",
-            self.conway_births, self.conway_deaths)
+        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} eff_spd={eff_spd:.3} moved={moved_pct:.0}% max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{BTOTAL} dense={max_in_block} hot=[{hot}] com=({cx:.1},{cy:.1})",
+            self.conway_births, self.conway_deaths,
+            moved_pct = moved_frac * 100.0)
     }
 
 // [recovery] edit target not found, appending:
