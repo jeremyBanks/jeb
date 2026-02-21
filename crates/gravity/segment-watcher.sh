@@ -107,8 +107,6 @@ while true; do
             fi
             [ -n "$RUN_ID" ] && EXTRA="\`${RUN_ID}\` ${PARAMS}${EXTRA}"
 
-            local preview_label="[chunk1 end → chunk$((chunk_num-1)) end → chunk${chunk_num} end]"
-            [ "$chunk_num" -le 1 ] && preview_label="[chunk1 start | mid | end]"
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
