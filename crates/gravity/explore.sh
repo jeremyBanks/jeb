@@ -121,12 +121,12 @@ for entry in "${CONFIGS[@]}"; do
         continue
     fi
 
-    # Print snapshots every 30 samples
+    # Print snapshots every 10s so we can see full trajectory
     echo "  time   avg_spd   p10    blk/640  dense  hot_blocks"
     i=0
     while IFS= read -r line; do
         i=$(( i + 1 ))
-        if [ $(( (i-1) % 30 )) -eq 0 ] || [ "$i" -eq "$n_samples" ]; then
+        if [ $(( (i-1) % 10 )) -eq 0 ] || [ "$i" -eq "$n_samples" ]; then
             spd=$(echo   "$line" | grep -oE 'avg_spd=[0-9.]+' | cut -d= -f2)
             p10=$(echo   "$line" | grep -oE 'p10=[0-9.]+'     | cut -d= -f2)
             blk=$(echo   "$line" | grep -oE 'blk=[0-9]+'      | cut -d= -f2)
