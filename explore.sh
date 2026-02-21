@@ -4,7 +4,7 @@
 # Usage: ./explore.sh [sim_seconds] [round_number]
 
 BIN="/Users/matte/jeb/target/release/gravity"
-SIM_SECONDS="${1:-300}"
+SIM_SECONDS="${1:-120}"
 ROUND="${2:-1}"
 SEED=42
 WORKDIR="/tmp/gravity_explore_$$"
