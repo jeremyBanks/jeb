@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
@@ -13,12 +14,50 @@ const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 1920; // 32s at 60fps
 
+// ── Audio constants ────────────────────────────────────────────────────────
+const SAMPLE_RATE: u32    = 44100;
+const SAMPLES_PER_FRAME: usize = 735; // 44100 / 60, truncated (acceptable drift)
+const AUDIO_BASE_FREQ: f32  = 130.81; // C3
+const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
+const AUDIO_SLEW: f32       = 0.005;  // per-sample freq portamento
+const AUDIO_ATTACK: usize   = 220;    // 5 ms
+const AUDIO_RELEASE: usize  = 17640;  // 400 ms
+
+struct Voice {
+    phase: f32,
+    current_freq: f32,
+    target_freq: f32,
+    filter_state: f32,         // one-pole LP memory
+    current_cutoff: f32,       // slewed cutoff coefficient
+    target_cutoff: f32,
+    sin_angle: f32,            // waveform blend: -1=pure sine, +1=pure saw
+    current_amp: f32,          // slewed amplitude (speed-based)
+    target_amp: f32,
+    attack_samples: usize,
+    releasing: bool,
+    release_samples: usize,
+    refreshed: bool,           // cleared each frame, set when cell moved
+}
+
+impl Voice {
+    fn new(freq: f32) -> Self {
+        Voice {
+            phase: 0.0, current_freq: freq, target_freq: freq,
+            filter_state: 0.0, current_cutoff: 0.02, target_cutoff: 0.02,
+            sin_angle: 0.0, current_amp: 0.0, target_amp: 0.0,
+            attack_samples: 0, releasing: false, release_samples: 0, refreshed: true,
+        }
+    }
+}
+
 struct Cell {
     px: f32,   // continuous world position, x ∈ [0, W)
     py: f32,   // continuous world position, y ∈ [0, H)
     vx: f32,
     vy: f32,
     prev_speed: f32,
+    id: u64,      // persistent identity — travels with the cell
+    moved: bool,  // true if cell changed grid square this tick
 }
 impl Cell {
     #[inline] fn gx(&self) -> usize { (self.px.round() as i32).rem_euclid(W as i32) as usize }
@@ -47,6 +86,8 @@ struct Sim {
     dampen: bool,  // nudge system COM velocity toward zero each tick (--dampen flag)
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
+    next_id: u64,
+    voice_pool: HashMap<u64, Voice>,
 }
 
 // Original state captured at tick=0 for epilogue convergence
@@ -200,6 +241,7 @@ impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, seed_density_inv: usize, wrap: bool, steer: bool, dampen: bool) -> Self {
         let mut rng = rng_seed;
+        let mut next_id: u64 = 1;
         let mut cells: Vec<Cell> = Vec::new();
 
         // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
@@ -240,7 +282,8 @@ impl Sim {
                     let vy = xorf32(&mut rng) * 0.25;
                     (vx, vy)
                 };
-                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
+                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0, id: next_id, moved: false });
+                next_id += 1;
                 occupied[idx] = true;
                 seeded += 1;
             }
@@ -251,7 +294,7 @@ impl Sim {
         let target_pop = W * H / 16;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
-              conway_births: 0, conway_deaths: 0 }
+              conway_births: 0, conway_deaths: 0, next_id, voice_pool: HashMap::new() }
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
@@ -262,6 +305,7 @@ impl Sim {
         buf.extend_from_slice(&self.rng.to_le_bytes());
         buf.extend_from_slice(&(self.tick_count as u64).to_le_bytes());
         buf.extend_from_slice(&(chunk_index as u64).to_le_bytes());
+        buf.extend_from_slice(&self.next_id.to_le_bytes());
         // cells
         for c in &self.cells {
             buf.extend_from_slice(&c.px.to_le_bytes());
@@ -269,6 +313,7 @@ impl Sim {
             buf.extend_from_slice(&c.vx.to_le_bytes());
             buf.extend_from_slice(&c.vy.to_le_bytes());
             buf.extend_from_slice(&c.prev_speed.to_le_bytes());
+            buf.extend_from_slice(&c.id.to_le_bytes());
         }
         // prev_live (packed as u8 per bool for simplicity)
         for &b in &self.prev_live {
@@ -299,6 +344,7 @@ impl Sim {
         let rng     = read_u64!();
         let tick_count = read_u64!() as usize;
         let chunk_index = read_u64!() as usize;
+        let next_id = read_u64!();
 
         let mut cells = Vec::with_capacity(n_cells);
         for _ in 0..n_cells {
@@ -307,7 +353,8 @@ impl Sim {
             let vx = read_f32!();
             let vy = read_f32!();
             let ps = read_f32!();
-            cells.push(Cell { px, py, vx, vy, prev_speed: ps });
+            let id = read_u64!();
+            cells.push(Cell { px, py, vx, vy, prev_speed: ps, id, moved: false });
         }
 
         let mut prev_live = vec![false; W * H];
@@ -331,7 +378,8 @@ impl Sim {
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit,
                         tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen,
-                        conway_births: 0, conway_deaths: 0 };
+                        conway_births: 0, conway_deaths: 0,
+                        next_id, voice_pool: HashMap::new() };
         Some((sim, canvas, chunk_index))
     }
 
@@ -509,7 +557,8 @@ impl Sim {
             };
             let birth_spd = (vx * vx + vy * vy).sqrt();
             let new_idx = self.cells.len();
-            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd });
+            let id = self.next_id; self.next_id += 1;
+            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd, id, moved: false });
             grid2[gy * W + gx] = new_idx;
             self.conway_births += 1;
         }
@@ -519,6 +568,8 @@ impl Sim {
 
     // ── Gravity step (Barnes-Hut O(n log n)) ──────────────────────────────
     fn gravity_step(&mut self) {
+        // Reset moved flag each tick — only set for cells that change grid square
+        for c in &mut self.cells { c.moved = false; }
         let n = self.cells.len();
 
         // Build quadtree with a SQUARE root centered on the grid center.
@@ -605,13 +656,14 @@ impl Sim {
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
             } else if grid[tgy * W + tgx] == usize::MAX {
-                // Target square free — move
+                // Target square free — move; mark for audio
                 grid[old_gy * W + old_gx] = usize::MAX;
                 grid[tgy * W + tgx] = idx;
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
+                self.cells[idx].moved = true;
             }
-            // else: target occupied — stay put
+            // else: target occupied — stay put (no audio this tick)
         }
     }
 
@@ -668,8 +720,9 @@ impl Sim {
         // Every dead original cell has revive_chance of being born
         for &(ox, oy) in &orig.positions {
             if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                let id = self.next_id; self.next_id += 1;
                 self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
-                                       vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+                                       vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
             }
         }
 
@@ -737,8 +790,9 @@ impl Sim {
             }
             for &(ox, oy) in &orig.positions {
                 if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                    let id = self.next_id; self.next_id += 1;
                     self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
-                                           vx: 0.0, vy: 0.0, prev_speed: 0.0 });
+                                           vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
                 }
             }
         }
@@ -867,7 +921,8 @@ impl Sim {
             let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
             let new_idx = self.cells.len();
             let spd = (vx*vx+vy*vy).sqrt();
-            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd });
+            let id = self.next_id; self.next_id += 1;
+            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd, id, moved: false });
             grid2[gy * W + gx] = new_idx;
         }
         self.order = (0..self.cells.len()).collect();
@@ -901,6 +956,113 @@ impl Sim {
             c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
         }
         self.order = (0..self.cells.len()).collect();
+    }
+
+    // ── Audio synthesis ────────────────────────────────────────────────────
+    // Called once per video frame. Appends SAMPLES_PER_FRAME f32 samples to chunk_audio.
+    // Only cells that moved (changed grid square) this tick sustain a voice.
+    // Stationary/blocked cells let their voice release.
+    fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
+        use std::f32::consts::PI;
+
+        // ── 1. Mark all voices as not yet refreshed this frame ─────────────
+        for v in self.voice_pool.values_mut() { v.refreshed = false; }
+
+        // ── 2. Update/spawn voices from cells that moved ───────────────────
+        let speed_cap = self.speed_cap;
+        for c in &self.cells {
+            if !c.moved { continue; }
+            let speed = (c.vx * c.vx + c.vy * c.vy).sqrt();
+            let t = (speed / speed_cap).clamp(0.0, 1.0);
+
+            // Pitch: C3 → C6 logarithmically with speed
+            let freq = AUDIO_BASE_FREQ * 2.0_f32.powf(t * AUDIO_OCTAVE_SPAN);
+
+            // Position detune: ±5 cents from spatial location (toroidal coords)
+            let px_angle = c.px / W as f32 * 2.0 * PI;
+            let py_angle = c.py / H as f32 * 2.0 * PI;
+            let detune_cents = px_angle.cos() * 5.0 + py_angle.sin() * 3.0;
+            let target_freq = freq * 2.0_f32.powf(detune_cents / 1200.0);
+
+            // Direction decomposition (sin/cos of velocity angle)
+            let (cos_th, sin_th) = if speed > 1e-6 {
+                (c.vx / speed, c.vy / speed)
+            } else { (0.0, 0.0) };
+
+            // Filter cutoff: rightward=bright (high), leftward=dark (low)
+            // Base 600 Hz, ±2 octaves from cos(θ)
+            let cutoff_hz = 600.0 * 2.0_f32.powf(cos_th * 2.0);
+            let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
+
+            // Amplitude: sqrt(speed/cap) curve, scaled for reasonable mix level
+            let target_amp = (t.sqrt() * 0.018).max(0.002);
+
+            let v = self.voice_pool.entry(c.id).or_insert_with(|| Voice::new(target_freq));
+            v.target_freq   = target_freq;
+            v.target_cutoff = target_cutoff;
+            v.sin_angle     = sin_th;  // waveform blend
+            v.target_amp    = target_amp;
+            v.refreshed     = true;
+            if v.releasing { v.releasing = false; v.release_samples = 0; }
+        }
+
+        // ── 3. Start release on voices whose cell didn't move ──────────────
+        for v in self.voice_pool.values_mut() {
+            if !v.refreshed && !v.releasing {
+                v.releasing = true;
+            }
+        }
+        // Remove fully-released voices
+        self.voice_pool.retain(|_, v| {
+            !(v.releasing && v.release_samples >= AUDIO_RELEASE)
+        });
+
+        // ── 4. Synthesise SAMPLES_PER_FRAME samples ────────────────────────
+        let n_voices = self.voice_pool.len();
+        // Normalise mix: target RMS ~0.25 regardless of voice count
+        let mix_gain = if n_voices > 0 {
+            0.25 / (n_voices as f32).sqrt()
+        } else { 0.0 };
+
+        for _ in 0..SAMPLES_PER_FRAME {
+            let mut sum = 0.0_f32;
+            for v in self.voice_pool.values_mut() {
+                // Slew frequency and cutoff
+                v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
+                v.current_cutoff += (v.target_cutoff - v.current_cutoff) * AUDIO_SLEW;
+                v.current_amp    += (v.target_amp    - v.current_amp)    * 0.01;
+
+                // Phase advance
+                v.phase = (v.phase + v.current_freq / SAMPLE_RATE as f32).rem_euclid(1.0);
+
+                // Waveform: blend sine ↔ saw based on sin(θ)
+                // sin_angle=-1 (up): pure sine (thin); sin_angle=+1 (down): pure saw (thick)
+                let blend = (v.sin_angle + 1.0) * 0.5;  // 0..1
+                let sine_s = (v.phase * 2.0 * PI).sin();
+                let saw_s  = 2.0 * v.phase - 1.0;
+                let raw    = blend * saw_s + (1.0 - blend) * sine_s;
+
+                // One-pole low-pass filter
+                v.filter_state += v.current_cutoff * (raw - v.filter_state);
+
+                // Envelope
+                let env = if v.releasing {
+                    let t = v.release_samples as f32 / AUDIO_RELEASE as f32;
+                    v.release_samples += 1;
+                    let decay = 1.0 - t;
+                    decay * decay  // quadratic = exponential feel
+                } else if v.attack_samples < AUDIO_ATTACK {
+                    let t = v.attack_samples as f32 / AUDIO_ATTACK as f32;
+                    v.attack_samples += 1;
+                    t
+                } else { 1.0 };
+
+                sum += v.filter_state * env * v.current_amp;
+            }
+            // Soft-clip with tanh then scale to comfortable level
+            let out = (sum * mix_gain).tanh() * 0.7;
+            chunk_audio.push(out);
+        }
     }
 
     fn paint_frame(&mut self, canvas: &mut Vec<f32>) {
@@ -1043,6 +1205,37 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize) {
     println!("  encoded {n_frames} frames → {seg_path}");
 }
 
+// Write raw f32le PCM, mux with video segment in-place.
+fn mux_audio_into_segment(seg_path: &str, audio: &[f32]) {
+    let pcm_path = format!("{seg_path}.pcm");
+    // Write f32 little-endian samples
+    let bytes: Vec<u8> = audio.iter().flat_map(|&s| s.to_le_bytes()).collect();
+    fs::write(&pcm_path, &bytes).expect("write pcm");
+
+    let muxed = format!("{seg_path}.muxed.mp4");
+    let status = Command::new("ffmpeg")
+        .args([
+            "-y",
+            "-i", seg_path,                        // video-only segment
+            "-f", "f32le", "-ar", "44100", "-ac", "1",
+            "-i", &pcm_path,                        // raw PCM audio
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "128k",
+            "-shortest",
+            &muxed,
+        ])
+        .status()
+        .expect("ffmpeg mux failed");
+
+    if status.success() {
+        fs::rename(&muxed, seg_path).expect("rename muxed");
+    } else {
+        eprintln!("  [audio] mux failed for {seg_path}, keeping video-only");
+        let _ = fs::remove_file(&muxed);
+    }
+    let _ = fs::remove_file(&pcm_path);
+}
+
 fn delete_frames(frames_dir: &str) {
     for entry in fs::read_dir(frames_dir).unwrap() {
         let path = entry.unwrap().path();
@@ -1053,13 +1246,14 @@ fn delete_frames(frames_dir: &str) {
 }
 
 fn concat_segments(segments_file: &str, output: &str) {
-    // Re-encode with nearest-neighbour upscale to 3840×2400
+    // Re-encode video with NN upscale; copy audio stream from muxed segments
     let status = Command::new("ffmpeg")
         .args([
             "-y", "-f", "concat", "-safe", "0", "-i", segments_file,
             "-vf", "scale=512:320:flags=neighbor",
             "-c:v", "libx264", "-crf", "12", "-preset", "fast",
             "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "128k",
             output,
         ])
         .status()
@@ -1190,6 +1384,7 @@ fn main() {
         let this_chunk_frames = chunk_end_frame - chunk_start_frame;
 
         println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames);
 
         // Render frames for this chunk — check signal each frame
         for local_frame in 0..this_chunk_frames {
@@ -1206,6 +1401,7 @@ fn main() {
                 Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
             }
             sim.tick();
+            sim.generate_audio(&mut chunk_audio);
 
             let log_every = if headless { FPS as usize } else { 480 };
             if local_frame % log_every == 0 {
@@ -1217,6 +1413,7 @@ fn main() {
             // Encode chunk
             let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
             encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+            mux_audio_into_segment(&seg_path, &chunk_audio);
 
             // Append to segments list
             writeln!(seg_list, "file '{seg_path}'").unwrap();
