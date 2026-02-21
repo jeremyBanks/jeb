@@ -1440,27 +1440,27 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
 // L: 0.45 (still) → 0.75 (fast); C: 0.0 (still) → 0.20 (fast); H: velocity direction angle.
 // ── Palette system ────────────────────────────────────────────────────────────
 // Hot-reload: binary reads /tmp/gravity_palette at the start of each chunk.
-// File contains a single palette name: "classic" | "jeremy"
+// File contains a single palette name: "classic" | "frozen"
 // If file is absent or unrecognised, falls back to "classic".
 // "classic" = original uniform hue wheel (exact same behaviour as before).
-// "jeremy"  = gravity-well hue biasing toward a curated palette; same L/C ramp.
+// "frozen"  = gravity-well hue biasing toward a curated palette; same L/C ramp.
 
 #[derive(Clone, Debug)]
 enum PaletteMode {
     /// Original: speed→L/C, direction→hue uniformly.
     Classic,
-    /// Gravity-well hue biasing toward Jeremy's palette anchors.
+    /// Gravity-well hue biasing toward the curated palette anchors.
     /// pull ∈ [0,1]: 0 = classic, 1 = maximum bias.
     /// sigma_rad: angular half-width of each well in radians (~0.7 ≈ 40°).
-    Jeremy { pull: f32, sigma_rad: f32 },
+    Frozen { pull: f32, sigma_rad: f32 },
 }
 
 fn load_palette() -> PaletteMode {
     let raw = std::fs::read_to_string("/tmp/gravity_palette")
         .unwrap_or_default();
     let s = raw.trim().to_lowercase();
-    if s.starts_with("jeremy") {
-        // Optional: "jeremy pull=0.8 sigma=0.6"
+    if s.starts_with("frozen") {
+        // Optional: "frozen pull=0.8 sigma=0.6"
         let pull = s.split("pull=").nth(1)
             .and_then(|v| v.split_whitespace().next())
             .and_then(|v| v.parse().ok())
@@ -1469,7 +1469,7 @@ fn load_palette() -> PaletteMode {
             .and_then(|v| v.split_whitespace().next())
             .and_then(|v| v.parse().ok())
             .unwrap_or(0.70_f32);  // ~40°
-        PaletteMode::Jeremy { pull, sigma_rad: sigma }
+        PaletteMode::Frozen { pull, sigma_rad: sigma }
     } else {
         PaletteMode::Classic
     }
@@ -1489,9 +1489,9 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
             (l, c * h.cos(), c * h.sin())
         }
 
-        PaletteMode::Jeremy { pull, sigma_rad } => {
+        PaletteMode::Frozen { pull, sigma_rad } => {
             // Anchor hues in radians (Oklch atan2 convention, −π..π).
-            // Derived from Jeremy's palette: FF6118 FFC01F 635BFF 533AFD F44BCC EA2261
+            // Anchor colors: FF6118 FFC01F 635BFF 533AFD F44BCC EA2261
             //   orange≈40°  gold≈80°  periwinkle≈274°  violet≈280°  pink≈325°  rose≈5°
             const ANCHORS: [f32; 6] = [
                  0.698,   // FF6118  orange  ~40°
