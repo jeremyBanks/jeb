@@ -86,6 +86,8 @@ struct Sim {
     dampen: bool,  // nudge system COM velocity toward zero each tick (--dampen flag)
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
+    next_id: u64,
+    voice_pool: HashMap<u64, Voice>,
 }
 
 // Original state captured at tick=0 for epilogue convergence
