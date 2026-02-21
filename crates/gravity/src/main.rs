@@ -1091,6 +1091,37 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize) {
     println!("  encoded {n_frames} frames → {seg_path}");
 }
 
+// Write raw f32le PCM, mux with video segment in-place.
+fn mux_audio_into_segment(seg_path: &str, audio: &[f32]) {
+    let pcm_path = format!("{seg_path}.pcm");
+    // Write f32 little-endian samples
+    let bytes: Vec<u8> = audio.iter().flat_map(|&s| s.to_le_bytes()).collect();
+    fs::write(&pcm_path, &bytes).expect("write pcm");
+
+    let muxed = format!("{seg_path}.muxed.mp4");
+    let status = Command::new("ffmpeg")
+        .args([
+            "-y",
+            "-i", seg_path,                        // video-only segment
+            "-f", "f32le", "-ar", "44100", "-ac", "1",
+            "-i", &pcm_path,                        // raw PCM audio
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "128k",
+            "-shortest",
+            &muxed,
+        ])
+        .status()
+        .expect("ffmpeg mux failed");
+
+    if status.success() {
+        fs::rename(&muxed, seg_path).expect("rename muxed");
+    } else {
+        eprintln!("  [audio] mux failed for {seg_path}, keeping video-only");
+        let _ = fs::remove_file(&muxed);
+    }
+    let _ = fs::remove_file(&pcm_path);
+}
+
 fn delete_frames(frames_dir: &str) {
     for entry in fs::read_dir(frames_dir).unwrap() {
         let path = entry.unwrap().path();
