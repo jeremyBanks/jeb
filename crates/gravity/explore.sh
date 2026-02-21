@@ -67,30 +67,30 @@ case "$ROUND" in
   )
   ;;
 2)
-  # Round 2: vary gravity + softening, holding Conway params at baseline.
+  # Round 2: vary gravity + softening with wrap, holding Conway params at baseline.
   CONFIGS=(
-    "baseline:--gravity 0.03125 --softening 6"
-    "G/2+s6:--gravity 0.015 --softening 6"
-    "G×2+s6:--gravity 0.0625 --softening 6"
-    "G×4+s6:--gravity 0.125 --softening 6"
-    "G×1+s3:--gravity 0.03125 --softening 3"
-    "G×1+s12:--gravity 0.03125 --softening 12"
-    "G×2+s3:--gravity 0.0625 --softening 3"
-    "G×2+s12:--gravity 0.0625 --softening 12"
+    "wrap+base:--gravity 0.03125 --softening 6 --wrap"
+    "wrap+G/2+s6:--gravity 0.015 --softening 6 --wrap"
+    "wrap+G×2+s6:--gravity 0.0625 --softening 6 --wrap"
+    "wrap+G×4+s6:--gravity 0.125 --softening 6 --wrap"
+    "wrap+G×1+s3:--gravity 0.03125 --softening 3 --wrap"
+    "wrap+G×1+s12:--gravity 0.03125 --softening 12 --wrap"
+    "wrap+G×2+s3:--gravity 0.0625 --softening 3 --wrap"
+    "wrap+G×2+s12:--gravity 0.0625 --softening 12 --wrap"
   )
   ;;
 3)
-  # Round 3: vary initial conditions (seed_density, pop_target).
+  # Round 3: vary initial conditions (seed_density, pop_target) and dampen.
   # Different starting densities → different initial cluster topologies.
   CONFIGS=(
-    "baseline:--gravity 0.03125 --softening 6"
-    "dense=1/64:--gravity 0.03125 --softening 6 --seed-density 64"
-    "dense=1/256:--gravity 0.03125 --softening 6 --seed-density 256"
-    "pop=1280:--gravity 0.03125 --softening 6 --pop-target 1280"
-    "pop=2560:--gravity 0.03125 --softening 6 --pop-target 2560"
-    "pop=10240:--gravity 0.03125 --softening 6 --pop-target 10240"
-    "dampen:--gravity 0.03125 --softening 6 --dampen"
-    "rate=8+band=512:--gravity 0.03125 --softening 6 --rate-limit 8 --pop-band 512"
+    "wrap+base:--gravity 0.03125 --softening 6 --wrap"
+    "wrap+dense=1/64:--gravity 0.03125 --softening 6 --wrap --seed-density 64"
+    "wrap+dense=1/256:--gravity 0.03125 --softening 6 --wrap --seed-density 256"
+    "wrap+pop=1280:--gravity 0.03125 --softening 6 --wrap --pop-target 1280"
+    "wrap+pop=2560:--gravity 0.03125 --softening 6 --wrap --pop-target 2560"
+    "wrap+pop=10240:--gravity 0.03125 --softening 6 --wrap --pop-target 10240"
+    "wrap+dampen:--gravity 0.03125 --softening 6 --wrap --dampen"
+    "wrap+rate=8+band=512:--gravity 0.03125 --softening 6 --wrap --rate-limit 8 --pop-band 512"
   )
   ;;
 *)
