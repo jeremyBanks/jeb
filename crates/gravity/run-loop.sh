@@ -20,7 +20,7 @@ while true; do
     rm -f segments.txt state/checkpoint.bin state/orig_state.bin
     rm -f segments/*.mp4 2>/dev/null || true
 
-    cargo run --release -- --seconds "$SECONDS_PER_RUN" --epilogue --seed "$SEED"
+    cargo run --release -- --seconds "$SECONDS_PER_RUN" --epilogue --seed "$SEED" "${EXTRA_ARGS[@]}"
 
     echo "=== Done seed=$SEED ==="
     SEED=$((SEED + 1))
