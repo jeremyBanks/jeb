@@ -1417,7 +1417,7 @@ fn xorf32(s: &mut u64) -> f32 {
 
 fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize) {
     // ffmpeg glob requires sorted files — they're zero-padded so glob order = numeric order
-    let scale = format!("scale={}:{}:flags=neighbor", OUT_W, OUT_H);
+    let scale = format!("scale={}:{}:flags=neighbor", OUT_W * 2, OUT_H * 2); // 2× NN upscale in segments
     let status = Command::new("ffmpeg")
         .args([
             "-y",
@@ -1481,7 +1481,7 @@ fn concat_segments(segments_file: &str, output: &str) {
     let status = Command::new("ffmpeg")
         .args([
             "-y", "-f", "concat", "-safe", "0", "-i", segments_file,
-            "-vf", "scale=512:320:flags=neighbor",
+            "-vf", "scale=2048:1280:flags=neighbor",
             "-c:v", "libx264", "-crf", "12", "-preset", "fast",
             "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "128k",
