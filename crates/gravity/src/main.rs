@@ -248,7 +248,7 @@ impl Sim {
         shuffle_vec(&mut cells, &mut rng);
 
         let n = cells.len();
-        let target_pop = W * H / 8;
+        let target_pop = W * H / 16;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
               conway_births: 0, conway_deaths: 0 }
@@ -327,7 +327,7 @@ impl Sim {
             prev_live_rebuilt[c.gy() * W + c.gx()] = true;
         }
         let order = (0..cells.len()).collect();
-        let target_pop = W * H / 8;
+        let target_pop = W * H / 16;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit,
                         tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen,
@@ -1095,10 +1095,10 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(6.0_f32);
     let speed_cap   = 2.25_f32; // cells/frame
-    let target_pop_default = W * H / 8; // 5120 for 256×160
+    let target_pop_default = W * H / 16; // 2560 for 256×160 (half of W*H/8)
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
-        .unwrap_or((target_pop_default / 8) as f32); // default: target/8 = 640
+        .unwrap_or(640.0); // fixed band: same ±640 around new target
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
         .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
