@@ -54,6 +54,7 @@ struct Voice {
     release_samples: usize,
     release_total: usize,      // varies by kind
     refreshed: bool,
+    init_delay: usize,         // samples to skip before voice starts (event temporal spreading)
 }
 
 impl Voice {
