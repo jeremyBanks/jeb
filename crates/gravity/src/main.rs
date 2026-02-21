@@ -1607,6 +1607,7 @@ use std::io::{BufWriter, Write};
 // [recovery] edit target not found, appending:
         // Build quadtree over [0,W]×[0,H]
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
             qt_insert(&mut nodes, 0, i, px, py, 0);
