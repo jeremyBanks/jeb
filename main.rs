@@ -23,29 +23,63 @@ const AUDIO_SLEW: f32       = 0.005;  // per-sample freq portamento
 const AUDIO_ATTACK: usize   = 220;    // 5 ms
 const AUDIO_RELEASE: usize  = 17640;  // 400 ms
 
+#[derive(Clone, Copy, PartialEq)]
+enum VoiceKind {
+    Sustain,  // moving cell — sustained while cell keeps moving
+    Birth,    // Conway birth — sine ping, 150ms decay, no sustain
+    Death,    // Conway death — saw thud, 70ms decay + pitch drop
+}
+
+struct AudioEvent {
+    kind: VoiceKind,
+    px: f32, py: f32,
+    vx: f32, vy: f32,
+}
+
 struct Voice {
+    kind: VoiceKind,
     phase: f32,
     current_freq: f32,
     target_freq: f32,
+    pitch_drop: f32,           // per-sample pitch multiplier for Death glide
     filter_state: f32,         // one-pole LP memory
-    current_cutoff: f32,       // slewed cutoff coefficient
+    current_cutoff: f32,
     target_cutoff: f32,
     sin_angle: f32,            // waveform blend: -1=pure sine, +1=pure saw
-    current_amp: f32,          // slewed amplitude (speed-based)
+    current_amp: f32,
     target_amp: f32,
     attack_samples: usize,
     releasing: bool,
     release_samples: usize,
-    refreshed: bool,           // cleared each frame, set when cell moved
+    release_total: usize,      // varies by kind
+    refreshed: bool,
 }
 
 impl Voice {
-    fn new(freq: f32) -> Self {
+    fn new_sustain(freq: f32) -> Self {
         Voice {
-            phase: 0.0, current_freq: freq, target_freq: freq,
+            kind: VoiceKind::Sustain,
+            phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop: 1.0,
             filter_state: 0.0, current_cutoff: 0.02, target_cutoff: 0.02,
             sin_angle: 0.0, current_amp: 0.0, target_amp: 0.0,
-            attack_samples: 0, releasing: false, release_samples: 0, refreshed: true,
+            attack_samples: 0, releasing: false,
+            release_samples: 0, release_total: AUDIO_RELEASE, refreshed: true,
+        }
+    }
+    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32) -> Self {
+        let (release_total, pitch_drop) = match kind {
+            VoiceKind::Birth => (6615_usize,  1.0_f32),         // 150ms
+            VoiceKind::Death => (3087_usize,  0.9997_f32),      // 70ms, drops ~half-step
+            VoiceKind::Sustain => (AUDIO_RELEASE, 1.0),
+        };
+        Voice {
+            kind,
+            phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop,
+            filter_state: 0.0, current_cutoff: cutoff, target_cutoff: cutoff,
+            sin_angle, current_amp: amp, target_amp: amp,
+            attack_samples: AUDIO_ATTACK,   // start fully in attack state = already at amp
+            releasing: true,                // one-shot: immediately releasing
+            release_samples: 0, release_total, refreshed: true,
         }
     }
 }
