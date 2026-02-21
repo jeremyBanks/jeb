@@ -70,7 +70,7 @@ case "$ROUND" in
   # Round 2: vary gravity + softening with wrap, holding Conway params at baseline.
   CONFIGS=(
     "wrap+base:--gravity 0.03125 --softening 6 --wrap"
-    "wrap+G/2+s6:--gravity 0.015 --softening 6 --wrap"
+    "wrap+Ghalf+s6:--gravity 0.015 --softening 6 --wrap"
     "wrap+G×2+s6:--gravity 0.0625 --softening 6 --wrap"
     "wrap+G×4+s6:--gravity 0.125 --softening 6 --wrap"
     "wrap+G×1+s3:--gravity 0.03125 --softening 3 --wrap"
