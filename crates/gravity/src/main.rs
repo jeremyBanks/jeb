@@ -1185,9 +1185,17 @@ impl Sim {
         }
 
         // ── 4. Spawn one-shot voices for Conway events ────────────────────────
-        // Events use position-based pitch/timbre — NOT velocity. This ensures:
-        //   • births and deaths at different screen locations sound distinctly different
-        //   • amplitude is fixed and low (not velocity-scaled), killing the buzzing
+        // Events use position-based pitch/timbre — NOT velocity.
+        // Amplitude scales with average cell speed: when things are slow (Conway churning),
+        // events are nearly silent. Movement is the primary sound driver.
+        let avg_speed = if self.cells.is_empty() { 0.0 } else {
+            self.cells.iter().map(|c| (c.vx*c.vx + c.vy*c.vy).sqrt()).sum::<f32>()
+                / self.cells.len() as f32
+        };
+        let speed_factor = (avg_speed / self.speed_cap).clamp(0.0, 1.0);
+        // sqrt curve so even moderate movement gives some event texture
+        let event_scale = speed_factor.sqrt();
+
         let events: Vec<AudioEvent> = self.audio_events.drain(..).collect();
         for ev in events {
             use std::f32::consts::PI;
@@ -1195,25 +1203,18 @@ impl Sim {
             let y_t = (ev.py / H as f32).clamp(0.0, 1.0); // 0=top  … 1=bottom
             let (adj_freq, adj_cutoff, adj_sin, adj_amp) = match ev.kind {
                 VoiceKind::Birth => {
-                    // Pitch: top of screen = high (C5-C6), bottom = lower (C4-C5)
-                    // Y drives position in upper pentatonic register
-                    let t = 0.5 + (1.0 - y_t) * 0.5;  // 0.5..1.0
+                    let t = 0.5 + (1.0 - y_t) * 0.5;
                     let freq = Self::pentatonic_freq(t);
-                    // Filter: left=darker, right=brighter — X axis spatial brightness
-                    let cutoff_hz = 400.0 * 2.0_f32.powf(x_t * 3.0); // 400Hz..3200Hz
+                    let cutoff_hz = 400.0 * 2.0_f32.powf(x_t * 3.0);
                     let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-                    // Pure sine — thin, light ping
-                    (freq, cutoff, -1.0_f32, AUDIO_AMP_SCALE * 0.12_f32)
+                    (freq, cutoff, -1.0_f32, AUDIO_AMP_SCALE * 0.03_f32 * event_scale)
                 },
                 VoiceKind::Death => {
-                    // Pitch: left=low (C3), right=higher (C4-C5) — X axis spatial
-                    let t = x_t * 0.45;  // 0.0..0.45 → stays in low register
+                    let t = x_t * 0.45;
                     let freq = Self::pentatonic_freq(t);
-                    // Filter: top=bright, bottom=dark — Y axis timbral
-                    let cutoff_hz = 700.0 * 2.0_f32.powf((1.0 - y_t) * -2.0); // 700Hz..175Hz
+                    let cutoff_hz = 700.0 * 2.0_f32.powf((1.0 - y_t) * -2.0);
                     let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-                    // Triangle — warm, thumpy
-                    (freq, cutoff, 1.0_f32, AUDIO_AMP_SCALE * 0.09_f32)
+                    (freq, cutoff, 1.0_f32, AUDIO_AMP_SCALE * 0.02_f32 * event_scale)
                 },
                 VoiceKind::Sustain => unreachable!(),
             };
@@ -1524,7 +1525,7 @@ fn main() {
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.5_f32);
+        .unwrap_or(0.03125_f32);
     let softening: f32 = parse_arg("--softening")
         .and_then(|s| s.parse().ok())
         .unwrap_or(6.0_f32);
