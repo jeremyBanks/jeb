@@ -1593,13 +1593,14 @@ use std::io::{BufWriter, Write};
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
             } else if grid[tgy * W + tgx] == usize::MAX {
-                // Target square free — move
+                // Target square free — move; mark for audio
                 grid[old_gy * W + old_gx] = usize::MAX;
                 grid[tgy * W + tgx] = idx;
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
+                self.cells[idx].moved = true;
             }
-            // else: target occupied — stay put
+            // else: target occupied — stay put (no audio this tick)
         }
     }
 
