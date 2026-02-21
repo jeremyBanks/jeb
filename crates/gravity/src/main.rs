@@ -1892,9 +1892,7 @@ use std::io::{BufWriter, Write};
         });
 
         // ── 6. Synthesise SAMPLES_PER_FRAME samples ────────────────────────
-        let n_voices = self.voice_pool.len();
-        let mix_gain = if n_voices > 0 { 0.25 / (n_voices as f32).sqrt() } else { 0.0 };
-
+        // No pool-size normalization — more movers = louder, tanh handles headroom.
         for _ in 0..SAMPLES_PER_FRAME {
             let mut sum = 0.0_f32;
             for v in self.voice_pool.values_mut() {
