@@ -536,6 +536,8 @@ impl Sim {
 
     // ── Gravity step (Barnes-Hut O(n log n)) ──────────────────────────────
     fn gravity_step(&mut self) {
+        // Reset moved flag each tick — only set for cells that change grid square
+        for c in &mut self.cells { c.moved = false; }
         let n = self.cells.len();
 
         // Build quadtree over the toroidal domain (use cell centres for continuous physics)
