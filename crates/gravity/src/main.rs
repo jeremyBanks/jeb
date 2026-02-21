@@ -2164,3 +2164,61 @@ use std::io::{BufWriter, Write};
             mux_audio_into_segment(&seg_path, &chunk_audio);
 
             // Append to segments list
+
+// [recovery] edit target not found, appending:
+        println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames);
+
+        // Render frames for this chunk — check signal each frame
+        let sim_t0 = std::time::Instant::now();
+        for local_frame in 0..this_chunk_frames {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Discard partial chunk and stop immediately
+                println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
+                    chunk + 1, local_frame);
+                delete_frames(frames_dir);
+                break 'chunks;
+            }
+            let global_frame = chunk_start_frame + local_frame;
+            if !headless {
+                sim.paint_frame(&mut canvas);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
+            }
+            sim.tick();
+            sim.generate_audio(&mut chunk_audio);
+
+            let log_every = if headless { FPS as usize } else { 480 };
+            if local_frame % log_every == 0 {
+                println!("  frame {}/{total_frames}  {}", global_frame, sim.stats());
+            }
+        }
+        let sim_ms = sim_t0.elapsed().as_millis();
+
+        let enc_ms;
+        if !headless {
+            // Encode chunk
+            let enc_t0 = std::time::Instant::now();
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
+            encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+            mux_audio_into_segment(&seg_path, &chunk_audio);
+            enc_ms = enc_t0.elapsed().as_millis();
+
+            // Append to segments list
+            writeln!(seg_list, "file '{seg_path}'").unwrap();
+            seg_list.flush().unwrap();
+
+            // Delete PNGs
+            delete_frames(frames_dir);
+        } else {
+            enc_ms = 0;
+        }
+
+        // Save checkpoint (next chunk index)
+        sim.save_checkpoint(&canvas, chunk + 1, checkpoint_path);
+
+        let pct = (chunk + 1) * 100 / n_chunks;
+        let pop = sim.cells.len();
+        println!("  chunk {}/{n_chunks} done ({pct}%)  pop={pop}  sim={sim_ms}ms enc={enc_ms}ms", chunk+1);
+        // Write stats for segment-watcher.sh to include in Discord messages
+        let _ = fs::write("state/last_stats.txt",
+            format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
