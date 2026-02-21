@@ -3,8 +3,8 @@ use std::io::{BufWriter, Write};
 use std::process::Command;
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
-const W: usize = 192;
-const H: usize = 120; // 192×120 × 10 = 1920×1200 exactly (square pixels)
+const W: usize = 256;
+const H: usize = 160; // raw sim grid; upscaled to 3840×2400 at concat time
 
 // Output video settings
 const OUT_W: u32 = 1920; // 192 × 10
