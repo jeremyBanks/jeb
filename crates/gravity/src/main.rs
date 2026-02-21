@@ -1913,11 +1913,12 @@ use std::io::{BufWriter, Write};
                 // Phase advance
                 v.phase = (v.phase + v.current_freq / SAMPLE_RATE as f32).rem_euclid(1.0);
 
-                // Waveform: sin_angle=-1 → pure sine (birth/up), +1 → pure saw (death/down)
+                // Waveform: sin_angle=-1 → pure sine (thin/up), +1 → triangle (warm/down)
+                // Triangle instead of saw: same directional variety, far softer harmonics
                 let blend  = (v.sin_angle + 1.0) * 0.5;
                 let sine_s = (v.phase * 2.0 * PI).sin();
-                let saw_s  = 2.0 * v.phase - 1.0;
-                let raw    = blend * saw_s + (1.0 - blend) * sine_s;
+                let tri_s  = 1.0 - 4.0 * (v.phase - 0.5).abs(); // triangle: -1..+1
+                let raw    = blend * tri_s + (1.0 - blend) * sine_s;
 
                 // One-pole LP filter
                 v.filter_state += v.current_cutoff * (raw - v.filter_state);
