@@ -56,16 +56,15 @@ case "$ROUND" in
   # rate_limit controls max churn; pop_band controls how aggressively it steers pop.
   # Start by understanding how these affect long-term dynamics.
   CONFIGS=(
-    "baseline:--gravity 0.03125 --softening 6"
-    "rate=8:--gravity 0.03125 --softening 6 --rate-limit 8"
-    "rate=128:--gravity 0.03125 --softening 6 --rate-limit 128"
-    "band=256:--gravity 0.03125 --softening 6 --pop-band 256"
-    "band=2560:--gravity 0.03125 --softening 6 --pop-band 2560"
-    "cap=2:--gravity 0.03125 --softening 6 --speed-cap 2"
-    "cap=12:--gravity 0.03125 --softening 6 --speed-cap 12"
-    "nowrap:--gravity 0.03125 --softening 6 --wrap"  # note: --wrap in BASE, this overrides nothing — add a nowrap version
+    "wrap+base:--gravity 0.03125 --softening 6 --wrap"
+    "nowrap+base:--gravity 0.03125 --softening 6"
+    "wrap+rate=8:--gravity 0.03125 --softening 6 --wrap --rate-limit 8"
+    "wrap+rate=128:--gravity 0.03125 --softening 6 --wrap --rate-limit 128"
+    "wrap+band=256:--gravity 0.03125 --softening 6 --wrap --pop-band 256"
+    "wrap+band=2560:--gravity 0.03125 --softening 6 --wrap --pop-band 2560"
+    "wrap+cap=2:--gravity 0.03125 --softening 6 --wrap --speed-cap 2"
+    "wrap+cap=12:--gravity 0.03125 --softening 6 --wrap --speed-cap 12"
   )
-  # nowrap is tricky since --wrap is in BASE_ARGS; handled by score_config noting it
   ;;
 2)
   # Round 2: vary gravity + softening, holding Conway params at baseline.
