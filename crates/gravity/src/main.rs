@@ -1998,7 +1998,8 @@ use std::io::{BufWriter, Write};
 
                 sum += v.filter_state * env * v.current_amp;
             }
-            let out = sum.tanh() * 0.7;
+            let dry = sum.tanh() * 0.7;
+            let out = self.reverb.process(dry);
             chunk_audio.push(out);
         }
     }
