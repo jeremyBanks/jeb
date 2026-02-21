@@ -904,17 +904,24 @@ impl Sim {
     }
 
     fn paint_frame(&mut self, canvas: &mut Vec<f32>) {
+        // Canvas stores Oklab (L, a, b) as f32 per channel.
+        // Fade only L (brightness): multiplicative + constant drain so L always reaches 0.
+        // a and b (chroma) are left intact — they become invisible as L→0.
+        const FADE_SLOW: f32 = 0.999534;
+        // Epsilon ensures L hits 0 within ~28s at 60fps (not stuck at grey asymptote).
+        // At FADE_SLOW, without epsilon, a cell starting at L=0.75 would asymptote to ~0.32.
+        const FADE_EPSILON: f32 = 0.0003;
         for py in 0..H {
             for px in 0..W {
                 let i = (py * W + px) * 3;
                 if self.prev_live[py * W + px] {
-                    canvas[i]     *= 0.5;
-                    canvas[i + 1] *= 0.5;
-                    canvas[i + 2] *= 0.5;
+                    // Was alive last tick, now gone — fast brightness drop (trail burst)
+                    canvas[i] = (canvas[i] * 0.5).max(0.0);
+                    // a, b unchanged
                 } else {
-                    canvas[i]     *= 0.999534; // fade rate (doubled from 0.999767)
-                    canvas[i + 1] *= 0.999534;
-                    canvas[i + 2] *= 0.999534;
+                    // Normal background fade — only L drained
+                    canvas[i] = (canvas[i] * FADE_SLOW - FADE_EPSILON).max(0.0);
+                    // a, b unchanged
                 }
             }
         }
@@ -922,17 +929,23 @@ impl Sim {
         for c in &self.cells {
             let xi = c.gx();
             let yi = c.gy();
-            let (r, g, b) = velocity_color(c.vx, c.vy, self.speed_cap);
+            let (l, a, b) = velocity_color_oklab(c.vx, c.vy, self.speed_cap);
             let i = (yi * W + xi) * 3;
-            canvas[i]     = r as f32;
-            canvas[i + 1] = g as f32;
-            canvas[i + 2] = b as f32;
+            canvas[i]     = l;
+            canvas[i + 1] = a;
+            canvas[i + 2] = b;
             self.prev_live[yi * W + xi] = true;
         }
     }
 
     fn save_png(canvas: &[f32], path: &str) {
-        let pixels: Vec<u8> = canvas.iter().map(|&v| v.clamp(0.0, 255.0) as u8).collect();
+        // Convert Oklab (L, a, b) → sRGB u8 only at output time.
+        let pixels: Vec<u8> = canvas.chunks_exact(3)
+            .flat_map(|px| {
+                let (r, g, b) = oklab_to_srgb(px[0], px[1], px[2]);
+                [r, g, b]
+            })
+            .collect();
         let file = fs::File::create(path).unwrap();
         let mut enc = png::Encoder::new(BufWriter::new(file), W as u32, H as u32);
         enc.set_color(png::ColorType::Rgb);
@@ -971,19 +984,15 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
     }
 }
 
-fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
+// Returns Oklab (L, a, b) for a cell's velocity — stored directly in canvas, no RGB conversion here.
+// L: 0.45 (still) → 0.75 (fast); C: 0.0 (still) → 0.20 (fast); H: velocity direction angle.
+fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32) -> (f32, f32, f32) {
     let spd = (vx * vx + vy * vy).sqrt();
     let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
-    // Oklch: perceptually uniform — equal speed = equal brightness regardless of direction
-    // L: 0.45 (still, ~sRGB 64) → 0.75 (fast, bright)
-    // C: 0.0 (still, achromatic) → 0.20 (fast, saturated)
-    // H: velocity direction angle
     let l = 0.45 + 0.30 * t;
     let c = 0.20 * t;
     let h = vy.atan2(vx);
-    let a = c * h.cos();
-    let b = c * h.sin();
-    oklab_to_srgb(l, a, b)
+    (l, c * h.cos(), c * h.sin())
 }
 
 fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
@@ -1274,7 +1283,8 @@ fn main() {
             // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
             let t = (ep_tick as f32 / 600.0_f32).min(1.0);
             let fade = 0.999534_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
-            for v in canvas.iter_mut() { *v *= fade; }
+            // Only fade L (brightness); a and b are irrelevant as L→0
+            for px in canvas.chunks_exact_mut(3) { px[0] = (px[0] * fade).max(0.0); }
             sim.paint_frame(&mut canvas);
             let global_frame = total_frames + ep_frame;
             let path = format!("{frames_dir}/f{global_frame:013}.png");
