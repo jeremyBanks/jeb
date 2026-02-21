@@ -1043,7 +1043,9 @@ fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
     // speed_cap → 75% saturation; 100% requires exceeding speed_cap (≥ 4/3 × speed_cap)
     let sat = (spd * 0.75 / speed_cap).clamp(0.0, 1.0);
     let hue = (vy.atan2(vx) + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
-    let (r, g, b) = hsv_to_rgb(hue, sat, 1.0);
+    // Brightness: 0.5 at rest, eases up to 1.0 at 2× speed_cap and above
+    let val = 0.5 + 0.5 * (spd / (2.0 * speed_cap)).clamp(0.0, 1.0);
+    let (r, g, b) = hsv_to_rgb(hue, sat, val);
     let floor = 64u8;
     (r.max(floor), g.max(floor), b.max(floor))
 }
