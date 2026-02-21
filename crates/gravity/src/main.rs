@@ -1970,7 +1970,9 @@ use std::io::{BufWriter, Write};
             let birth_spd = (vx * vx + vy * vy).sqrt();
             let new_idx = self.cells.len();
             let id = self.next_id; self.next_id += 1;
-            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd, id, moved: false });
+            let (bpx, bpy) = (gx as f32 + 0.5, gy as f32 + 0.5);
+            self.cells.push(Cell { px: bpx, py: bpy, vx, vy, prev_speed: birth_spd, id, moved: false });
+            self.audio_events.push(AudioEvent { kind: VoiceKind::Birth, px: bpx, py: bpy, vx, vy });
             grid2[gy * W + gx] = new_idx;
             self.conway_births += 1;
 
