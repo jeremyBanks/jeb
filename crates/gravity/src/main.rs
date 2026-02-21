@@ -1509,9 +1509,18 @@ use std::io::{BufWriter, Write};
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
             if live_nbrs.is_empty() { continue; }
-            let n_nbrs = live_nbrs.len() as f32;
-            let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
-            let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+            let (vx, vy) = if self.wrap {
+                // Wrap mode: inherit avg neighbour velocity for interesting dynamics
+                let n_nbrs = live_nbrs.len() as f32;
+                let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
+                let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+                (vx, vy)
+            } else {
+                // No-wrap: born at rest — gravity provides velocity organically.
+                // Inheriting neighbour velocity near walls continuously injects wall-facing
+                // momentum faster than gravity can correct it.
+                (0.0_f32, 0.0_f32)
+            };
             let birth_spd = (vx * vx + vy * vy).sqrt();
             let new_idx = self.cells.len();
             self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd });
