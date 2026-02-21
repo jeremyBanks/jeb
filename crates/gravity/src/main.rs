@@ -2037,6 +2037,11 @@ use std::io::{BufWriter, Write};
                 } else { 1.0 };
 
                 sum += v.filter_state * env * v.current_amp;
+
+                // Event voices (Birth/Death): start releasing once attack ramp finishes
+                if v.kind != VoiceKind::Sustain && !v.releasing && v.attack_samples >= AUDIO_ATTACK {
+                    v.releasing = true;
+                }
             }
             let dry = sum.tanh() * 0.7;
             let out = self.reverb.process(dry);
