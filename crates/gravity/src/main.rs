@@ -248,7 +248,7 @@ impl Sim {
         shuffle_vec(&mut cells, &mut rng);
 
         let n = cells.len();
-        let target_pop = W * H / 16;
+        let target_pop = W * H / 8;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H], wrap, steer,
               conway_births: 0, conway_deaths: 0 }
@@ -327,7 +327,7 @@ impl Sim {
             prev_live_rebuilt[c.gy() * W + c.gx()] = true;
         }
         let order = (0..cells.len()).collect();
-        let target_pop = W * H / 16;
+        let target_pop = W * H / 8;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, conway_every, pop_band,
                         tick_count, prev_live: prev_live_rebuilt, wrap, steer,
