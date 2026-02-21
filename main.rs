@@ -1550,13 +1550,21 @@ fn main() {
     let output_file = format!("{}/gravity_{}.mp4", shared_dir, run_id);
 
     // Write settings file alongside video and run_info for the watcher
-    let init_pop = if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
+    let init_pop = if circles > 0 {
+        use std::f32::consts::PI;
+        let cells_per = (target_pop / circles).max(1);
+        let r = ((cells_per as f32 / PI).sqrt()).max(4.0)
+                 .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
+        (PI * r * r) as usize * circles
+    } else if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
+    let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
         "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
          commit:        {commit_id}\n\
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
+         circles:       {circles_str}\n\
          wrap:          {wrap}\ndampen:        {dampen}\nsteer:         {steer}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
