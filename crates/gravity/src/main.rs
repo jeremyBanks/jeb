@@ -1269,6 +1269,7 @@ fn main() {
         let this_chunk_frames = chunk_end_frame - chunk_start_frame;
 
         println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames);
 
         // Render frames for this chunk — check signal each frame
         for local_frame in 0..this_chunk_frames {
