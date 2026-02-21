@@ -2456,3 +2456,8 @@ use std::io::{BufWriter, Write};
             if !headless {
                 sim.paint_frame(&mut canvas, &palette);
                 Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
+
+// [recovery] edit target not found, appending:
+            sim.paint_frame(&mut canvas, &palette);
+            let global_frame = total_frames + ep_frame;
+            let path = format!("{frames_dir}/f{global_frame:013}.png");
