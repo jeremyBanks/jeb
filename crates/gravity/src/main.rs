@@ -1605,3 +1605,7 @@ use std::io::{BufWriter, Write};
 
 // [recovery] edit target not found, appending:
                 let spd   = xorf32(&mut rng) * speed_cap * 0.001; // tiny perturbation — gravity does the work
+
+// [recovery] edit target not found, appending:
+                // Tiny random initial velocity: speed ~ U[0, 0.003% of speed_cap], gravity does the work
+                let spd   = xorf32(&mut rng) * speed_cap * 0.00003125; // 0.001 / 32
