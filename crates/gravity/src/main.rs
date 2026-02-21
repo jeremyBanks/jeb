@@ -1823,6 +1823,9 @@ use std::io::{BufWriter, Write};
 // [recovery] edit target not found, appending:
     fn stats(&self) -> String {
         let total = self.cells.len() as f32;
+        if total == 0.0 {
+            return "pop=0 births=0 deaths=0 avg_spd=0 max=0 p10=0 spread=0 blk=0/0 com=(0,0)".into();
+        }
         let in_bounds: Vec<&Cell> = if self.wrap {
             self.cells.iter().collect()
         } else {
@@ -1830,15 +1833,42 @@ use std::io::{BufWriter, Write};
         };
         let pop = in_bounds.len();
         let n = total;
-        let avg_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).sum::<f32>() / n;
-        let max_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).fold(0.0f32, f32::max);
         let cx = self.cells.iter().map(|c| c.px).sum::<f32>() / n;
         let cy = self.cells.iter().map(|c| c.py).sum::<f32>() / n;
         let spread = self.cells.iter().map(|c| {
             let dx = c.px - cx; let dy = c.py - cy;
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
-        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.1},{cy:.1})",
+
+        // Speed stats: avg, max, p10 (10th percentile — "are most cells moving?")
+        let mut speeds: Vec<f32> = self.cells.iter()
+            .map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).collect();
+        speeds.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let avg_spd = speeds.iter().sum::<f32>() / n;
+        let max_spd = *speeds.last().unwrap_or(&0.0);
+        let p10_idx = ((speeds.len() as f32 * 0.10) as usize).min(speeds.len().saturating_sub(1));
+        let p10_spd = speeds[p10_idx];
+
+        // Clustering: divide grid into BLK×BLK blocks, count occupied blocks
+        // Low blk = tight clusters; high blk = spread across grid
+        const BLK: usize = 8;
+        const BROWS: usize = (H + BLK - 1) / BLK;  // 20
+        const BCOLS: usize = (W + BLK - 1) / BLK;  // 32
+        const BTOTAL: usize = BROWS * BCOLS;          // 640
+        let mut block_occ = [false; BTOTAL];
+        let mut max_in_block = 0u16;
+        let mut block_counts = [0u16; BTOTAL];
+        for c in &self.cells {
+            let bx = (c.px as usize / BLK).min(BCOLS - 1);
+            let by = (c.py as usize / BLK).min(BROWS - 1);
+            let bi = by * BCOLS + bx;
+            block_occ[bi] = true;
+            block_counts[bi] += 1;
+            if block_counts[bi] > max_in_block { max_in_block = block_counts[bi]; }
+        }
+        let blk_used = block_occ.iter().filter(|&&v| v).count();
+
+        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{BTOTAL} dense={max_in_block} com=({cx:.1},{cy:.1})",
             self.conway_births, self.conway_deaths)
     }
 
