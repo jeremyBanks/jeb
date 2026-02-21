@@ -113,7 +113,8 @@ while true; do
                 WRAP=$( grep "^wrap:"       state/run_info.txt | awk '{print $2}')
                 INITV=$(grep "^init_vel:"   state/run_info.txt | awk '{print $2}')
                 CMT=$(  grep "^commit:"     state/run_info.txt | awk '{print $2}')
-                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} rate=${RATE} wrap=${WRAP} vel=${INITV}"
+                DAMP=$(grep "^dampen:"    state/run_info.txt | awk '{print $2}')
+                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} rate=${RATE} wrap=${WRAP} dampen=${DAMP} vel=${INITV}"
             fi
 
             if openclaw message send --channel discord \
