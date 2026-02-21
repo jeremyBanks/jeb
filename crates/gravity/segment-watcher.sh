@@ -20,9 +20,8 @@ GAP_DUR="0.125"  # 1/8 second
 make_preview() {
     local seg="$1"
     local out="$2"
-    local chunk_n="$3"   # current chunk number
+    local chunk_n="$3"
 
-    # Get duration of this segment
     local dur
     dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$seg" 2>/dev/null | tr -d '[:space:]')
     dur=${dur:-0}
@@ -35,28 +34,45 @@ make_preview() {
     ffmpeg -y -f lavfi -i "color=black:s=${PREVIEW_W}x${PREVIEW_H}:r=60" \
         -t $GAP_DUR -c:v libx264 -crf 22 -preset fast "$tmp/gap.mp4" 2>/dev/null
 
-    # Part A: first CLIP_DUR seconds of chunk 1 (t=0 baseline — always the same reference)
-    local seg1
-    seg1=$(ls segments/seg_*.mp4 2>/dev/null | sort | head -1)
-    if [ -n "$seg1" ] && [ "$chunk_n" -gt 1 ]; then
-        ffmpeg -y -i "$seg1" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_a.mp4" 2>/dev/null
+    # Find the earliest and most recent completed segments (excluding current)
+    local segs
+    segs=$(ls segments/seg_*.mp4 2>/dev/null | sort)
+    local seg_first seg_prev
+    seg_first=$(echo "$segs" | head -1)
+    seg_prev=$(echo "$segs" | grep -v "$(basename "$seg")" | tail -1)
+
+    # Part A: last CLIP_DUR of the EARLIEST segment (what it looked like at chunk 1)
+    if [ -n "$seg_first" ] && [ "$seg_first" != "$seg" ]; then
+        local first_dur
+        first_dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$seg_first" 2>/dev/null | tr -d '[:space:]')
+        local first_last_start
+        first_last_start=$(echo "scale=3; $first_dur - $CLIP_DUR" | bc)
+        ffmpeg -y -i "$seg_first" -ss "$first_last_start" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_a.mp4" 2>/dev/null
     else
         ffmpeg -y -i "$seg" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_a.mp4" 2>/dev/null
     fi
 
-    # Part B: first CLIP_DUR seconds of THIS chunk (start of current window)
-    ffmpeg -y -i "$seg" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_b.mp4" 2>/dev/null
+    # Part B: last CLIP_DUR of previous segment (continuity bridge)
+    if [ -n "$seg_prev" ] && [ "$seg_prev" != "$seg_first" ]; then
+        local prev_dur
+        prev_dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$seg_prev" 2>/dev/null | tr -d '[:space:]')
+        local prev_last_start
+        prev_last_start=$(echo "scale=3; $prev_dur - $CLIP_DUR" | bc)
+        ffmpeg -y -i "$seg_prev" -ss "$prev_last_start" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_b.mp4" 2>/dev/null
+    else
+        ffmpeg -y -i "$seg" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_b.mp4" 2>/dev/null
+    fi
 
-    # Part C: last CLIP_DUR seconds of THIS chunk (end of current window)
+    # Part C: last CLIP_DUR of THIS segment (current state)
     if (( $(echo "$dur >= $((CLIP_DUR + 1))" | bc -l) )); then
         local last_start
         last_start=$(echo "scale=3; $dur - $CLIP_DUR" | bc)
         ffmpeg -y -i "$seg" -ss "$last_start" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_c.mp4" 2>/dev/null
     else
-        cp "$tmp/part_b.mp4" "$tmp/part_c.mp4"
+        ffmpeg -y -i "$seg" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_c.mp4" 2>/dev/null
     fi
 
-    # Concat: A (t=0) + gap + B (start of chunk) + gap + C (end of chunk)
+    # Concat: A (chunk 1 end) + gap + B (prev chunk end) + gap + C (this chunk end)
     printf "file '%s'\nfile '%s'\nfile '%s'\nfile '%s'\nfile '%s'\n" \
         "$tmp/part_a.mp4" "$tmp/gap.mp4" \
         "$tmp/part_b.mp4" "$tmp/gap.mp4" \
