@@ -10,7 +10,7 @@ touch "$SEEN_FILE"
 
 echo "[watcher] started, watching segments/"
 
-TOTAL=69
+TOTAL=137
 LAST_TIME=$(date +%s)  # track time between segments
 PREVIEW_W=512
 PREVIEW_H=320
