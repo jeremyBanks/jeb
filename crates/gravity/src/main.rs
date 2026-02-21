@@ -1584,3 +1584,7 @@ use std::io::{BufWriter, Write};
             // else: target occupied — stay put
         }
     }
+
+// [recovery] edit target not found, appending:
+            let gx = self.cells[di].gx();
+            let gy = self.cells[di].gy();
