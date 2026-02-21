@@ -1519,6 +1519,13 @@ fn main() {
     let init_vel: String = parse_arg("--init-vel")
         .unwrap_or_else(|| "swirl".to_string());
 
+    // --circles N: place N filled disks instead of random scatter.
+    // Each disk gets target_pop/N cells; radius derived from cell count.
+    // Disk centres maximise min-distance from walls and each other.
+    let circles: usize = parse_arg("--circles")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+
     // --commit HASH: git commit ID for reproducibility logging (passed by run-loop.sh)
     let commit_id: String = parse_arg("--commit")
         .unwrap_or_else(|| "unknown".to_string());
