@@ -248,3 +248,32 @@ SIM_SECONDS="${1:-120}"
     hot_end=$(echo   "$last_line"  | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
     local blob_moved=0
     [ "$hot_start" != "$hot_end" ] && blob_moved=1
+
+// [recovery] edit target not found, appending:
+4)
+  # Round 4: explore init_vel modes with the best G/soft from R2.
+  # Tests whether initial angular momentum changes long-term dynamics.
+  CONFIGS=(
+    "swirl+wrap:--init-vel swirl --gravity 0.03125 --softening 6 --wrap"
+    "random+wrap:--init-vel random --gravity 0.03125 --softening 6 --wrap"
+    "spin+wrap:--init-vel spin --gravity 0.03125 --softening 6 --wrap"
+    "spin-ccw+wrap:--init-vel spin-ccw --gravity 0.03125 --softening 6 --wrap"
+    "radial-out+wrap:--init-vel radial-out --gravity 0.03125 --softening 6 --wrap"
+    "zero+wrap:--init-vel zero --gravity 0.03125 --softening 6 --wrap"
+    "spin+nowrap:--init-vel spin --gravity 0.03125 --softening 6"
+    "spin+G×2:--init-vel spin --gravity 0.0625 --softening 6 --wrap"
+  )
+  ;;
+*)
+  # Round 5+: cross-product of best init_vel + best G/soft/rate from R1-R4
+  CONFIGS=(
+    "r${ROUND}a:--init-vel swirl --gravity 0.0625 --softening 6 --rate-limit 8 --wrap"
+    "r${ROUND}b:--init-vel spin --gravity 0.0625 --softening 6 --rate-limit 8 --wrap"
+    "r${ROUND}c:--init-vel swirl --gravity 0.03125 --softening 12 --rate-limit 8 --wrap"
+    "r${ROUND}d:--init-vel spin --gravity 0.03125 --softening 12 --rate-limit 8 --wrap"
+    "r${ROUND}e:--init-vel swirl --gravity 0.125 --softening 6 --rate-limit 8 --wrap"
+    "r${ROUND}f:--init-vel spin --gravity 0.125 --softening 12 --rate-limit 8 --wrap"
+    "r${ROUND}g:--init-vel swirl --gravity 0.0625 --softening 12 --pop-band 512 --wrap"
+    "r${ROUND}h:--init-vel spin --gravity 0.03125 --softening 6 --speed-cap 2 --rate-limit 8 --wrap"
+  )
+  ;;
