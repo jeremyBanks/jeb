@@ -46,9 +46,11 @@ struct Voice {
     filter_state: f32,         // one-pole LP memory
     current_cutoff: f32,
     target_cutoff: f32,
-    sin_angle: f32,            // waveform blend: -1=pure sine, +1=pure saw
+    sin_angle: f32,            // waveform blend: -1=pure sine, +1=triangle
     current_amp: f32,
     target_amp: f32,
+    current_pan: f32,          // stereo position: -1=full left, 0=center, +1=full right
+    target_pan: f32,
     attack_samples: usize,
     releasing: bool,
     release_samples: usize,
@@ -64,12 +66,13 @@ impl Voice {
             phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop: 1.0,
             filter_state: 0.0, current_cutoff: 0.02, target_cutoff: 0.02,
             sin_angle: 0.0, current_amp: 0.0, target_amp: 0.0,
+            current_pan: 0.0, target_pan: 0.0,
             attack_samples: 0, releasing: false,
             release_samples: 0, release_total: AUDIO_RELEASE, refreshed: true,
             init_delay: 0,
         }
     }
-    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32, delay: usize) -> Self {
+    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32, pan: f32, delay: usize) -> Self {
         let (release_total, pitch_drop) = match kind {
             VoiceKind::Birth => (6615_usize,  1.0_f32),         // 150ms
             VoiceKind::Death => (3087_usize,  0.9997_f32),      // 70ms, drops ~half-step
@@ -80,6 +83,7 @@ impl Voice {
             phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop,
             filter_state: 0.0, current_cutoff: cutoff, target_cutoff: cutoff,
             sin_angle, current_amp: amp, target_amp: amp,
+            current_pan: pan, target_pan: pan,
             attack_samples: 0,              // ramp up through attack before releasing
             releasing: false,               // attack first, then release kicks in
             release_samples: 0, release_total, refreshed: true,
@@ -1119,7 +1123,7 @@ impl Sim {
     // ── Audio parameter helper ─────────────────────────────────────────────
     // Shared by both sustain voices and event voices.
     fn audio_params(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32)
-        -> (f32, f32, f32, f32)  // (target_freq, target_cutoff, sin_angle, target_amp)
+        -> (f32, f32, f32, f32, f32)  // (target_freq, target_cutoff, sin_angle, target_amp, pan)
     {
         use std::f32::consts::PI;
         let speed = (vx * vx + vy * vy).sqrt();
@@ -1136,14 +1140,16 @@ impl Sim {
         let target_freq = Self::pentatonic_freq(sin_th.abs()) * detune;
 
         // Filter: cos(θ) → brightness (right=bright, left=dark), base 400 Hz ±1.5 oct
-        // Ceiling ~1130Hz (was 2400Hz) — warmer, less shrill on fast rightward movers
         let cutoff_hz = 400.0 * 2.0_f32.powf(cos_th * 1.5);
         let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
 
-        // Amplitude: proportional to move magnitude (speed), sqrt curve
+        // Amplitude: proportional to speed, sqrt curve
         let target_amp = t.sqrt() * AUDIO_AMP_SCALE;
 
-        (target_freq, target_cutoff, sin_th, target_amp)
+        // Pan: cos(θ) — rightward=+1 (right), leftward=-1 (left), vertical=0 (center)
+        let pan = cos_th;
+
+        (target_freq, target_cutoff, sin_th, target_amp, pan)
     }
 
     fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
@@ -1159,7 +1165,7 @@ impl Sim {
         // Release only triggers when the cell no longer exists (Conway death).
         let speed_cap = self.speed_cap;
         for c in &self.cells {
-            let (tfreq, tcutoff, sin_th, tamp) =
+            let (tfreq, tcutoff, sin_th, tamp, tpan) =
                 Self::audio_params(c.vx, c.vy, c.px, c.py, speed_cap);
             let v = self.voice_pool.entry(c.id)
                 .or_insert_with(|| Voice::new_sustain(tfreq));
@@ -1167,6 +1173,7 @@ impl Sim {
             v.target_cutoff = tcutoff;
             v.sin_angle     = sin_th;
             v.target_amp    = tamp;
+            v.target_pan    = tpan;
             v.refreshed     = true;
             if v.releasing { v.releasing = false; v.release_samples = 0; }
         }
@@ -1215,8 +1222,10 @@ impl Sim {
             // Temporal spreading: X position offsets event start across the frame
             // Left=early, right=late — staggers simultaneous events, kills constructive buzzing
             let delay = (x_t * (SAMPLES_PER_FRAME - 1) as f32) as usize;
+            // Pan: X position maps directly to stereo field
+            let pan = x_t * 2.0 - 1.0;  // 0..1 → -1..+1
             let id = self.next_id; self.next_id += 1;
-            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp, delay));
+            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp, pan, delay));
         }
 
         // ── 5. Remove fully-released voices ────────────────────────────────
@@ -1224,32 +1233,31 @@ impl Sim {
             !(v.releasing && v.release_samples >= v.release_total)
         });
 
-        // ── 6. Synthesise SAMPLES_PER_FRAME samples ────────────────────────
-        // No pool-size normalization — more movers = louder, tanh handles headroom.
+        // ── 6. Synthesise SAMPLES_PER_FRAME stereo pairs (interleaved L, R) ──
         for _ in 0..SAMPLES_PER_FRAME {
-            let mut sum = 0.0_f32;
+            let mut sum_l = 0.0_f32;
+            let mut sum_r = 0.0_f32;
             for v in self.voice_pool.values_mut() {
                 // Temporal spread: stagger event voices across the frame by their X position
-                // Each sample we count down; voice produces nothing until delay hits zero
                 if v.init_delay > 0 { v.init_delay -= 1; continue; }
 
-                // Slew (events skip freq slew — they're one-shot and pitch-dropping)
+                // Slew (sustain only — events are one-shot)
                 if v.kind == VoiceKind::Sustain {
                     v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
                     v.current_cutoff += (v.target_cutoff - v.current_cutoff) * AUDIO_SLEW;
                     v.current_amp    += (v.target_amp    - v.current_amp)    * 0.01;
+                    v.current_pan    += (v.target_pan    - v.current_pan)    * 0.02;
                 }
-                // Death glide: frequency drops each sample
+                // Death glide
                 v.current_freq *= v.pitch_drop;
 
                 // Phase advance
                 v.phase = (v.phase + v.current_freq / SAMPLE_RATE as f32).rem_euclid(1.0);
 
-                // Waveform: sin_angle=-1 → pure sine (thin/up), +1 → triangle (warm/down)
-                // Triangle instead of saw: same directional variety, far softer harmonics
+                // Waveform: sin_angle=-1 → pure sine, +1 → triangle
                 let blend  = (v.sin_angle + 1.0) * 0.5;
                 let sine_s = (v.phase * 2.0 * PI).sin();
-                let tri_s  = 1.0 - 4.0 * (v.phase - 0.5).abs(); // triangle: -1..+1
+                let tri_s  = 1.0 - 4.0 * (v.phase - 0.5).abs();
                 let raw    = blend * tri_s + (1.0 - blend) * sine_s;
 
                 // One-pole LP filter
@@ -1267,16 +1275,26 @@ impl Sim {
                     t
                 } else { 1.0 };
 
-                sum += v.filter_state * env * v.current_amp;
+                // Equal-power panning: cos(θ)=right moves image right, left moves left
+                let angle = (v.current_pan + 1.0) * 0.5 * PI * 0.5;  // -1..+1 → 0..π/2
+                let gain_l = angle.cos();
+                let gain_r = angle.sin();
+                let s = v.filter_state * env * v.current_amp;
+                sum_l += s * gain_l;
+                sum_r += s * gain_r;
 
-                // Event voices (Birth/Death): start releasing once attack ramp finishes
+                // Event voices: start releasing once attack ramp finishes
                 if v.kind != VoiceKind::Sustain && !v.releasing && v.attack_samples >= AUDIO_ATTACK {
                     v.releasing = true;
                 }
             }
-            let dry = sum.tanh() * 0.7;
-            let out = self.reverb.process(dry);
-            chunk_audio.push(out);
+
+            // Mid-side reverb: wet reverb on mono mid, dry stereo width preserved
+            let mid  = (sum_l + sum_r) * 0.5;
+            let side = (sum_l - sum_r) * 0.5;
+            let wet  = self.reverb.process(mid.tanh() * 0.7);
+            chunk_audio.push(wet + side);  // L
+            chunk_audio.push(wet - side);  // R
         }
     }
 
@@ -1432,7 +1450,7 @@ fn mux_audio_into_segment(seg_path: &str, audio: &[f32]) {
         .args([
             "-y",
             "-i", seg_path,                        // video-only segment
-            "-f", "f32le", "-ar", "44100", "-ac", "1",
+            "-f", "f32le", "-ar", "44100", "-ac", "2",
             "-i", &pcm_path,                        // raw PCM audio
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
@@ -1599,7 +1617,7 @@ fn main() {
         let this_chunk_frames = chunk_end_frame - chunk_start_frame;
 
         println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
-        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames);
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2); // stereo interleaved
 
         // Render frames for this chunk — check signal each frame
         let sim_t0 = std::time::Instant::now();
