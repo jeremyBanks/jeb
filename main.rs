@@ -80,8 +80,8 @@ impl Voice {
             phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop,
             filter_state: 0.0, current_cutoff: cutoff, target_cutoff: cutoff,
             sin_angle, current_amp: amp, target_amp: amp,
-            attack_samples: AUDIO_ATTACK,   // start fully in attack state = already at amp
-            releasing: true,                // one-shot: immediately releasing
+            attack_samples: 0,              // ramp up through attack before releasing
+            releasing: false,               // attack first, then release kicks in
             release_samples: 0, release_total, refreshed: true,
             init_delay: delay,
         }
