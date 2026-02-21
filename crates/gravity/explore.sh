@@ -52,17 +52,16 @@ echo "=== Base: $BASE_ARGS ==="
 declare -a CONFIGS
 case "$ROUND" in
 1)
-  # Round 1: find configs where p10 stays BELOW speed_cap (Conway stays active).
-  # Base: G=0.03125, soft=6, no-wrap. Vary speed_cap and init_vel.
+  # Round 1: wrap-only. Vary speed_cap and init_vel around constant-rate baseline.
   CONFIGS=(
-    "nowrap+cap6+swirl:--speed-cap 6 --init-vel swirl"
-    "nowrap+cap9+swirl:--speed-cap 9 --init-vel swirl"
-    "nowrap+cap6+random:--speed-cap 6 --init-vel random"
-    "nowrap+cap9+random:--speed-cap 9 --init-vel random"
-    "nowrap+cap6+zero:--speed-cap 6 --init-vel zero"
+    "wrap+cap6+zero:--speed-cap 6 --init-vel zero --wrap"
+    "wrap+cap9+zero:--speed-cap 9 --init-vel zero --wrap"
     "wrap+cap6+swirl:--speed-cap 6 --init-vel swirl --wrap"
     "wrap+cap9+swirl:--speed-cap 9 --init-vel swirl --wrap"
+    "wrap+cap6+random:--speed-cap 6 --init-vel random --wrap"
     "wrap+cap9+random:--speed-cap 9 --init-vel random --wrap"
+    "wrap+cap6+spin:--speed-cap 6 --init-vel spin --wrap"
+    "wrap+cap9+spin:--speed-cap 9 --init-vel spin --wrap"
   )
   
 esac
