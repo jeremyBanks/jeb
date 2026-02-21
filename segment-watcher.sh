@@ -118,10 +118,11 @@ while true; do
             fi
             [ -n "$RUN_ID" ] && EXTRA="\`${RUN_ID}\` ${PARAMS}${EXTRA}"
 
+            local preview_label="[t=0 | chunk${chunk_num} start | chunk${chunk_num} end]"
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
-                -m "chunk ${chunk_num}/${TOTAL} | ${META}${EXTRA}"; then
+                -m "chunk ${chunk_num}/${TOTAL} | ${META} | ${preview_label}${EXTRA}"; then
                 echo "[watcher] sent chunk $chunk_num (${META})"
                 echo "$seg" >> "$SEEN_FILE"
                 LAST_TIME=$NOW
