@@ -20,38 +20,43 @@ GAP_DUR="0.125"  # 1/8 second
 make_preview() {
     local seg="$1"
     local out="$2"
+    local chunk_n="$3"   # current chunk number
 
-    # Get duration
+    # Get duration of this segment
     local dur
     dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$seg" 2>/dev/null | tr -d '[:space:]')
     dur=${dur:-0}
 
     local scale="scale=${PREVIEW_W}:${PREVIEW_H}:flags=neighbor"
-
-    if (( $(echo "$dur < $((CLIP_DUR * 2 + 1))" | bc -l) )); then
-        # Short segment — just take what we have
-        ffmpeg -y -i "$seg" -vf "$scale" -c:v libx264 -crf 22 -preset fast "$out" 2>/dev/null
-        return
-    fi
-
-    local mid_start
-    mid_start=$(echo "scale=3; $dur / 2 - $CLIP_DUR / 2" | bc)
-    local last_start
-    last_start=$(echo "scale=3; $dur - $CLIP_DUR" | bc)
-
     local tmp
     tmp=$(mktemp -d)
-
-    # Extract three clips at preview resolution
-    ffmpeg -y -i "$seg" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_a.mp4" 2>/dev/null
-    ffmpeg -y -i "$seg" -ss "$mid_start" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_b.mp4" 2>/dev/null
-    ffmpeg -y -i "$seg" -ss "$last_start" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_c.mp4" 2>/dev/null
 
     # 1/8s black gap
     ffmpeg -y -f lavfi -i "color=black:s=${PREVIEW_W}x${PREVIEW_H}:r=60" \
         -t $GAP_DUR -c:v libx264 -crf 22 -preset fast "$tmp/gap.mp4" 2>/dev/null
 
-    # Concat: A + gap + B + gap + C
+    # Part A: first CLIP_DUR seconds of chunk 1 (t=0 baseline — always the same reference)
+    local seg1
+    seg1=$(ls segments/seg_*.mp4 2>/dev/null | sort | head -1)
+    if [ -n "$seg1" ] && [ "$chunk_n" -gt 1 ]; then
+        ffmpeg -y -i "$seg1" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_a.mp4" 2>/dev/null
+    else
+        ffmpeg -y -i "$seg" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_a.mp4" 2>/dev/null
+    fi
+
+    # Part B: first CLIP_DUR seconds of THIS chunk (start of current window)
+    ffmpeg -y -i "$seg" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_b.mp4" 2>/dev/null
+
+    # Part C: last CLIP_DUR seconds of THIS chunk (end of current window)
+    if (( $(echo "$dur >= $((CLIP_DUR + 1))" | bc -l) )); then
+        local last_start
+        last_start=$(echo "scale=3; $dur - $CLIP_DUR" | bc)
+        ffmpeg -y -i "$seg" -ss "$last_start" -t $CLIP_DUR -vf "$scale" -c:v libx264 -crf 22 -preset fast "$tmp/part_c.mp4" 2>/dev/null
+    else
+        cp "$tmp/part_b.mp4" "$tmp/part_c.mp4"
+    fi
+
+    # Concat: A (t=0) + gap + B (start of chunk) + gap + C (end of chunk)
     printf "file '%s'\nfile '%s'\nfile '%s'\nfile '%s'\nfile '%s'\n" \
         "$tmp/part_a.mp4" "$tmp/gap.mp4" \
         "$tmp/part_b.mp4" "$tmp/gap.mp4" \
@@ -77,7 +82,7 @@ while true; do
 
         preview="${PREVIEW_DIR}/preview_chunk${chunk_num}.mp4"
 
-        if make_preview "$seg" "$preview"; then
+        if make_preview "$seg" "$preview" "$chunk_num"; then
             NOW=$(date +%s)
             ELAPSED=$(( NOW - LAST_TIME ))
             MINS=$(( ELAPSED / 60 ))
@@ -113,10 +118,11 @@ while true; do
             fi
             [ -n "$RUN_ID" ] && EXTRA="\`${RUN_ID}\` ${PARAMS}${EXTRA}"
 
+            local preview_label="[t=0 | chunk${chunk_num} start | chunk${chunk_num} end]"
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
-                -m "chunk ${chunk_num}/${TOTAL} | ${META}${EXTRA}"; then
+                -m "chunk ${chunk_num}/${TOTAL} | ${META} | ${preview_label}${EXTRA}"; then
                 echo "[watcher] sent chunk $chunk_num (${META})"
                 echo "$seg" >> "$SEEN_FILE"
                 LAST_TIME=$NOW
