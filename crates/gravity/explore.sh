@@ -30,15 +30,17 @@ case "$ROUND" in
   )
   ;;
 2)
+  # Round 2: probe different axes — speed_cap, pop_target, softening range
+  # Winner from R1: G=0.125, s=4. Now vary cap, pop, and softening.
   CONFIGS=(
-    "G×8+s3:--gravity 0.25 --softening 3"
-    "G×16+s6:--gravity 0.5 --softening 6"
-    "G×16+s4:--gravity 0.5 --softening 4"
-    "G×32:--gravity 1.0 --softening 6"
-    "G×4+s1.5:--gravity 0.125 --softening 1.5"
-    "G×2+s3:--gravity 0.0625 --softening 3"
-    "G×2+s1.5:--gravity 0.0625 --softening 1.5"
-    "G×8+s1.5:--gravity 0.25 --softening 1.5"
+    "winner+cap3:--gravity 0.125 --softening 4 --speed-cap 3"
+    "winner+pop2560:--gravity 0.125 --softening 4 --pop-target 2560"
+    "winner+cap3+pop2560:--gravity 0.125 --softening 4 --speed-cap 3 --pop-target 2560"
+    "winner+s8:--gravity 0.125 --softening 8"
+    "G0.05+s4:--gravity 0.05 --softening 4"
+    "G0.2+s5:--gravity 0.2 --softening 5"
+    "winner+s2:--gravity 0.125 --softening 2"
+    "G0.07+s4:--gravity 0.07 --softening 4"
   )
   ;;
 3)
