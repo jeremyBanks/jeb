@@ -1517,3 +1517,27 @@ use std::io::{BufWriter, Write};
     }
 
     // ── Gravity step (Barnes-Hut O(n log n)) ──────────────────────────────
+
+// [recovery] edit target not found, appending:
+        let o = OriginalState {
+            positions:  sim.cells.iter().map(|c| (c.gx(), c.gy())).collect(),
+            velocities: sim.cells.iter().map(|c| ((c.gx(), c.gy()), (c.vx, c.vy))).collect(),
+            count: sim.cells.len(),
+        };
+        Sim::save_orig_state(&o, orig_state_path);
+        println!("Saved original state ({} cells) for epilogue target.", o.count);
+        o
+    } else {
+        // Checkpoint resume — load the tick=0 state saved on fresh start
+        match Sim::load_orig_state(orig_state_path) {
+            Some(o) => { println!("Loaded original state ({} cells) for epilogue target.", o.count); o }
+            None => {
+                println!("WARNING: orig_state.bin not found — epilogue will target checkpoint state, not tick=0.");
+                OriginalState {
+                    positions:  sim.cells.iter().map(|c| (c.gx(), c.gy())).collect(),
+                    velocities: sim.cells.iter().map(|c| ((c.gx(), c.gy()), (c.vx, c.vy))).collect(),
+                    count: sim.cells.len(),
+                }
+            }
+        }
+    };
