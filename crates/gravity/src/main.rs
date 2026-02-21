@@ -1845,6 +1845,13 @@ use std::io::{BufWriter, Write};
         let p10_idx = ((speeds.len() as f32 * 0.10) as usize).min(speeds.len().saturating_sub(1));
         let p10_spd = speeds[p10_idx];
 
+        // Effective speed: cells that didn't actually move last tick count as 0.
+        // Reveals true visual motion — packed cells have velocity but are frozen in place.
+        let eff_spd = self.cells.iter()
+            .map(|c| if c.moved { (c.vx*c.vx+c.vy*c.vy).sqrt() } else { 0.0 })
+            .sum::<f32>() / n;
+        let moved_frac = self.cells.iter().filter(|c| c.moved).count() as f32 / n;
+
         // Clustering: divide grid into BLK×BLK blocks, count occupied blocks
         // Low blk = tight clusters; high blk = spread across grid
         const BLK: usize = 8;
