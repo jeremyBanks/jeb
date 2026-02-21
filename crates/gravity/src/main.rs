@@ -1991,6 +1991,10 @@ use std::io::{BufWriter, Write};
         for _ in 0..SAMPLES_PER_FRAME {
             let mut sum = 0.0_f32;
             for v in self.voice_pool.values_mut() {
+                // Temporal spread: stagger event voices across the frame by their X position
+                // Each sample we count down; voice produces nothing until delay hits zero
+                if v.init_delay > 0 { v.init_delay -= 1; continue; }
+
                 // Slew (events skip freq slew — they're one-shot and pitch-dropping)
                 if v.kind == VoiceKind::Sustain {
                     v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
