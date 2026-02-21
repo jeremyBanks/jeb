@@ -4,7 +4,7 @@
 # Usage: ./explore.sh [sim_seconds] [round_number]
 
 BIN="/Users/matte/jeb/target/release/gravity"
-SIM_SECONDS="${1:-300}"
+SIM_SECONDS="${1:-120}"
 ROUND="${2:-1}"
 SEED=42
 WORKDIR="/tmp/gravity_explore_$$"
@@ -121,7 +121,7 @@ for entry in "${CONFIGS[@]}"; do
         continue
     fi
 
-    # Print snapshots every 30 samples
+    # Print snapshots every 30s
     echo "  time   avg_spd   p10    blk/640  dense  hot_blocks"
     i=0
     while IFS= read -r line; do
@@ -137,15 +137,32 @@ for entry in "${CONFIGS[@]}"; do
         fi
     done <<< "$stat_lines"
 
-    # Hot block drift verdict
+    # Drift verdict: compare SETTLED snapshots (skip first ~15s of ramp-up)
+    # Use line 15+ as "settled" — by then cells have formed initial clusters
+    settled_lines=$(echo "$stat_lines" | tail -n +16)
+    n_settled=$(echo "$settled_lines" | grep -c "." 2>/dev/null || echo 0)
+
     first_line=$(echo "$stat_lines" | head -1)
     last_line=$(echo  "$stat_lines" | tail -1)
-    hs=$(echo "$first_line" | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
-    he=$(echo "$last_line"  | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
-    if [ "$hs" = "$he" ]; then
-        echo "  ⚠️  hot blocks STATIC: [$hs]"
+
+    if [ "$n_settled" -ge 2 ]; then
+        settled_first=$(echo "$settled_lines" | head -1)
+        settled_last=$(echo  "$settled_lines" | tail -1)
+        hs=$(echo "$settled_first" | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
+        he=$(echo "$settled_last"  | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
+        # Count unique hot block positions across settled snapshots
+        unique_hots=$(echo "$settled_lines" | grep -oE 'hot=\[[^]]*\]' | sort -u | wc -l | tr -d ' ')
+        if [ "$hs" = "$he" ]; then
+            echo "  ⚠️  STATIC after settling: hot always [$hs] ($unique_hots unique patterns)"
+        else
+            echo "  ✅ DRIFTING after settling: [$hs] → [$he] ($unique_hots unique patterns)"
+        fi
     else
-        echo "  ✅ hot blocks MOVED: [$hs] → [$he]"
+        settled_first="$first_line"
+        settled_last="$last_line"
+        hs=$(echo "$first_line" | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
+        he=$(echo "$last_line"  | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
+        echo "  (not enough settled samples)"
     fi
 
     p10s=$(echo "$first_line" | grep -oE 'p10=[0-9.]+' | cut -d= -f2)
