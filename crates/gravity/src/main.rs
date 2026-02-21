@@ -590,7 +590,7 @@ impl Sim {
             let t_speed = (p90 / self.speed_cap).clamp(0.0, 1.0);
 
             // Population factor: below target → t_pop≈0 (want more Conway to fill up)
-            let t_pop = (n as f32 / self.target_pop as f32).clamp(0.0, 1.0);
+            let t_pop = (n as f32 / self.start_pop as f32).clamp(0.0, 1.0);
 
             // Combined: either slow OR underpopulated keeps rate high.
             // Both at max (fast + full) → rate drops to 1.
