@@ -139,12 +139,9 @@ for entry in "${CONFIGS[@]}"; do
 
     # Drift verdict: compare SETTLED snapshots (skip first ~15s of ramp-up)
     # Use line 15+ as "settled" — by then cells have formed initial clusters
-    local settled_lines
     settled_lines=$(echo "$stat_lines" | tail -n +16)
-    local n_settled
     n_settled=$(echo "$settled_lines" | grep -c "." 2>/dev/null || echo 0)
 
-    local first_line last_line settled_first settled_last
     first_line=$(echo "$stat_lines" | head -1)
     last_line=$(echo  "$stat_lines" | tail -1)
 
