@@ -1235,7 +1235,10 @@ fn main() {
         sim.save_checkpoint(&canvas, chunk + 1, checkpoint_path);
 
         let pct = (chunk + 1) * 100 / n_chunks;
-        println!("  chunk {}/{n_chunks} done ({pct}%)  pop={}", chunk+1, sim.cells.len());
+        let pop = sim.cells.len();
+        println!("  chunk {}/{n_chunks} done ({pct}%)  pop={pop}", chunk+1);
+        // Write stats for segment-watcher.sh to include in Discord messages
+        let _ = fs::write("state/last_stats.txt", format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\n"));
     }
 
     // ── Epilogue phase ────────────────────────────────────────────────────
