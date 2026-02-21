@@ -1132,13 +1132,14 @@ fn delete_frames(frames_dir: &str) {
 }
 
 fn concat_segments(segments_file: &str, output: &str) {
-    // Re-encode with nearest-neighbour upscale to 3840×2400
+    // Re-encode video with NN upscale; copy audio stream from muxed segments
     let status = Command::new("ffmpeg")
         .args([
             "-y", "-f", "concat", "-safe", "0", "-i", segments_file,
             "-vf", "scale=512:320:flags=neighbor",
             "-c:v", "libx264", "-crf", "12", "-preset", "fast",
             "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "128k",
             output,
         ])
         .status()
