@@ -1288,7 +1288,8 @@ fn main() {
             // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
             let t = (ep_tick as f32 / 600.0_f32).min(1.0);
             let fade = 0.999534_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
-            for v in canvas.iter_mut() { *v *= fade; }
+            // Only fade L (brightness); a and b are irrelevant as L→0
+            for px in canvas.chunks_exact_mut(3) { px[0] = (px[0] * fade).max(0.0); }
             sim.paint_frame(&mut canvas);
             let global_frame = total_frames + ep_frame;
             let path = format!("{frames_dir}/f{global_frame:08}.png");
