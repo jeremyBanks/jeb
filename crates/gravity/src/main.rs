@@ -21,8 +21,8 @@ struct Cell {
     prev_speed: f32,
 }
 impl Cell {
-    #[inline] fn gx(&self) -> usize { self.px.round() as i32).rem_euclid(W as i32) as usize }
-    #[inline] fn gy(&self) -> usize { self.py.round() as i32).rem_euclid(H as i32) as usize }
+    #[inline] fn gx(&self) -> usize { (self.px.round() as i32).rem_euclid(W as i32) as usize }
+    #[inline] fn gy(&self) -> usize { (self.py.round() as i32).rem_euclid(H as i32) as usize }
 }
 
 struct Sim {
