@@ -1885,7 +1885,6 @@ use std::io::{BufWriter, Write};
 
 // [recovery] edit target not found, appending:
         let order = (0..cells.len()).collect();
-        let target_pop = W * H / 16;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
 
 // [recovery] edit target not found, appending:
