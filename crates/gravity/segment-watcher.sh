@@ -4,6 +4,7 @@ cd "$(dirname "$0")"
 
 DISCORD_CHANNEL="1467063568712339561"
 SEEN_FILE="/tmp/gravity_segments_seen.txt"
+PREVIEW_DIR="/Users/matte/.openclaw/workspace/shared/gravity"
 touch "$SEEN_FILE"
 
 echo "[watcher] started, watching segments/"
@@ -19,22 +20,27 @@ while true; do
         sleep 2
         [ -f "$seg" ] || continue
 
-        # Extract chunk number from frame offset in filename
         seg_name=$(basename "$seg" .mp4)
         frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
         frame_offset=${frame_offset:-0}
         chunk_num=$(( frame_offset / 3840 + 1 ))
 
-        preview="/Users/matte/.openclaw/workspace/shared/gravity/preview_chunk${chunk_num}.mp4"
-        ffmpeg -y -i "$seg" -t 15 -vf scale=960:600 -c:v libx264 -crf 22 -preset fast "$preview" 2>/dev/null \
-            && openclaw message send --channel discord \
+        preview="${PREVIEW_DIR}/preview_chunk${chunk_num}.mp4"
+
+        if ffmpeg -y -i "$seg" -t 15 -vf scale=960:600 -c:v libx264 -crf 22 -preset fast "$preview" 2>/dev/null; then
+            if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
-                -m "chunk ${chunk_num}/${TOTAL} — \`$seg_name\`" \
-            && echo "[watcher] sent chunk $chunk_num"
-
-        echo "$seg" >> "$SEEN_FILE"
-        rm -f "$preview"
+                -m "chunk ${chunk_num}/${TOTAL} — \`$seg_name\`"; then
+                echo "[watcher] sent chunk $chunk_num"
+                echo "$seg" >> "$SEEN_FILE"  # only mark seen on success
+            else
+                echo "[watcher] send failed for chunk $chunk_num, will retry"
+            fi
+            rm -f "$preview"
+        else
+            echo "[watcher] ffmpeg failed for chunk $chunk_num, will retry"
+        fi
     done
 
     sleep 5
