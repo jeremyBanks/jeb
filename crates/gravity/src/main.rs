@@ -211,10 +211,10 @@ impl Sim {
                     if xoru64(&mut rng) % 2 != 0 { continue; }
                     if xoru64(&mut rng) % 2 != 0 { continue; }
                     if xoru64(&mut rng) % 2 != 0 { continue; }
-                    if cells.iter().any(|c: &Cell| c.x == xi && c.y == yi) {
+                    if cells.iter().any(|c: &Cell| c.gx() == xi && c.gy() == yi) {
                         continue;
                     }
-                    cells.push(Cell { x: xi, y: yi, vx: ivx, vy: ivy, prev_speed: 0.0 });
+                    cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx: ivx, vy: ivy, prev_speed: 0.0 });
                 }
             }
         }
