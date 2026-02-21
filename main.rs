@@ -264,7 +264,8 @@ impl Sim {
                 let angle = xorf32(&mut rng) * 2.0 * std::f32::consts::PI;
                 let vx    = angle.cos() * spd;
                 let vy    = angle.sin() * spd;
-                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
+                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0, id: next_id, moved: false });
+                next_id += 1;
                 occupied[idx] = true;
                 seeded += 1;
             }
