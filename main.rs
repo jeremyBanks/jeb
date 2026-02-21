@@ -530,6 +530,10 @@ impl Sim {
         let mut death_indices: Vec<usize> = dying.drain().collect();
         death_indices.sort_unstable_by(|a, b| b.cmp(a));
         self.conway_deaths += death_indices.len();
+        for &i in &death_indices {
+            let c = &self.cells[i];
+            self.audio_events.push(AudioEvent { kind: VoiceKind::Death, px: c.px, py: c.py, vx: c.vx, vy: c.vy });
+        }
         for i in death_indices { self.cells.swap_remove(i); }
 
         let mut grid2 = vec![usize::MAX; W * H];
