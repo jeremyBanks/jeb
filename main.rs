@@ -570,7 +570,7 @@ impl Sim {
 
         let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.y * W + c.x] = i;
+            grid[c.gy() * W + c.gx()] = i;
         }
 
         // Save pre-move positions for steer correction
