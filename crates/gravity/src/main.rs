@@ -264,7 +264,7 @@ impl Sim {
     }
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
-                       conway_every: usize, pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
+                       pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
                        wrap: bool, steer: bool)
         -> Option<(Self, Vec<f32>, usize)>
     {
