@@ -1071,11 +1071,11 @@ fn main() {
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.125_f32);
+        .unwrap_or(0.03125_f32);
     let softening: f32 = parse_arg("--softening")
         .and_then(|s| s.parse().ok())
         .unwrap_or(6.0_f32);
-    let speed_cap   = 18.0_f32; // cells/frame
+    let speed_cap   = 4.5_f32; // cells/frame
     let target_pop_default = W * H / 8; // 5120 for 256×160
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
