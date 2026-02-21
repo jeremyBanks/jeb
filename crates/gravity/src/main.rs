@@ -1263,16 +1263,18 @@ fn main() {
             }
         }
 
-        // Encode chunk
-        let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:08}.mp4");
-        encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+        if !headless {
+            // Encode chunk
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:08}.mp4");
+            encode_chunk(frames_dir, &seg_path, this_chunk_frames);
 
-        // Append to segments list
-        writeln!(seg_list, "file '{seg_path}'").unwrap();
-        seg_list.flush().unwrap();
+            // Append to segments list
+            writeln!(seg_list, "file '{seg_path}'").unwrap();
+            seg_list.flush().unwrap();
 
-        // Delete PNGs
-        delete_frames(frames_dir);
+            // Delete PNGs
+            delete_frames(frames_dir);
+        }
 
         // Save checkpoint (next chunk index)
         sim.save_checkpoint(&canvas, chunk + 1, checkpoint_path);
