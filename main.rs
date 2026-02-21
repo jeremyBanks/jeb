@@ -1086,8 +1086,15 @@ fn delete_frames(frames_dir: &str) {
 }
 
 fn concat_segments(segments_file: &str, output: &str) {
+    // Re-encode with nearest-neighbour upscale to 3840×2400
     let status = Command::new("ffmpeg")
-        .args(["-y", "-f", "concat", "-safe", "0", "-i", segments_file, "-c", "copy", output])
+        .args([
+            "-y", "-f", "concat", "-safe", "0", "-i", segments_file,
+            "-vf", "scale=3840:2400:flags=neighbor",
+            "-c:v", "libx264", "-crf", "12", "-preset", "slow",
+            "-pix_fmt", "yuv420p",
+            output,
+        ])
         .status()
         .expect("ffmpeg concat failed");
     assert!(status.success(), "ffmpeg concat failed");
