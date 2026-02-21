@@ -927,9 +927,9 @@ impl Sim {
                     canvas[i + 1] *= 0.5;
                     canvas[i + 2] *= 0.5;
                 } else {
-                    canvas[i]     *= 0.999767; // half fade rate vs 0.999534
-                    canvas[i + 1] *= 0.999767;
-                    canvas[i + 2] *= 0.999767;
+                    canvas[i]     *= 0.999534; // fade rate (doubled from 0.999767)
+                    canvas[i + 1] *= 0.999534;
+                    canvas[i + 2] *= 0.999534;
                 }
             }
         }
