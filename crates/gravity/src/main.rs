@@ -1904,8 +1904,9 @@ use std::io::{BufWriter, Write};
         let detune = 2.0_f32.powf((px_a.cos() * 5.0 + py_a.sin() * 3.0) / 1200.0);
         let target_freq = Self::pentatonic_freq(sin_th.abs()) * detune;
 
-        // Filter: cos(θ) → brightness (right=bright, left=dark), base 600 Hz ±2 oct
-        let cutoff_hz = 600.0 * 2.0_f32.powf(cos_th * 2.0);
+        // Filter: cos(θ) → brightness (right=bright, left=dark), base 400 Hz ±1.5 oct
+        // Ceiling ~1130Hz (was 2400Hz) — warmer, less shrill on fast rightward movers
+        let cutoff_hz = 400.0 * 2.0_f32.powf(cos_th * 1.5);
         let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
 
         // Amplitude: proportional to move magnitude (speed), sqrt curve
