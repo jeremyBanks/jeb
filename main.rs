@@ -1145,7 +1145,7 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(0.096000_f32); // 8× previous
     let softening   = 1.5_f32;
-    let speed_cap   = 12.0_f32; // cells/frame
+    let speed_cap   = 3.0_f32; // cells/frame
     let conway_every = FPS as usize / 4; // run Conway 4× per second → up to 4 births + 4 deaths/sec
     let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
 
