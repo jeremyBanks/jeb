@@ -40,6 +40,7 @@ struct Sim {
     start_pop: usize,
     conway_every: usize,
     pop_band: f32,
+    rate_limit: usize,
     tick_count: usize,
     prev_live: Vec<bool>,
     wrap: bool,   // toroidal wrapping (false = hard walls)
