@@ -1939,3 +1939,12 @@ use std::io::{BufWriter, Write};
             let id = self.next_id; self.next_id += 1;
             self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd, id, moved: false });
             grid2[gy * W + gx] = new_idx;
+
+// [recovery] edit target not found, appending:
+        if !headless {
+            // Encode chunk
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
+            encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+            mux_audio_into_segment(&seg_path, &chunk_audio);
+
+            // Append to segments list
