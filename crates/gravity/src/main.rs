@@ -1106,10 +1106,10 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(6.0_f32);
     let speed_cap   = 2.25_f32; // cells/frame
-    let target_pop_default = W * H / 8; // 5120 for 256×160
+    let target_pop_default = W * H / 16; // 2560 for 256×160 (half of W*H/8)
     let pop_band: f32 = parse_arg("--pop-band")
         .and_then(|s| s.parse().ok())
-        .unwrap_or((target_pop_default / 8) as f32); // default: target/8 = 640
+        .unwrap_or(640.0); // fixed band: same ±640 around new target
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
         .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
