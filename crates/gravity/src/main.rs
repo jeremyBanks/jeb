@@ -14,6 +14,15 @@ const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 1920; // 32s at 60fps
 
+// ── Audio constants ────────────────────────────────────────────────────────
+const SAMPLE_RATE: u32    = 44100;
+const SAMPLES_PER_FRAME: usize = 735; // 44100 / 60, truncated (acceptable drift)
+const AUDIO_BASE_FREQ: f32  = 130.81; // C3
+const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
+const AUDIO_SLEW: f32       = 0.005;  // per-sample freq portamento
+const AUDIO_ATTACK: usize   = 220;    // 5 ms
+const AUDIO_RELEASE: usize  = 17640;  // 400 ms
+
 struct Cell {
     px: f32,   // continuous world position, x ∈ [0, W)
     py: f32,   // continuous world position, y ∈ [0, H)
