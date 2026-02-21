@@ -1,67 +1,114 @@
 #!/bin/bash
 # explore.sh — headless parameter sweep to find configs with continuous movement
-# Runs each config for SIM_SECONDS of sim time, reports avg_spd at end
-# Usage: ./explore.sh
+# Samples stats every 60 frames; reports clustering (blk), p10 speed, COM drift.
+# Usage: ./explore.sh [--seconds N]
 
 BIN="/Users/matte/jeb/target/release/gravity"
-SIM_SECONDS=90  # sim-time seconds per config (headless runs faster than realtime)
+SIM_SECONDS="${1:-120}"  # sim-time seconds per config
 SEED=42
+TMPDIR_BASE="/tmp/gravity_explore_$$"
+mkdir -p "$TMPDIR_BASE"
 
 echo "=== Gravity parameter exploration ==="
-echo "sim time: ${SIM_SECONDS}s per config"
+echo "sim time: ${SIM_SECONDS}s per config | seed=$SEED"
+echo "Metrics: avg_spd (higher=more movement), p10 (10th %ile speed; >0=no stalled cells),"
+echo "         blk/640 (block coverage; higher=spread out), dense (max cells in 8x8 block),"
+echo "         COM_drift (pixels the center-of-mass moved over the run)"
 echo ""
+printf "%-18s %8s %8s %8s %8s %8s %8s\n" "CONFIG" "avg_spd" "p10_spd" "blk/640" "dense" "COM_drift" "score"
+printf "%-18s %8s %8s %8s %8s %8s %8s\n" "------------------" "--------" "--------" "--------" "--------" "---------" "-------"
+
+SCORES=()
+LABELS=()
 
 run_config() {
     local label="$1"; shift
     local extra_args="$@"
-    echo -n "[$label] $extra_args ... "
+    local outfile="$TMPDIR_BASE/${label}.txt"
 
-    # Run headless, capture last few stat lines
-    local out
-    out=$(timeout 300s "$BIN" --seconds "$SIM_SECONDS" --headless --seed "$SEED" \
+    GRAVITY_SHARED_DIR="$TMPDIR_BASE" \
+        "$BIN" --seconds "$SIM_SECONDS" --headless --seed "$SEED" \
         --pop-target 5120 --wrap --speed-cap 6.0 \
-        $extra_args 2>/dev/null | grep "avg_spd" | tail -5)
+        $extra_args > "$outfile" 2>/dev/null
 
-    if [ -z "$out" ]; then
-        echo "FAILED/TIMEOUT"
+    if [ ! -s "$outfile" ]; then
+        printf "%-18s  FAILED\n" "$label"
         return
     fi
 
-    # Extract avg_spd values from last 5 lines
-    local speeds
-    speeds=$(echo "$out" | grep -oP 'avg_spd=\K[0-9.]+')
-    local final_speed
-    final_speed=$(echo "$speeds" | tail -1)
-    local min_speed
-    min_speed=$(echo "$speeds" | sort -n | head -1)
+    # Parse all stat lines (headless prints every 60 frames = 1s of sim)
+    local stat_lines
+    stat_lines=$(grep "avg_spd" "$outfile")
+    local n_samples
+    n_samples=$(echo "$stat_lines" | wc -l | tr -d ' ')
 
-    # Also extract spread and pop
-    local final_line
-    final_line=$(echo "$out" | tail -1)
-    local spread pop
-    spread=$(echo "$final_line" | grep -oP 'spread=\K[0-9.]+')
-    pop=$(echo "$final_line" | grep -oP 'pop=\K[0-9]+')
+    if [ "$n_samples" -eq 0 ]; then
+        printf "%-18s  NO_STATS\n" "$label"
+        return
+    fi
 
-    echo "final_avg_spd=$final_speed  min_spd=$min_speed  spread=$spread  pop=$pop"
+    # Final sample values
+    local last
+    last=$(echo "$stat_lines" | tail -1)
+    local avg_spd p10 blk dense
+    avg_spd=$(echo "$last" | grep -oE 'avg_spd=[0-9.]+' | cut -d= -f2)
+    p10=$(echo "$last"     | grep -oE 'p10=[0-9.]+' | cut -d= -f2)
+    blk=$(echo "$last"     | grep -oE 'blk=[0-9]+' | cut -d= -f2)
+    dense=$(echo "$last"   | grep -oE 'dense=[0-9]+' | cut -d= -f2)
+
+    # COM drift: distance COM moved from first to last sample
+    local first_com last_com
+    first_com=$(echo "$stat_lines" | head -1 | grep -oE 'com=\([0-9.]+,[0-9.]+\)' | tr -d 'com=()')
+    last_com=$(echo "$last"        | grep -oE 'com=\([0-9.]+,[0-9.]+\)' | tr -d 'com=()')
+    local fx fy lx ly com_drift
+    fx=$(echo "$first_com" | cut -d, -f1)
+    fy=$(echo "$first_com" | cut -d, -f2)
+    lx=$(echo "$last_com"  | cut -d, -f1)
+    ly=$(echo "$last_com"  | cut -d, -f2)
+    com_drift=$(echo "scale=1; sqrt(($lx-$fx)^2+($ly-$fy)^2)" | bc -l 2>/dev/null || echo "?")
+
+    # Score: higher is better for "continuous non-clustering movement"
+    # Components: avg_spd * p10 boost * spread_ratio
+    # p10>0 means no totally-stationary cells (good)
+    # blk>100 means not all in a tiny cluster (good)
+    local spread_ratio blk_ratio score
+    blk_ratio=$(echo "scale=3; ${blk:-0} / 640" | bc -l 2>/dev/null || echo "0")
+    score=$(echo "scale=2; ${avg_spd:-0} * (1 + ${p10:-0}) * (1 + $blk_ratio)" | bc -l 2>/dev/null || echo "0")
+
+    printf "%-18s %8s %8s %7s/640 %8s %9s %7s\n" \
+        "$label" "${avg_spd:-?}" "${p10:-?}" "${blk:-?}" "${dense:-?}" "${com_drift}" "${score}"
+
+    SCORES+=("$score $label")
+    LABELS+=("$label")
 }
 
 # Baseline
-run_config "baseline" "--gravity 0.03125 --softening 6"
+run_config "baseline"       "--gravity 0.03125 --softening 6"
 
-# Higher G — more orbital energy
-run_config "G×4"      "--gravity 0.125   --softening 6"
-run_config "G×8"      "--gravity 0.25    --softening 6"
-run_config "G×16"     "--gravity 0.5     --softening 6"
+# Higher G — more gravitational energy → faster orbits
+run_config "G×4"            "--gravity 0.125   --softening 6"
+run_config "G×8"            "--gravity 0.25    --softening 6"
+run_config "G×16"           "--gravity 0.5     --softening 6"
 
-# Lower softening — sharper wells, more close-range force
-run_config "soft/2"   "--gravity 0.03125 --softening 3"
-run_config "soft/4"   "--gravity 0.03125 --softening 1.5"
+# Lower softening — sharper wells, stronger close-range interaction
+run_config "soft=3"         "--gravity 0.03125 --softening 3"
+run_config "soft=1.5"       "--gravity 0.03125 --softening 1.5"
 
-# Combined changes
-run_config "G×4+s3"   "--gravity 0.125   --softening 3"
-run_config "G×4+s4"   "--gravity 0.125   --softening 4"
-run_config "G×8+s4"   "--gravity 0.25    --softening 4"
-run_config "G×2+s4"   "--gravity 0.0625  --softening 4"
+# Combined
+run_config "G×4+soft=4"     "--gravity 0.125   --softening 4"
+run_config "G×4+soft=3"     "--gravity 0.125   --softening 3"
+run_config "G×8+soft=4"     "--gravity 0.25    --softening 4"
+run_config "G×2+soft=4"     "--gravity 0.0625  --softening 4"
+run_config "G×2+soft=3"     "--gravity 0.0625  --softening 3"
 
 echo ""
-echo "=== Done ==="
+echo "=== Top configs by score ==="
+printf '%s\n' "${SCORES[@]}" | sort -rn | head -5 | while read score label; do
+    echo "  $label  (score=$score)"
+done
+
+echo ""
+echo "Note: score = avg_spd × (1+p10) × (1+blk/640)"
+echo "Favors: fast cells, none stationary, spread across grid"
+
+rm -rf "$TMPDIR_BASE"
