@@ -1389,7 +1389,17 @@ impl Sim {
         }
         let blk_used = block_occ.iter().filter(|&&v| v).count();
 
-        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{BTOTAL} dense={max_in_block} com=({cx:.1},{cy:.1})",
+        // Top-3 densest block coordinates — track these across samples to detect blob drift
+        let mut block_list: Vec<(u16, usize, usize)> = block_counts.iter().enumerate()
+            .filter(|(_, &c)| c > 0)
+            .map(|(bi, &c)| (c, bi % BCOLS, bi / BCOLS))
+            .collect();
+        block_list.sort_by(|a, b| b.0.cmp(&a.0));
+        let hot: String = block_list.iter().take(3)
+            .map(|(_, bx, by)| format!("({},{})", bx * BLK, by * BLK))
+            .collect::<Vec<_>>().join(";");
+
+        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{BTOTAL} dense={max_in_block} hot=[{hot}] com=({cx:.1},{cy:.1})",
             self.conway_births, self.conway_deaths)
     }
 }
