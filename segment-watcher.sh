@@ -73,7 +73,7 @@ while true; do
         seg_name=$(basename "$seg" .mp4)
         frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
         frame_offset=${frame_offset:-0}
-        chunk_num=$(( frame_offset / 3840 + 1 ))
+        chunk_num=$(( frame_offset / 1920 + 1 ))
 
         preview="${PREVIEW_DIR}/preview_chunk${chunk_num}.mp4"
 
