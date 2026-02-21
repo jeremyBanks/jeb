@@ -243,6 +243,10 @@ echo "label=$BEST_LABEL" >> "$BEST_FILE"
 echo "score=$BEST_SCORE" >> "$BEST_FILE"
 echo "Written → $BEST_FILE"
 
+# Write flag file so heartbeat can detect completion and act
+echo "EXPLORE_READY round=$ROUND label=$BEST_LABEL score=$BEST_SCORE" > /tmp/gravity_explore_ready.txt
+echo "results=/tmp/gravity_explore_round${ROUND}.txt" >> /tmp/gravity_explore_ready.txt
+
 // [recovery] edit target not found, appending:
 SIM_SECONDS="${1:-120}"
 
