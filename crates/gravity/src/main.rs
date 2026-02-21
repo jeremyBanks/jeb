@@ -1566,7 +1566,7 @@ fn main() {
     // Parse args
     let args: Vec<String> = std::env::args().collect();
     let parse_arg = |flag: &str| -> Option<String> {
-        args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
+        args.iter().rposition(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
     };
     let seconds: usize = parse_arg("--seconds")
         .and_then(|s| s.parse().ok())
