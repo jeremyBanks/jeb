@@ -349,7 +349,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool, dampen: bool) -> Self {
+           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool, dampen: bool, init_vel: &str) -> Self {
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
         let mut cells: Vec<Cell> = Vec::new();
@@ -369,28 +369,63 @@ impl Sim {
             let yi = (xoru64(&mut rng) as usize) % H;
             let idx = yi * W + xi;
             if !occupied[idx] {
-                let (vx, vy) = if xi < W / 2 && yi < H / 2 {
-                    // Top-left: biased right, vx = U[-0.25, +0.5], vy = U[-0.125, +0.125]
-                    let vx = xorf32(&mut rng) * 0.75 - 0.25;
-                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
-                    (vx, vy)
-                } else if xi >= W / 2 && yi >= H / 2 {
-                    // Bottom-right: 180° opposite of top-left → biased left
-                    // vx = U[-0.5, +0.25], vy = U[-0.125, +0.125]
-                    let vx = xorf32(&mut rng) * 0.75 - 0.5;
-                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
-                    (vx, vy)
-                } else if xi >= W / 2 && yi < H / 2 {
-                    // Top-right: no directional bias, U[-0.125, +0.125] each axis
-                    let vx = (xorf32(&mut rng) - 0.5) * 0.25;
-                    let vy = (xorf32(&mut rng) - 0.5) * 0.25;
-                    (vx, vy)
-                } else {
-                    // Bottom-left: similar magnitude, dominant direction points down
-                    // vx = U[-0.125, +0.125], vy = U[0, +0.25] → avg = (0, +0.125)
-                    let vx = (xorf32(&mut rng) - 0.5) * 0.25;
-                    let vy = xorf32(&mut rng) * 0.25;
-                    (vx, vy)
+                let cx = W as f32 / 2.0;
+                let cy = H as f32 / 2.0;
+                let (vx, vy) = match init_vel {
+                    "swirl" => {
+                        // Asymmetric quadrant bias — creates net angular momentum.
+                        // Top-left biased right, bottom-right biased left,
+                        // bottom-left biased down, top-right unbiased.
+                        if xi < W / 2 && yi < H / 2 {
+                            (xorf32(&mut rng) * 0.75 - 0.25, (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else if xi >= W / 2 && yi >= H / 2 {
+                            (xorf32(&mut rng) * 0.75 - 0.5,  (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else if xi >= W / 2 {
+                            ((xorf32(&mut rng) - 0.5) * 0.25, (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else {
+                            ((xorf32(&mut rng) - 0.5) * 0.25, xorf32(&mut rng) * 0.25)
+                        }
+                    }
+                    "random" => {
+                        // Isotropic random — no net angular momentum or linear drift.
+                        ((xorf32(&mut rng) - 0.5) * 0.5, (xorf32(&mut rng) - 0.5) * 0.5)
+                    }
+                    "spin" => {
+                        // Clockwise tangential velocity field.
+                        // Speed proportional to distance from centre, capped at 0.5.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = (r / (cx.min(cy))).min(1.0) * 0.5;
+                        // Clockwise tangent: (-dy/r, dx/r)
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (-dy / r * scale + noise_x, dx / r * scale + noise_y)
+                    }
+                    "spin-ccw" => {
+                        // Counter-clockwise tangential velocity field.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = (r / (cx.min(cy))).min(1.0) * 0.5;
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (dy / r * scale + noise_x, -dx / r * scale + noise_y)
+                    }
+                    "radial-out" => {
+                        // Radially outward from centre — dramatic infall after reversal.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = 0.4;
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (dx / r * scale + noise_x, dy / r * scale + noise_y)
+                    }
+                    "zero" | _ => {
+                        // All seeded cells start stationary — pure gravity collapse from rest.
+                        (0.0, 0.0)
+                    }
                 };
                 cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0, id: next_id, moved: false });
                 next_id += 1;
@@ -1577,6 +1612,18 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
 
+    // --init-vel MODE: initial velocity field for seeded cells.
+    //   swirl   (default) — asymmetric quadrant bias, net angular momentum
+    //   random  — isotropic random ±0.25, no directional bias
+    //   spin    — clockwise tangential field proportional to distance from centre
+    //   zero    — all seeded cells start stationary (pure gravity collapse from rest)
+    let init_vel: String = parse_arg("--init-vel")
+        .unwrap_or_else(|| "swirl".to_string());
+
+    // --commit HASH: git commit ID for reproducibility logging (passed by run-loop.sh)
+    let commit_id: String = parse_arg("--commit")
+        .unwrap_or_else(|| "unknown".to_string());
+
     let run_id: String = parse_arg("--run-id")
         .unwrap_or_else(|| format!("seed{}", rng_seed));
 
@@ -1592,9 +1639,10 @@ fn main() {
     // Write settings file alongside video and run_info for the watcher
     let settings = format!(
         "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
+         commit:        {commit_id}\n\
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
-         seed_density:  1/{seed_density_inv}\n\
+         seed_density:  1/{seed_density_inv}\ninit_vel:      {init_vel}\n\
          wrap:          {wrap}\ndampen:        {dampen}\nsteer:         {steer}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
@@ -1616,7 +1664,7 @@ fn main() {
         })
         .unwrap_or_else(|| {
             println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen, &init_vel);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });

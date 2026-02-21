@@ -35,6 +35,7 @@ ROUND="${2:-1}"
 SEED=42
 WORKDIR="/tmp/gravity_explore_$$"
 BEST_FILE="$(dirname "$0")/best_config.txt"
+COMMIT=$(git -C "$(dirname "$0")" rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
 mkdir -p "$WORKDIR/state" "$WORKDIR/segments"
 trap "rm -rf $WORKDIR" EXIT
 
@@ -93,17 +94,30 @@ case "$ROUND" in
     "wrap+rate=8+band=512:--gravity 0.03125 --softening 6 --wrap --rate-limit 8 --pop-band 512"
   )
   ;;
-*)
-  # Round 4+: cross-product of best findings from R1-R3
+4)
+  # Round 4: explore init_vel modes — does initial angular momentum affect long-term?
   CONFIGS=(
-    "r${ROUND}a:--gravity 0.0625 --softening 6 --rate-limit 8"
-    "r${ROUND}b:--gravity 0.0625 --softening 6 --rate-limit 128"
-    "r${ROUND}c:--gravity 0.03125 --softening 12 --rate-limit 8"
-    "r${ROUND}d:--gravity 0.03125 --softening 12 --rate-limit 128"
-    "r${ROUND}e:--gravity 0.125 --softening 6 --rate-limit 8"
-    "r${ROUND}f:--gravity 0.125 --softening 12 --rate-limit 8"
-    "r${ROUND}g:--gravity 0.0625 --softening 12 --pop-band 512"
-    "r${ROUND}h:--gravity 0.03125 --softening 6 --speed-cap 2 --rate-limit 8"
+    "swirl+wrap:--init-vel swirl --gravity 0.03125 --softening 6 --wrap"
+    "random+wrap:--init-vel random --gravity 0.03125 --softening 6 --wrap"
+    "spin+wrap:--init-vel spin --gravity 0.03125 --softening 6 --wrap"
+    "spin-ccw+wrap:--init-vel spin-ccw --gravity 0.03125 --softening 6 --wrap"
+    "radial-out+wrap:--init-vel radial-out --gravity 0.03125 --softening 6 --wrap"
+    "zero+wrap:--init-vel zero --gravity 0.03125 --softening 6 --wrap"
+    "spin+nowrap:--init-vel spin --gravity 0.03125 --softening 6"
+    "spin+G×2:--init-vel spin --gravity 0.0625 --softening 6 --wrap"
+  )
+  ;;
+*)
+  # Round 5+: cross-product of best init_vel + best G/soft/rate from R1-R4
+  CONFIGS=(
+    "r${ROUND}a:--init-vel swirl --gravity 0.0625 --softening 6 --rate-limit 8 --wrap"
+    "r${ROUND}b:--init-vel spin --gravity 0.0625 --softening 6 --rate-limit 8 --wrap"
+    "r${ROUND}c:--init-vel swirl --gravity 0.03125 --softening 12 --rate-limit 8 --wrap"
+    "r${ROUND}d:--init-vel spin --gravity 0.03125 --softening 12 --rate-limit 8 --wrap"
+    "r${ROUND}e:--init-vel swirl --gravity 0.125 --softening 6 --rate-limit 8 --wrap"
+    "r${ROUND}f:--init-vel spin --gravity 0.125 --softening 12 --rate-limit 8 --wrap"
+    "r${ROUND}g:--init-vel random --gravity 0.0625 --softening 12 --pop-band 512 --wrap"
+    "r${ROUND}h:--init-vel spin --gravity 0.03125 --softening 6 --speed-cap 2 --rate-limit 8 --wrap"
   )
   ;;
 esac
@@ -150,6 +164,7 @@ for entry in "${CONFIGS[@]}"; do
     local_out="$WORKDIR/${label}.txt"
     ( cd "$WORKDIR" && GRAVITY_SHARED_DIR="$WORKDIR" \
         "$BIN" --seconds "$SIM_SECONDS" --headless --seed "$SEED" \
+        --commit "$COMMIT" \
         $BASE_ARGS \
         $extra_args ) > "$local_out" 2>&1
 
