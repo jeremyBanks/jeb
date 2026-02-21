@@ -276,7 +276,7 @@ impl Sim {
         let target_pop = W * H / 32;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
-              conway_births: 0, conway_deaths: 0 }
+              conway_births: 0, conway_deaths: 0, next_id, voice_pool: HashMap::new() }
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
