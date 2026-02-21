@@ -2095,8 +2095,10 @@ use std::io::{BufWriter, Write};
             let mid  = (sum_l + sum_r) * 0.5;
             let side = (sum_l - sum_r) * 0.5;
             let wet  = self.reverb.process(mid.tanh() * 0.7);
-            chunk_audio.push(wet + side);  // L
-            chunk_audio.push(wet - side);  // R
+            // Final soft clip on output: tanh keeps us out of hard clipping
+            // even when many fast cells sum to large amplitudes
+            chunk_audio.push((wet + side).tanh());  // L
+            chunk_audio.push((wet - side).tanh());  // R
         }
     }
 
