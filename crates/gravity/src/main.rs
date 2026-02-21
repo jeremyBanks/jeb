@@ -241,6 +241,7 @@ impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, seed_density_inv: usize, wrap: bool, steer: bool, dampen: bool) -> Self {
         let mut rng = rng_seed;
+        let mut next_id: u64 = 1;
         let mut cells: Vec<Cell> = Vec::new();
 
         // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
