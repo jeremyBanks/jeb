@@ -448,8 +448,8 @@ impl Sim {
         // Births: weighted by neighbour speed — handled below after grid2 is built
 
         // Rate-limit: max births/deaths per Conway call, independent of pop_band.
-        // With conway_every=FPS/4 (4 calls/sec) and rate_limit=4: up to 16 births+deaths/sec.
-        let rate_limit = 4_usize;
+        // With conway_every=FPS/4 (4 calls/sec) and rate_limit=8: up to 32 births+deaths/sec.
+        let rate_limit = 8_usize;
         let max_births = pop_max.saturating_sub(n).min(rate_limit);
         let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         // desired_births NOT truncated here — weighted selection happens post-deaths
@@ -1107,7 +1107,7 @@ fn main() {
     let speed_cap   = 1.5_f32; // cells/frame
     let conway_every = if args.iter().any(|a| a == "--no-conway") { 0 }
         else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
-    let pop_band    = 8.0_f32; // gap halved: min stays same, max comes halfway down
+    let pop_band    = 16.0_f32; // doubled: wider target population band
 
     // Four clockwise blobs — radius from --radius (0 = no blobs)
     let clumps_owned: Vec<(f32, f32, f32, f32, f32, usize)> = if blob_radius > 0.0 {
