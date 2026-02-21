@@ -2012,8 +2012,10 @@ use std::io::{BufWriter, Write};
             // Temporal spreading: X position offsets event start across the frame
             // Left=early, right=late — staggers simultaneous events, kills constructive buzzing
             let delay = (x_t * (SAMPLES_PER_FRAME - 1) as f32) as usize;
+            // Pan: X position maps directly to stereo field
+            let pan = x_t * 2.0 - 1.0;  // 0..1 → -1..+1
             let id = self.next_id; self.next_id += 1;
-            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp, delay));
+            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp, pan, delay));
         }
 
         // ── 5. Remove fully-released voices ────────────────────────────────
