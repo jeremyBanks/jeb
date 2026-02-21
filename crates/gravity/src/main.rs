@@ -20,7 +20,7 @@ const SAMPLES_PER_FRAME: usize = 735; // 44100 / 60, truncated (acceptable drift
 const AUDIO_BASE_FREQ: f32  = 130.81; // C3
 const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
 const AUDIO_SLEW: f32       = 0.05;   // per-sample freq snap (fast — less glide between scale degrees)
-const AUDIO_AMP_SCALE: f32  = 0.003;  // per-voice amplitude scale; tanh handles headroom
+const AUDIO_AMP_SCALE: f32  = 0.0015; // per-voice amplitude scale; tanh handles headroom
 const AUDIO_ATTACK: usize   = 220;    // 5 ms
 const AUDIO_RELEASE: usize  = 17640;  // 400 ms
 
