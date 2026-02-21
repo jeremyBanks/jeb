@@ -1663,3 +1663,48 @@ use std::io::{BufWriter, Write};
         let order = (0..cells.len()).collect();
         let target_pop = W * H / 16;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
+
+// [recovery] edit target not found, appending:
+    fn paint_frame(&mut self, canvas: &mut Vec<f32>) {
+        // Canvas stores Oklab (L, a, b) as f32 per channel.
+        // Fade only L (brightness): multiplicative + constant drain so L always reaches 0.
+        // a and b (chroma) are left intact — they become invisible as L→0.
+        const FADE_SLOW: f32 = 0.999534;
+        // Epsilon ensures L hits 0 within ~28s at 60fps (not stuck at grey asymptote).
+        // At FADE_SLOW, without epsilon, a cell starting at L=0.75 would asymptote to ~0.32.
+        const FADE_EPSILON: f32 = 0.0003;
+        for py in 0..H {
+            for px in 0..W {
+                let i = (py * W + px) * 3;
+                if self.prev_live[py * W + px] {
+                    // Was alive last tick, now gone — fast brightness drop (trail burst)
+                    canvas[i] = (canvas[i] * 0.5).max(0.0);
+                    // a, b unchanged
+                } else {
+                    // Normal background fade — only L drained
+                    canvas[i] = (canvas[i] * FADE_SLOW - FADE_EPSILON).max(0.0);
+                    // a, b unchanged
+                }
+            }
+        }
+        self.prev_live.fill(false);
+        for c in &self.cells {
+            let xi = c.gx();
+            let yi = c.gy();
+            let (l, a, b) = velocity_color_oklab(c.vx, c.vy, self.speed_cap);
+            let i = (yi * W + xi) * 3;
+            canvas[i]     = l;
+            canvas[i + 1] = a;
+            canvas[i + 2] = b;
+            self.prev_live[yi * W + xi] = true;
+        }
+    }
+
+    fn save_png(canvas: &[f32], path: &str) {
+        // Convert Oklab (L, a, b) → sRGB u8 only at output time.
+        let pixels: Vec<u8> = canvas.chunks_exact(3)
+            .flat_map(|px| {
+                let (r, g, b) = oklab_to_srgb(px[0], px[1], px[2]);
+                [r, g, b]
+            })
+            .collect();
