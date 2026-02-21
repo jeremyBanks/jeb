@@ -578,29 +578,10 @@ impl Sim {
         // Deaths: uniform random selection (shuffled above)
         // Births: weighted by neighbour speed — handled below after grid2 is built
 
-        // Dynamic rate-limit: inversely proportional to 90th-percentile cell speed.
-        // Slow cells → Conway churns hard (up to self.rate_limit/tick).
-        // Fast cells → Conway barely fires (minimum 1/tick).
-        // Creates a feedback loop: slow clusters explode with Life activity, launching
-        // new cells; fast clusters let gravity do the work until they settle again.
-        let rate_limit = {
-            // p90 speed factor: slow cells → t_speed≈0 (want more Conway)
-            let mut speeds: Vec<f32> = self.cells.iter()
-                .map(|c| (c.vx * c.vx + c.vy * c.vy).sqrt())
-                .collect();
-            speeds.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-            let p90_idx = ((speeds.len() as f32 * 0.9) as usize).min(speeds.len().saturating_sub(1));
-            let p90 = speeds.get(p90_idx).copied().unwrap_or(0.0);
-            let t_speed = (p90 / self.speed_cap).clamp(0.0, 1.0);
-
-            // Population factor: below target → t_pop≈0 (want more Conway to fill up)
-            let t_pop = (n as f32 / self.start_pop as f32).clamp(0.0, 1.0);
-
-            // Combined: either slow OR underpopulated keeps rate high.
-            // Both at max (fast + full) → rate drops to 1.
-            let t = t_speed * t_pop;
-            ((self.rate_limit as f32 * (1.0 - t) * (1.0 - t)).round() as usize).max(1)
-        };
+        // Conway runs at a fixed rate regardless of cell speed.
+        // Pop-band alone throttles births/deaths (cells can only be born up to pop_max,
+        // killed down to pop_min). No speed-based shutoff.
+        let rate_limit = self.rate_limit;
         let max_births = pop_max.saturating_sub(n).min(rate_limit);
         let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         // desired_births NOT truncated here — weighted selection happens post-deaths
