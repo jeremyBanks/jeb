@@ -1238,7 +1238,7 @@ fn mux_audio_into_segment(seg_path: &str, audio: &[f32]) {
         .args([
             "-y",
             "-i", seg_path,                        // video-only segment
-            "-f", "f32le", "-ar", "44100", "-ac", "1",
+            "-f", "f32le", "-ar", "44100", "-ac", "2",
             "-i", &pcm_path,                        // raw PCM audio
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
