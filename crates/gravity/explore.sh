@@ -18,54 +18,57 @@ echo "=== Explore round $ROUND | sim=${SIM_SECONDS}s | seed=$SEED ==="
 declare -a CONFIGS
 case "$ROUND" in
 1)
+  # Base: G=0.03125, s=6, cap=1.125, no wrap — the known-good config.
+  # Round 1: vary G and softening one at a time around the baseline.
   CONFIGS=(
     "baseline:--gravity 0.03125 --softening 6"
+    "G×2:--gravity 0.0625 --softening 6"
     "G×4:--gravity 0.125 --softening 6"
-    "G×8:--gravity 0.25 --softening 6"
-    "soft=3:--gravity 0.03125 --softening 3"
-    "G×4+s3:--gravity 0.125 --softening 3"
-    "G×4+s4:--gravity 0.125 --softening 4"
-    "G×8+s4:--gravity 0.25 --softening 4"
+    "G/2:--gravity 0.015625 --softening 6"
+    "soft=4:--gravity 0.03125 --softening 4"
+    "soft=8:--gravity 0.03125 --softening 8"
+    "soft=12:--gravity 0.03125 --softening 12"
     "G×2+s4:--gravity 0.0625 --softening 4"
   )
   ;;
 2)
-  # Round 2: probe different axes — speed_cap, pop_target, softening range
-  # Winner from R1: G=0.125, s=4. Now vary cap, pop, and softening.
+  # Round 2: winner from R1 + vary speed_cap and pop_target.
+  # Base params still: cap=1.125, no wrap.
   CONFIGS=(
-    "winner+cap3:--gravity 0.125 --softening 4 --speed-cap 3"
-    "winner+pop2560:--gravity 0.125 --softening 4 --pop-target 2560"
-    "winner+cap3+pop2560:--gravity 0.125 --softening 4 --speed-cap 3 --pop-target 2560"
-    "winner+s8:--gravity 0.125 --softening 8"
-    "G0.05+s4:--gravity 0.05 --softening 4"
-    "G0.2+s5:--gravity 0.2 --softening 5"
-    "winner+s2:--gravity 0.125 --softening 2"
-    "G0.07+s4:--gravity 0.07 --softening 4"
+    "baseline:--gravity 0.03125 --softening 6"
+    "cap0.75:--gravity 0.03125 --softening 6 --speed-cap 0.75"
+    "cap1.5:--gravity 0.03125 --softening 6 --speed-cap 1.5"
+    "cap2.0:--gravity 0.03125 --softening 6 --speed-cap 2.0"
+    "pop2560:--gravity 0.03125 --softening 6 --pop-target 2560"
+    "pop7680:--gravity 0.03125 --softening 6 --pop-target 7680"
+    "wrap:--gravity 0.03125 --softening 6 --wrap"
+    "G×2+cap1.5:--gravity 0.0625 --softening 6 --speed-cap 1.5"
   )
   ;;
 3)
+  # Round 3: zoom in on best G/s combo from R1, vary both together.
   CONFIGS=(
-    "pop2560+G4:--gravity 0.125 --softening 4 --pop-target 2560"
-    "pop7680+G4:--gravity 0.125 --softening 4 --pop-target 7680"
-    "pop5120+G4+nodamp:--gravity 0.125 --softening 4"
-    "cap3+G4:--gravity 0.125 --softening 4 --speed-cap 3"
-    "cap9+G4:--gravity 0.125 --softening 4 --speed-cap 9"
-    "cap3+G8:--gravity 0.25 --softening 4 --speed-cap 3"
-    "nodamp+G2:--gravity 0.0625 --softening 3"
+    "G×2+s6:--gravity 0.0625 --softening 6"
+    "G×2+s8:--gravity 0.0625 --softening 8"
+    "G×2+s4:--gravity 0.0625 --softening 4"
     "G×4+s8:--gravity 0.125 --softening 8"
+    "G×4+s6:--gravity 0.125 --softening 6"
+    "G×4+s4:--gravity 0.125 --softening 4"
+    "G×3+s6:--gravity 0.09375 --softening 6"
+    "G×3+s8:--gravity 0.09375 --softening 8"
   )
   ;;
 *)
-  # Round 4+: randomise around best from prior round
+  # Round 4+: fine-tune around R3 winner
   CONFIGS=(
-    "r${ROUND}a:--gravity 0.125 --softening 3"
-    "r${ROUND}b:--gravity 0.175 --softening 3"
-    "r${ROUND}c:--gravity 0.125 --softening 2"
-    "r${ROUND}d:--gravity 0.2 --softening 4"
-    "r${ROUND}e:--gravity 0.08 --softening 3"
-    "r${ROUND}f:--gravity 0.25 --softening 3"
-    "r${ROUND}g:--gravity 0.15 --softening 3.5"
-    "r${ROUND}h:--gravity 0.1 --softening 2.5"
+    "r${ROUND}a:--gravity 0.05 --softening 6"
+    "r${ROUND}b:--gravity 0.05 --softening 7"
+    "r${ROUND}c:--gravity 0.07 --softening 6"
+    "r${ROUND}d:--gravity 0.07 --softening 8"
+    "r${ROUND}e:--gravity 0.04 --softening 6"
+    "r${ROUND}f:--gravity 0.04 --softening 8"
+    "r${ROUND}g:--gravity 0.05 --softening 5"
+    "r${ROUND}h:--gravity 0.06 --softening 7"
   )
   ;;
 esac
@@ -112,7 +115,7 @@ for entry in "${CONFIGS[@]}"; do
     local_out="$WORKDIR/${label}.txt"
     ( cd "$WORKDIR" && GRAVITY_SHARED_DIR="$WORKDIR" \
         "$BIN" --seconds "$SIM_SECONDS" --headless --seed "$SEED" \
-        --pop-target 5120 --wrap --speed-cap 6.0 \
+        --pop-target 5120 --speed-cap 1.125 \
         $extra_args ) > "$local_out" 2>&1
 
     stat_lines=$(grep "avg_spd" "$local_out")
