@@ -42,8 +42,9 @@ struct Sim {
     rate_limit: usize,
     tick_count: usize,
     prev_live: Vec<bool>,
-    wrap: bool,   // toroidal wrapping (false = hard walls)
-    steer: bool,  // counter-rotate velocity to compensate discrete-move angular error
+    wrap: bool,    // toroidal wrapping (false = hard walls)
+    steer: bool,   // counter-rotate velocity to compensate discrete-move angular error
+    dampen: bool,  // nudge system COM velocity toward zero each tick (--dampen flag)
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
 }
