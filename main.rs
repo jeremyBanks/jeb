@@ -1353,11 +1353,12 @@ fn main() {
 
     // Write settings file alongside video and run_info for the watcher
     let settings = format!(
-        "run_id:      {run_id}\nseed:        {rng_seed}\nseconds:     {seconds}\n\
-         gravity:     {g}\nsoftening:   {softening}\nspeed_cap:   {speed_cap}\n\
-         pop_target:  {target_pop}\npop_band:    {pop_band}\nrate_limit:  {rate_limit}\n\
-         wrap:        {wrap}\ndampen:      {dampen}\n\
-         resolution:  {}x{} → 2048x1280\n",
+        "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
+         gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
+         pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
+         seed_density:  1/{seed_density_inv}\n\
+         wrap:          {wrap}\ndampen:        {dampen}\nsteer:         {steer}\n\
+         resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
     );
     let settings_file = format!("{}/gravity_{}.txt", shared_dir, run_id);
