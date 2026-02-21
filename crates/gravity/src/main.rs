@@ -1538,6 +1538,7 @@ fn main() {
         .expect("Usage: gravity --seconds <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
     let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
+    let no_audio    = headless || args.iter().any(|a| a == "--no-audio"); // skip audio synthesis
     let wrap   = args.iter().any(|a| a == "--wrap");    // default: hard walls (no wrap)
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
     let dampen = args.iter().any(|a| a == "--dampen");  // default: off
@@ -1688,7 +1689,7 @@ fn main() {
                 Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
             }
             sim.tick();
-            sim.generate_audio(&mut chunk_audio);
+            if !no_audio { sim.generate_audio(&mut chunk_audio); }
 
             let log_every = if headless { FPS as usize } else { 480 };
             if local_frame % log_every == 0 {
