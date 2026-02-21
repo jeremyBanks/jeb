@@ -1271,7 +1271,7 @@ fn concat_segments(segments_file: &str, output: &str) {
     let status = Command::new("ffmpeg")
         .args([
             "-y", "-f", "concat", "-safe", "0", "-i", segments_file,
-            "-vf", "scale=512:320:flags=neighbor",
+            "-vf", "scale=2048:1280:flags=neighbor",
             "-c:v", "libx264", "-crf", "12", "-preset", "fast",
             "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "128k",
