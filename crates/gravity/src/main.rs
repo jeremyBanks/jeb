@@ -1112,7 +1112,7 @@ fn main() {
         .unwrap_or((target_pop_default / 8) as f32); // default: target/8 = 640
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(16); // default: 16 per tick, 960/sec at 60fps
+        .unwrap_or(32); // default: 32 per tick, 1920/sec at 60fps
 
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
