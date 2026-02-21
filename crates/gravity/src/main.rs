@@ -995,27 +995,36 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
 
 fn velocity_color(vx: f32, vy: f32, speed_cap: f32) -> (u8, u8, u8) {
     let spd = (vx * vx + vy * vy).sqrt();
-    // speed_cap → 75% saturation; 100% requires exceeding speed_cap (≥ 4/3 × speed_cap)
-    let sat = (spd * 0.75 / speed_cap).clamp(0.0, 1.0);
-    let hue = (vy.atan2(vx) + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
-    // Brightness: 0.5 at rest, eases up to 1.0 at ½× speed_cap and above
-    let val = 0.5 + 0.5 * (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
-    let (r, g, b) = hsv_to_rgb(hue, sat, val);
-    let floor = 64u8;
-    (r.max(floor), g.max(floor), b.max(floor))
+    let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
+    // Oklch: perceptually uniform — equal speed = equal brightness regardless of direction
+    // L: 0.45 (still, ~sRGB 64) → 0.75 (fast, bright)
+    // C: 0.0 (still, achromatic) → 0.20 (fast, saturated)
+    // H: velocity direction angle
+    let l = 0.45 + 0.30 * t;
+    let c = 0.20 * t;
+    let h = vy.atan2(vx);
+    let a = c * h.cos();
+    let b = c * h.sin();
+    oklab_to_srgb(l, a, b)
 }
 
-fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
-    let i = (h * 6.0).floor() as u32;
-    let f = h * 6.0 - i as f32;
-    let p = v * (1.0 - s);
-    let q = v * (1.0 - f * s);
-    let t = v * (1.0 - (1.0 - f) * s);
-    let (r, g, b) = match i % 6 {
-        0 => (v, t, p), 1 => (q, v, p), 2 => (p, v, t),
-        3 => (p, q, v), 4 => (t, p, v), _ => (v, p, q),
+fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
+    // Oklab → LMS (cube roots)
+    let l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+    let m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+    let s_ = l - 0.0894841775 * a - 1.2914855480 * b;
+    let (l3, m3, s3) = (l_ * l_ * l_, m_ * m_ * m_, s_ * s_ * s_);
+    // LMS → linear sRGB
+    let r_lin =  4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+    let g_lin = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+    let b_lin = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+    // Linear sRGB → gamma-corrected u8 (clamp handles out-of-gamut)
+    let gamma = |x: f32| -> u8 {
+        let x = x.clamp(0.0, 1.0);
+        let g = if x <= 0.0031308 { x * 12.92 } else { 1.055 * x.powf(1.0 / 2.4) - 0.055 };
+        (g * 255.0).round() as u8
     };
-    ((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
+    (gamma(r_lin), gamma(g_lin), gamma(b_lin))
 }
 
 fn xoru64(s: &mut u64) -> u64 {
