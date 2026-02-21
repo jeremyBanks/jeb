@@ -199,7 +199,7 @@ impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
            seed_density_inv: usize, wrap: bool, steer: bool) -> Self {
         let mut rng = rng_seed;
-        let cells: Vec<Cell> = Vec::new();
+        let mut cells: Vec<Cell> = Vec::new();
 
         // Seed 1/seed_density_inv of empty cells as zero-momentum live cells (0 = none)
         let mut occupied = vec![false; W * H];
