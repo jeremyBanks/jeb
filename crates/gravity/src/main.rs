@@ -1955,7 +1955,7 @@ use std::io::{BufWriter, Write};
         // Release only triggers when the cell no longer exists (Conway death).
         let speed_cap = self.speed_cap;
         for c in &self.cells {
-            let (tfreq, tcutoff, sin_th, tamp) =
+            let (tfreq, tcutoff, sin_th, tamp, tpan) =
                 Self::audio_params(c.vx, c.vy, c.px, c.py, speed_cap);
             let v = self.voice_pool.entry(c.id)
                 .or_insert_with(|| Voice::new_sustain(tfreq));
@@ -1963,6 +1963,7 @@ use std::io::{BufWriter, Write};
             v.target_cutoff = tcutoff;
             v.sin_angle     = sin_th;
             v.target_amp    = tamp;
+            v.target_pan    = tpan;
             v.refreshed     = true;
             if v.releasing { v.releasing = false; v.release_samples = 0; }
         }
