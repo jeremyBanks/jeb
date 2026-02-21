@@ -20,7 +20,7 @@ const SAMPLES_PER_FRAME: usize = 735; // 44100 / 60, truncated (acceptable drift
 const AUDIO_BASE_FREQ: f32  = 130.81; // C3
 const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
 const AUDIO_SLEW: f32       = 0.05;   // per-sample freq snap (fast — less glide between scale degrees)
-const AUDIO_AMP_SCALE: f32  = 0.003;  // per-voice amplitude scale; tanh handles headroom
+const AUDIO_AMP_SCALE: f32  = 0.0015; // per-voice amplitude scale; tanh handles headroom
 const AUDIO_ATTACK: usize   = 220;    // 5 ms
 const AUDIO_RELEASE: usize  = 17640;  // 400 ms
 
@@ -1004,22 +1004,25 @@ impl Sim {
     // Called once per video frame. Appends SAMPLES_PER_FRAME f32 samples to chunk_audio.
     // Only cells that moved (changed grid square) this tick sustain a voice.
     // Stationary/blocked cells let their voice release.
-    // ── Pentatonic scale quantization ─────────────────────────────────────
-    // Maps t ∈ [0,1] → nearest note in C major pentatonic over 3 octaves (C3→C6).
-    // Any combination of simultaneously-playing voices is guaranteed consonant.
+    // ── Gravity-well pentatonic quantization ──────────────────────────────
+    // Pitch is attracted toward the nearest C major pentatonic degree but not
+    // fully snapped — like a gravity well. Close to a note = nearly there.
+    // Between two notes = pulled toward the nearer one, but still audibly between.
     fn pentatonic_freq(t: f32) -> f32 {
-        // Semitone offsets for C major pentatonic: C D E G A (per octave)
+        const PULL: f32 = 0.82; // attraction strength: 0=continuous, 1=full snap
         const DEGREES: &[f32] = &[
             0., 2., 4., 7., 9.,
             12., 14., 16., 19., 21.,
             24., 26., 28., 31., 33.,
-            36., // C6 cap
+            36.,
         ];
-        let target = t.clamp(0.0, 1.0) * 36.0; // 3 octaves in semitones
+        let semitone = t.clamp(0.0, 1.0) * 36.0;
         let nearest = DEGREES.iter().copied()
-            .min_by(|&a, &b| (a - target).abs().partial_cmp(&(b - target).abs()).unwrap())
+            .min_by(|&a, &b| (a - semitone).abs().partial_cmp(&(b - semitone).abs()).unwrap())
             .unwrap_or(0.0);
-        AUDIO_BASE_FREQ * 2.0_f32.powf(nearest / 12.0)
+        // Pull semitone toward nearest degree — gravity well, not hard snap
+        let attracted = semitone + (nearest - semitone) * PULL;
+        AUDIO_BASE_FREQ * 2.0_f32.powf(attracted / 12.0)
     }
 
     // ── Audio parameter helper ─────────────────────────────────────────────
@@ -1059,10 +1062,11 @@ impl Sim {
             if v.kind == VoiceKind::Sustain { v.refreshed = false; }
         }
 
-        // ── 2. Update/spawn sustain voices from cells that moved ───────────
+        // ── 2. Update/spawn sustain voices for ALL alive cells ─────────────
+        // Voice lifetime = cell lifetime. Amplitude naturally = 0 when stationary.
+        // Release only triggers when the cell no longer exists (Conway death).
         let speed_cap = self.speed_cap;
         for c in &self.cells {
-            if !c.moved { continue; }
             let (tfreq, tcutoff, sin_th, tamp) =
                 Self::audio_params(c.vx, c.vy, c.px, c.py, speed_cap);
             let v = self.voice_pool.entry(c.id)
@@ -1075,14 +1079,15 @@ impl Sim {
             if v.releasing { v.releasing = false; v.release_samples = 0; }
         }
 
-        // ── 3. Release sustain voices whose cell stopped moving ─────────────
+        // ── 3. Release sustain voices whose cell no longer exists ──────────
+        // (cell was removed by Conway death or epilogue — not by temporary blocking)
         for v in self.voice_pool.values_mut() {
             if v.kind == VoiceKind::Sustain && !v.refreshed && !v.releasing {
                 v.releasing = true;
             }
         }
 
-        // ── 4. Spawn one-shot voices for Conway events ──────────────────────
+        // ── 4. Spawn one-shot voices for Conway events ────────────────────────
         let events: Vec<AudioEvent> = self.audio_events.drain(..).collect();
         for ev in events {
             let (freq, cutoff, sin_th, amp) =
