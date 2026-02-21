@@ -561,8 +561,9 @@ impl Sim {
         }
 
         // Momentum damping: nudge system average velocity toward zero by 1/128 per tick.
-        // Prevents the centre-of-mass from drifting due to simulation asymmetries.
-        if !self.cells.is_empty() {
+        // Prevents the centre-of-mass from drifting due to simulation asymmetries in wrap mode.
+        // Not needed in no-wrap mode — hard walls already prevent runaway drift.
+        if self.wrap && !self.cells.is_empty() {
             let n = self.cells.len() as f32;
             let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
             let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
