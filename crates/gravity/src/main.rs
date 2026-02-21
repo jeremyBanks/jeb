@@ -38,8 +38,8 @@ struct Sim {
     softening: f32,
     speed_cap: f32,
     start_pop: usize,
-    conway_every: usize,
     pop_band: f32,
+    rate_limit: usize,
     tick_count: usize,
     prev_live: Vec<bool>,
     wrap: bool,   // toroidal wrapping (false = hard walls)
@@ -196,8 +196,8 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 // ──────────────────────────────────────────────────────────────────────────
 
 impl Sim {
-    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, conway_every: usize, pop_band: f32,
-           seed_density_inv: usize, wrap: bool, steer: bool) -> Self {
+    fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
+           rate_limit: usize, seed_density_inv: usize, wrap: bool, steer: bool) -> Self {
         let mut rng = rng_seed;
         let mut cells: Vec<Cell> = Vec::new();
 
@@ -231,7 +231,7 @@ impl Sim {
         let n = cells.len();
         let target_pop = W * H / 8;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              conway_every, pop_band, tick_count: 0, prev_live: vec![false; W * H], wrap, steer,
+              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer,
               conway_births: 0, conway_deaths: 0 }
     }
 
@@ -264,7 +264,7 @@ impl Sim {
     }
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
-                       conway_every: usize, pop_band: f32, _seed_density_inv: usize,
+                       pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
                        wrap: bool, steer: bool)
         -> Option<(Self, Vec<f32>, usize)>
     {
@@ -310,7 +310,7 @@ impl Sim {
         let order = (0..cells.len()).collect();
         let target_pop = W * H / 8;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
-                        start_pop: target_pop, conway_every, pop_band,
+                        start_pop: target_pop, pop_band, rate_limit,
                         tick_count, prev_live: prev_live_rebuilt, wrap, steer,
                         conway_births: 0, conway_deaths: 0 };
         Some((sim, canvas, chunk_index))
@@ -424,8 +424,7 @@ impl Sim {
         // Births: weighted by neighbour speed — handled below after grid2 is built
 
         // Rate-limit: max births/deaths per Conway call, independent of pop_band.
-        // With conway_every=FPS/4 (4 calls/sec) and rate_limit=8: up to 32 births+deaths/sec.
-        let rate_limit = 8_usize;
+        let rate_limit = self.rate_limit;
         let max_births = pop_max.saturating_sub(n).min(rate_limit);
         let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
         // desired_births NOT truncated here — weighted selection happens post-deaths
@@ -618,9 +617,7 @@ impl Sim {
     }
 
     fn tick(&mut self) {
-        if self.conway_every > 0 && self.tick_count % self.conway_every == 0 {
-            self.conway_step();
-        }
+        self.conway_step();
         self.gravity_step();
         self.tick_count += 1;
     }
@@ -1087,9 +1084,13 @@ fn main() {
         .unwrap_or(0.048000_f32); // half previous
     let softening   = 1.5_f32;
     let speed_cap   = 6.0_f32; // cells/frame
-    let conway_every = if args.iter().any(|a| a == "--no-conway") { 0 }
-        else { FPS as usize / 4 }; // run Conway 4× per second → up to 4 births + 4 deaths/sec
-    let pop_band    = 16.0_f32; // doubled: wider target population band
+    let target_pop_default = W * H / 8; // 5120 for 256×160
+    let pop_band: f32 = parse_arg("--pop-band")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or((target_pop_default / 128) as f32); // default: target/128 = 40
+    let rate_limit: usize = parse_arg("--rate-limit")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or((target_pop_default + 1) / 2); // default: ceil(target/2) = 2560
 
     let checkpoint_path = "state/checkpoint.bin";
     let segments_dir    = "segments";
@@ -1106,14 +1107,14 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, conway_every, pop_band, seed_density_inv, wrap, steer)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, wrap, steer)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
         })
         .unwrap_or_else(|| {
             println!("Fresh start (seed={rng_seed}, seed_density=1/{seed_density_inv})");
-            let s = Sim::new(rng_seed, g, softening, speed_cap, conway_every, pop_band, seed_density_inv, wrap, steer);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, wrap, steer);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
