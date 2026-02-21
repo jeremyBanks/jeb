@@ -1258,11 +1258,14 @@ fn main() {
                 break 'chunks;
             }
             let global_frame = chunk_start_frame + local_frame;
-            sim.paint_frame(&mut canvas);
-            Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
+            if !headless {
+                sim.paint_frame(&mut canvas);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
+            }
             sim.tick();
 
-            if local_frame % 480 == 0 {
+            let log_every = if headless { FPS as usize } else { 480 };
+            if local_frame % log_every == 0 {
                 println!("  frame {}/{total_frames}  {}", global_frame, sim.stats());
             }
         }
