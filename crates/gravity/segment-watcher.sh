@@ -11,6 +11,7 @@ touch "$SEEN_FILE"
 echo "[watcher] started, watching segments/"
 
 TOTAL=69
+LAST_TIME=$(date +%s)  # track time between segments
 PREVIEW_W=512
 PREVIEW_H=320
 CLIP_DUR=6
@@ -77,12 +78,20 @@ while true; do
         preview="${PREVIEW_DIR}/preview_chunk${chunk_num}.mp4"
 
         if make_preview "$seg" "$preview"; then
+            NOW=$(date +%s)
+            ELAPSED=$(( NOW - LAST_TIME ))
+            MINS=$(( ELAPSED / 60 ))
+            SECS=$(( ELAPSED % 60 ))
+            SIZE_MB=$(du -m "$seg" | cut -f1)
+            META="${MINS}m${SECS}s | ${SIZE_MB}MB"
+
             if openclaw message send --channel discord \
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
-                -m "chunk ${chunk_num}/${TOTAL} — \`$seg_name\`"; then
-                echo "[watcher] sent chunk $chunk_num"
+                -m "chunk ${chunk_num}/${TOTAL} | ${META}"; then
+                echo "[watcher] sent chunk $chunk_num (${META})"
                 echo "$seg" >> "$SEEN_FILE"
+                LAST_TIME=$NOW
             else
                 echo "[watcher] send failed for chunk $chunk_num, will retry"
             fi
