@@ -1849,10 +1849,11 @@ use std::io::{BufWriter, Write};
             if v.kind == VoiceKind::Sustain { v.refreshed = false; }
         }
 
-        // ── 2. Update/spawn sustain voices from cells that moved ───────────
+        // ── 2. Update/spawn sustain voices for ALL alive cells ─────────────
+        // Voice lifetime = cell lifetime. Amplitude naturally = 0 when stationary.
+        // Release only triggers when the cell no longer exists (Conway death).
         let speed_cap = self.speed_cap;
         for c in &self.cells {
-            if !c.moved { continue; }
             let (tfreq, tcutoff, sin_th, tamp) =
                 Self::audio_params(c.vx, c.vy, c.px, c.py, speed_cap);
             let v = self.voice_pool.entry(c.id)
@@ -1865,7 +1866,8 @@ use std::io::{BufWriter, Write};
             if v.releasing { v.releasing = false; v.release_samples = 0; }
         }
 
-        // ── 3. Release sustain voices whose cell stopped moving ─────────────
+        // ── 3. Release sustain voices whose cell no longer exists ──────────
+        // (cell was removed by Conway death or epilogue — not by temporary blocking)
         for v in self.voice_pool.values_mut() {
             if v.kind == VoiceKind::Sustain && !v.refreshed && !v.releasing {
                 v.releasing = true;
