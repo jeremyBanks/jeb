@@ -3092,3 +3092,11 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
 // [recovery] edit target not found, appending:
               pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge,
               conway_births: 0, conway_deaths: 0, next_id,
+
+// [recovery] edit target not found, appending:
+            // Candidate grid: full valid-cell range when wrapped, margin-inset when not.
+            // x_max is W()-1 (not W()) on wrapped axes — cell positions are 0..W()-1.
+            let x_min = if wrap_x { 0.0 } else { margin };
+            let x_max = if wrap_x { (W() - 1) as f32 } else { W() as f32 - margin };
+            let y_min = if wrap_y { 0.0 } else { margin };
+            let y_max = if wrap_y { (H() - 1) as f32 } else { H() as f32 - margin };
