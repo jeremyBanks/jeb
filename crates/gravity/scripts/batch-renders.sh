@@ -114,6 +114,10 @@ while true; do
     fi
 
     kill "$WATCHER_PID" 2>/dev/null || true
+
+    # ── Post-render cleanup: delete frames/segments/audio from older runs ──
+    bash scripts/cleanup-old-runs.sh "$RUN_ID" 2>/dev/null || true
+
     sleep 5
     echo ""
 done
