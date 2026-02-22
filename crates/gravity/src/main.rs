@@ -174,6 +174,7 @@ struct Sim {
     start_pop: usize,
     pop_band: f32,
     rate_limit: usize,
+    conway_every: usize, // fire Conway every N ticks (1 = every tick, 4 = every 4th tick)
     tick_count: usize,
     prev_live: Vec<bool>,
     wrap_x: bool,  // toroidal wrapping on x-axis (horizontal)
@@ -340,7 +341,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, seed_density_inv: usize, target_pop: usize,
+           rate_limit: usize, conway_every: usize, seed_density_inv: usize, target_pop: usize,
            wrap_x: bool, wrap_y: bool, bounce_x: bool, bounce_y: bool, steer: bool,
            dampen_x: f32, dampen_y: f32, init_vel: &str, circles: usize, vel_scale: f32) -> Self {
         use std::f32::consts::PI;
@@ -540,7 +541,7 @@ impl Sim {
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
+              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W * H], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
               conway_births: 0, conway_deaths: 0, next_id,
               region_stats: [RegionStats::default(); 9],
               region_voices: std::array::from_fn(|i| RegionVoice::new(
@@ -579,7 +580,8 @@ impl Sim {
     }
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
-                       pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
+                       pop_band: f32, rate_limit: usize, conway_every: usize,
+                       _seed_density_inv: usize,
                        target_pop: usize, wrap_x: bool, wrap_y: bool,
                        bounce_x: bool, bounce_y: bool, steer: bool,
                        dampen_x: f32, dampen_y: f32)
@@ -628,7 +630,7 @@ impl Sim {
         }
         let order = (0..cells.len()).collect();
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
-                        start_pop: target_pop, pop_band, rate_limit,
+                        start_pop: target_pop, pop_band, rate_limit, conway_every,
                         tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
                         conway_births: 0, conway_deaths: 0,
                         next_id,
@@ -979,7 +981,9 @@ impl Sim {
     }
 
     fn tick(&mut self) {
-        self.conway_step();
+        if self.tick_count % self.conway_every == 0 {
+            self.conway_step();
+        }
         self.gravity_step();
         self.tick_count += 1;
     }
@@ -1380,7 +1384,7 @@ impl Sim {
         for c in &self.cells {
             let xi = c.gx();
             let yi = c.gy();
-            let (l, a, b) = velocity_color_oklab(c.vx, c.vy, self.speed_cap, palette);
+            let (l, a, b) = velocity_color_oklab(c.vx, c.vy, c.px, c.py, self.speed_cap, palette);
             let i = (yi * W + xi) * 3;
             canvas[i]     = l;
             canvas[i + 1] = a;
@@ -1552,25 +1556,32 @@ struct DirectionalPalette {
     c_left:         (f32, f32, f32),  // #533AFD  violet     — −x
     c_down:         (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
     c_up:           (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
-    wheel_rotation: f32,              // turns; negative = CCW in screen space
+    wheel_rotation:      f32,   // turns; negative = CCW in screen space
+    pos_rotation_enabled: bool, // if true, add position-based rotation per cell
 }
 
 impl DirectionalPalette {
-    fn build() -> Self {
+    fn build(pos_rotation_enabled: bool) -> Self {
         DirectionalPalette {
-            dark:           rgb_to_oklab(0x06, 0x1B, 0x31),
-            c_right:        rgb_to_oklab(0x63, 0x5B, 0xFF),
-            c_left:         rgb_to_oklab(0x53, 0x3A, 0xFD),
-            c_down:         rgb_to_oklab(0xF4, 0x4B, 0xCC),
-            c_up:           rgb_to_oklab(0xF6, 0xF9, 0xFC),
-            wheel_rotation: -11.0 / 360.0,  // 11° CCW — current scheme
+            dark:                rgb_to_oklab(0x06, 0x1B, 0x31),
+            c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),
+            c_left:              rgb_to_oklab(0x53, 0x3A, 0xFD),
+            c_down:              rgb_to_oklab(0xF4, 0x4B, 0xCC),
+            c_up:                rgb_to_oklab(0xF6, 0xF9, 0xFC),
+            wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
+            pos_rotation_enabled,
         }
     }
 
     /// Blend the four directional anchors for a unit velocity (ux, uy).
-    /// The whole colour wheel is rotated by wheel_rotation turns before projecting.
-    fn directional_color(&self, ux: f32, uy: f32) -> (f32, f32, f32) {
-        let angle = self.wheel_rotation * 2.0 * std::f32::consts::PI;
+    /// Rotation = scheme wheel_rotation + optional position-based rotation:
+    ///   full left  (px=0) adds 3 full turns; full right (px=W) adds 0.
+    ///   full bottom (py=H) adds 2 full turns; full top  (py=0) adds 0.
+    fn directional_color(&self, ux: f32, uy: f32, px: f32, py: f32) -> (f32, f32, f32) {
+        let pos_rot = if self.pos_rotation_enabled {
+            (1.0 - px / W as f32) * 3.0 + (py / H as f32) * 2.0
+        } else { 0.0 };
+        let angle = (self.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
         let (ca, sa) = (angle.cos(), angle.sin());
         // Screen-space CCW rotation: rx = ux·cos + uy·sin, ry = −ux·sin + uy·cos
         let rx =  ux * ca + uy * sa;
@@ -1595,17 +1606,17 @@ enum PaletteMode {
     Radical(DirectionalPalette),
 }
 
-fn load_palette() -> PaletteMode {
+fn load_palette(pos_rotation_enabled: bool) -> PaletteMode {
     let raw = std::fs::read_to_string("/tmp/gravity_palette").unwrap_or_default();
     let s = raw.trim().to_lowercase();
     if s.starts_with("classic") {
         PaletteMode::Classic
     } else {
-        PaletteMode::Radical(DirectionalPalette::build())
+        PaletteMode::Radical(DirectionalPalette::build(pos_rotation_enabled))
     }
 }
 
-fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
+fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
     let spd = (vx * vx + vy * vy).sqrt();
 
     match palette {
@@ -1624,7 +1635,7 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
             // Directional blend: unit velocity selects among four palette colours.
             let (dl, da, db) = dp.dark;
             let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
-                dp.directional_color(vx / spd, vy / spd)
+                dp.directional_color(vx / spd, vy / spd, px, py)
             } else {
                 (dl, da, db)
             };
@@ -1798,6 +1809,7 @@ fn main() {
     let bounce_x  = args.iter().any(|a| a == "--bounce-x");
     let bounce_y  = args.iter().any(|a| a == "--bounce-y");
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
+    let pos_rotation_enabled = !args.iter().any(|a| a == "--no-pos-color"); // default: on
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
@@ -1844,6 +1856,9 @@ fn main() {
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
         .unwrap_or(pop_band as usize); // default: same as pop_band so Conway can move pop by its full range per tick
+    let conway_every: usize = parse_arg("--conway-every")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1); // default: every tick
 
     // --init-vel MODE: initial velocity field for seeded cells.
     //   swirl     (default) — asymmetric quadrant bias, net angular momentum
@@ -1893,7 +1908,7 @@ fn main() {
         "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
          commit:        {commit_id}\n\
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
-         pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
+         pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\nconway_every:  {conway_every}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nsteer:         {steer}\n\
@@ -1910,7 +1925,7 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
@@ -1921,7 +1936,7 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, &init_vel, circles, vel_scale);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
@@ -1978,7 +1993,7 @@ fn main() {
 
         println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
         // Hot-reload palette at chunk boundary — drop a file to change mid-run.
-        let palette = load_palette();
+        let palette = load_palette(pos_rotation_enabled);
         if !headless { println!("  palette: {:?}", palette); }
         let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2); // stereo interleaved
 
@@ -2039,7 +2054,7 @@ fn main() {
 
     // ── Epilogue phase ────────────────────────────────────────────────────
     if do_epilogue {
-        let palette = load_palette();
+        let palette = load_palette(pos_rotation_enabled);
         println!("\n[epilogue] converging to original {} cells...", orig.count);
         const MAX_EPILOGUE_TICKS: usize = 240; // 4s hard cap
         let mut ep_tick = 0usize;
