@@ -40,3 +40,6 @@ inverted_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 
 
 # 12. Extreme softening — very mushy gravity wells, cells deflect everywhere
 mushy_gravity:--gravity 0.25 --softening 12 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160
+
+// [recovery] edit target not found, appending:
+# pos_color_spin removed — no more positional color
