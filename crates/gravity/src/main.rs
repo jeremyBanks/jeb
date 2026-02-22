@@ -2092,6 +2092,16 @@ use std::io::{BufWriter, Write};
     };
 
 // [recovery] edit target not found, appending:
+        // Per-frame velocity decay: multiplicative drain on every cell's speed.
+        // e.g. vel_decay=1/1024 removes ~0.1% of speed each frame.
+        if self.vel_decay > 0.0 {
+            let retain = 1.0 - self.vel_decay;
+            for c in &mut self.cells {
+                c.vx *= retain;
+                c.vy *= retain;
+            }
+        }
+
         // Movement: float positions, collision by grid square.
         // Process in shuffled order. Each cell computes its target float position (px+vx, py+vy).
         // If the target grid square is free: move (update both float pos and grid).
