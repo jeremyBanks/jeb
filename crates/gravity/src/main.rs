@@ -2737,9 +2737,8 @@ impl DirectionalPalette {
     ///   Formula: (px + py) / (W + H) — top-left=0, bottom-right=1 turn.
     fn directional_color(&self, ux: f32, uy: f32, px: f32, py: f32) -> (f32, f32, f32) {
         let pos_rot = if self.pos_rotation_enabled {
-            // Max 1 turn total; each axis contributes proportional to its share of W+H.
-            // Horizontal flipped: max at right. Formula: (px + py) / (W + H)
-            (px + py) / (W + H) as f32
+            // 1 full turn across width, 3 full turns across height.
+            px / W as f32 + (py / H as f32) * 3.0
         } else { 0.0 };
         let angle = (self.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
         let (ca, sa) = (angle.cos(), angle.sin());
