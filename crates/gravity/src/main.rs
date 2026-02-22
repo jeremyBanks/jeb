@@ -758,7 +758,7 @@ impl Sim {
         self.conway_deaths += death_indices.len();
         for &i in &death_indices {
             let c = &self.cells[i];
-            self.audio_events.push(AudioEvent { kind: VoiceKind::Death, px: c.px, py: c.py, vx: c.vx, vy: c.vy });
+            // (no per-event audio in new direction-bucket system)
         }
         for i in death_indices { self.cells.swap_remove(i); }
 
