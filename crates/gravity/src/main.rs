@@ -1989,8 +1989,8 @@ use std::io::{BufWriter, Write};
                 if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 { continue; }
                 new_px = rx; new_py = ry;
             }
-            let tgx = (new_px.round() as i32).rem_euclid(W as i32) as usize;
-            let tgy = (new_py.round() as i32).rem_euclid(H as i32) as usize;
+            let tgx = (new_px.floor() as i32).rem_euclid(W as i32) as usize;
+            let tgy = (new_py.floor() as i32).rem_euclid(H as i32) as usize;
             let old_gx = c.gx(); let old_gy = c.gy();
             if tgx == old_gx && tgy == old_gy {
                 // Same grid square — update float position freely
