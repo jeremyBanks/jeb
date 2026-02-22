@@ -2253,8 +2253,8 @@ use std::io::{BufWriter, Write};
                 cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
 
 // [recovery] edit target not found, appending:
-        // Momentum damping: remove a fraction of COM velocity each tick.
-        // dampen_x/dampen_y are scale factors; 1.0 = 1/512 removed per tick.
+        // Momentum damping: remove dampen_x/dampen_y fraction of COM velocity each tick.
+        // e.g. dampen_y=0.125 removes 12.5% of avg vertical velocity per tick.
         if (self.dampen_x > 0.0 || self.dampen_y > 0.0) && !self.cells.is_empty() {
             let n = self.cells.len() as f32;
             let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
