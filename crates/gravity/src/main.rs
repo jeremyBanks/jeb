@@ -186,7 +186,7 @@ struct Sim {
     dampen_x: f32, // fraction of COM horizontal velocity removed per tick (0=off, 0.125=fast)
     dampen_y: f32, // fraction of COM vertical   velocity removed per tick (0=off, 0.125=fast)
     vel_decay: f32,  // per-frame multiplicative speed drain applied to every cell (0=off, e.g. 1/1024)
-    vel_nudge: f32,  // per-frame rotation of every cell's velocity vector in turns (0=off; neg=CW=nudge-up for rightward cells)
+    vel_nudge: f32,  // target direction in turns (0=off); each frame steers velocity 1/32 of remaining angular gap toward this direction
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
@@ -926,13 +926,23 @@ impl Sim {
             }
         }
 
-        // Per-frame velocity nudge: rotate every cell's velocity vector by vel_nudge turns.
-        // Positive = CCW (standard math); negative = CW (nudges rightward cells upward on screen).
-        // e.g. vel_nudge = -1/1024 turns/frame ≈ -0.35°/frame → steady-state clockwise orbit.
+        // Per-frame velocity nudge: steer each cell's velocity 1/32 of the way toward
+        // the target direction (vel_nudge in turns). Uses shortest-path arc so cells
+        // always rotate the small way around. Zero-velocity cells are skipped.
+        // e.g. vel_nudge = -11/360 → "11° above right" target; convergence half-life ≈ 22 frames.
         if self.vel_nudge != 0.0 {
-            let theta = self.vel_nudge * std::f32::consts::TAU;
-            let (sin_t, cos_t) = theta.sin_cos();
+            let target_h = self.vel_nudge * std::f32::consts::TAU;  // turns → radians
+            const RATE: f32 = 1.0 / 32.0;
             for c in &mut self.cells {
+                let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
+                if spd < 1e-6 { continue; }
+                let cur_h = c.vy.atan2(c.vx);
+                // Shortest-path angular difference, wrapped to (−π, π]
+                let mut dh = target_h - cur_h;
+                while dh >  std::f32::consts::PI { dh -= std::f32::consts::TAU; }
+                while dh < -std::f32::consts::PI { dh += std::f32::consts::TAU; }
+                let theta = dh * RATE;
+                let (sin_t, cos_t) = theta.sin_cos();
                 let nvx = c.vx * cos_t - c.vy * sin_t;
                 let nvy = c.vx * sin_t + c.vy * cos_t;
                 c.vx = nvx;
