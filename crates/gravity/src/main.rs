@@ -2708,8 +2708,9 @@ struct DirectionalPalette {
     c_left:         (f32, f32, f32),  // #533AFD  violet      — −x
     c_down:         (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
     c_up:           (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
-    wheel_rotation:      f32,   // turns; negative = CCW in screen space
-    pos_rotation_enabled: bool, // if true, add position-based rotation per cell
+    wheel_rotation:       f32,   // turns; negative = CCW in screen space
+    pos_rotation_enabled: bool,  // apply position-based hue rotation to velocity input
+    pos_rotation_output:  bool,  // also rotate output (a,b) by same angle (default: off)
 }
 
 impl DirectionalPalette {
