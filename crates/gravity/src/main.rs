@@ -3042,5 +3042,5 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
         let mut block_counts = vec![0u16; btotal];
 
 // [recovery] edit target not found, appending:
-              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay,
+              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge,
               conway_births: 0, conway_deaths: 0, next_id,
