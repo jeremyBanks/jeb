@@ -389,6 +389,17 @@ impl Sim {
                     let scale = (r / (cx_global.min(cy_global))).min(1.0) * 0.5;
                     (dy/r * scale + (xorf32(rng)-0.5)*0.1, -dx/r * scale + (xorf32(rng)-0.5)*0.1)
                 }
+                "spin-flat" => {
+                    // spin + aspect-ratio vx scaling + vy scaled down 75%
+                    // (vx aspect scaling is applied at closure return; vy *= 0.75 here)
+                    let dx = xi as f32 + 0.5 - cx_global;
+                    let dy = yi as f32 + 0.5 - cy_global;
+                    let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                    let scale = (r / (cx_global.min(cy_global))).min(1.0) * 0.5;
+                    let vx = -dy/r * scale + (xorf32(rng)-0.5)*0.1;
+                    let vy = (dx/r * scale + (xorf32(rng)-0.5)*0.1) * 0.75;
+                    (vx, vy)
+                }
                 "radial-out" => {
                     let dx = xi as f32 + 0.5 - cx_global;
                     let dy = yi as f32 + 0.5 - cy_global;
@@ -1884,10 +1895,12 @@ fn main() {
         .unwrap_or(16);
 
     // --init-vel MODE: initial velocity field for seeded cells.
-    //   swirl   (default) — asymmetric quadrant bias, net angular momentum
-    //   random  — isotropic random ±0.25, no directional bias
-    //   spin    — clockwise tangential field proportional to distance from centre
-    //   zero    — all seeded cells start stationary (pure gravity collapse from rest)
+    //   swirl     (default) — asymmetric quadrant bias, net angular momentum
+    //   random    — isotropic random ±0.25, no directional bias
+    //   spin      — clockwise tangential field proportional to distance from centre; vx scaled by aspect ratio
+    //   spin-flat — spin + vx*aspect + vy*0.75 (flatter elliptical orbits)
+    //   spin-ccw  — counter-clockwise spin
+    //   zero      — all seeded cells start stationary (pure gravity collapse from rest)
     let init_vel: String = parse_arg("--init-vel")
         .unwrap_or_else(|| "swirl".to_string());
 
