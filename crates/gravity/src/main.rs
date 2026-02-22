@@ -623,7 +623,7 @@ impl Sim {
         let n_cells = read_u64!() as usize;
         let rng     = read_u64!();
         let tick_count = read_u64!() as usize;
-        let chunk_index = read_u64!() as usize;
+        let resume_frame = read_u64!() as usize; // absolute frame offset to resume from
         let next_id = read_u64!();
 
         let mut cells = Vec::with_capacity(n_cells);
