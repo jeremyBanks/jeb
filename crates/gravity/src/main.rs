@@ -1649,7 +1649,7 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, &init_vel, circles, vel_scale);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
