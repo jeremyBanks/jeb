@@ -3011,3 +3011,8 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
 #[inline] fn H() -> usize { *H_CELL.get().expect("H not initialised") }
 #[inline] fn OUT_W() -> u32 { W() as u32 }
 #[inline] fn OUT_H() -> u32 { H() as u32 }
+
+// [recovery] edit target not found, appending:
+         pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\ntile_2x2:      {tile_2x2}\n\
+         resolution:    {}x{} → {}x{}\n",
+        width, height, width * 2, height * 2
