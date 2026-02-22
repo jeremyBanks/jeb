@@ -1642,13 +1642,16 @@ fn main() {
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
     );
-    let settings_file = format!("{}/gravity_{}.txt", shared_dir, run_id);
-    let _ = fs::write(&settings_file, &settings);
-    let _ = fs::write("state/run_info.txt", format!("run_id={run_id}\n{settings}"));
-
-    fs::create_dir_all(segments_dir).unwrap();
-    fs::create_dir_all(frames_dir).unwrap();
+    fs::create_dir_all(&segments_dir).unwrap();
+    fs::create_dir_all(&frames_dir).unwrap();
+    fs::create_dir_all("runs").unwrap();
+    // Write run_info to the run dir AND to state/ (watcher compat pointer)
+    let run_info_content = format!("run_id={run_id}\n{settings}");
+    let _ = fs::write(format!("{}/run_info.txt", run_dir), &run_info_content);
     fs::create_dir_all("state").unwrap();
+    let _ = fs::write("state/run_info.txt", &run_info_content);
+    // Settings copy to shared dir for reference
+    let _ = fs::write(format!("{}/{}.txt", shared_dir, run_id), &settings);
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
