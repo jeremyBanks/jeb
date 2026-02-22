@@ -350,7 +350,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool,
-           dampen: bool, init_vel: &str, circles: usize) -> Self {
+           dampen: bool, init_vel: &str, circles: usize, vel_scale: f32) -> Self {
         use std::f32::consts::PI;
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
@@ -457,6 +457,7 @@ impl Sim {
                     let idx = yi * W + xi;
                     if occupied[idx] { continue; }
                     let (vx, vy) = make_vel(xi, yi, &mut rng);
+                    let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                     cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                       prev_speed: 0.0, id: next_id, moved: false });
                     next_id += 1;
@@ -477,6 +478,7 @@ impl Sim {
             let idx = yi * W + xi;
             if !occupied[idx] {
                 let (vx, vy) = make_vel(xi, yi, &mut rng);
+                let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                 cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                   prev_speed: 0.0, id: next_id, moved: false });
                 next_id += 1;
@@ -1843,6 +1845,11 @@ fn main() {
     let init_vel: String = parse_arg("--init-vel")
         .unwrap_or_else(|| "swirl".to_string());
 
+    // --vel-scale F: multiply all initial velocities by F (default 1.0).
+    let vel_scale: f32 = parse_arg("--vel-scale")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1.0_f32);
+
     // --circles N: place N filled disks instead of random scatter.
     // Each disk gets target_pop/N cells; radius derived from cell count.
     // Disk centres maximise min-distance from walls and each other.
@@ -1881,7 +1888,7 @@ fn main() {
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
-         circles:       {circles_str}\n\
+         circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap:          {wrap}\ndampen:        {dampen}\nsteer:         {steer}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
@@ -1907,7 +1914,7 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen, &init_vel, circles);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
