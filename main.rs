@@ -1860,7 +1860,7 @@ fn main() {
     }
 
     // Final concat
-    let total_segs = fs::read_to_string(segments_file).unwrap_or_default().lines().count();
+    let total_segs = fs::read_to_string(&segments_file).unwrap_or_default().lines().count();
     println!("\nConcatenating {total_segs} segments → {output_file}");
     concat_segments(&segments_file, &output_file);
 
