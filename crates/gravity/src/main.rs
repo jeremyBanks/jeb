@@ -1553,10 +1553,10 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 }
 
 /// Directional colour anchors (OKLab).  Velocity components select four basis colours
-/// via squared-clamp weights that always sum to 1 on the unit circle:
-///   w_right = max(ux,0)²   w_left = max(−ux,0)²
-///   w_down  = max(uy,0)²   w_up   = max(−uy,0)²
-/// (ux²+uy²=1 guarantees Σwᵢ=1.)
+/// via squared-clamp weights (normalised).  Blue axes rotated 11° off horizontal:
+///   w_right = max( ux·cos11 − uy·sin11, 0)²  (peaks at 11° above right)
+///   w_left  = max(−ux·cos11 + uy·sin11, 0)²  (peaks at 11° below left)
+///   w_down  = max(uy, 0)²   w_up = max(−uy, 0)²   (unchanged)
 ///
 /// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
 /// down  / up    → warm family (#F44BCC hot-pink    / #F6F9FC near-white)
@@ -1583,11 +1583,18 @@ impl DirectionalPalette {
     }
 
     /// Blend the four directional anchors for a unit velocity (ux, uy).
+    /// Blue anchors are rotated 11° off horizontal: right-blue peaks at 11° above right,
+    /// left-blue peaks at 11° below left.  Weights are normalised (rotation breaks sum=1).
     fn directional_color(&self, ux: f32, uy: f32) -> (f32, f32, f32) {
-        let w_r = ux.max(0.0).powi(2);
-        let w_l = (-ux).max(0.0).powi(2);
+        const THETA: f32 = 11.0 * std::f32::consts::PI / 180.0;
+        let (ct, st) = (THETA.cos(), THETA.sin());
+        // Project onto rotated axes; up in screen coords = negative uy
+        let w_r = ( ux * ct - uy * st).max(0.0).powi(2); // peaks at 11° above right
+        let w_l = (-ux * ct + uy * st).max(0.0).powi(2); // peaks at 11° below left
         let w_d = uy.max(0.0).powi(2);
         let w_u = (-uy).max(0.0).powi(2);
+        let sum = (w_r + w_l + w_d + w_u).max(1e-9);
+        let (w_r, w_l, w_d, w_u) = (w_r/sum, w_l/sum, w_d/sum, w_u/sum);
         let l = w_r*self.c_right.0 + w_l*self.c_left.0 + w_d*self.c_down.0 + w_u*self.c_up.0;
         let a = w_r*self.c_right.1 + w_l*self.c_left.1 + w_d*self.c_down.1 + w_u*self.c_up.1;
         let b = w_r*self.c_right.2 + w_l*self.c_left.2 + w_d*self.c_down.2 + w_u*self.c_up.2;
