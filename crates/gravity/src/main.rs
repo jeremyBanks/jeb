@@ -3464,23 +3464,22 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, dp: 
         px / W() as f32 + (py / H() as f32) * 3.0
     } else { 0.0 };
 
-    let (dl, da, db) = dp.dark;
-    let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
+    let dark = dp.dark;
+    let tgt = if spd > 1e-6 {
         dp.directional_color(vx / spd, vy / spd, px, py)
     } else {
-        (dl, da, db)
+        dark
     };
 
     let (l, a, b) = if t <= 1.0 {
-        let l = dl + (tgt_l - dl) * t;
-        let a = da + (tgt_a - da) * t;
-        let b = db + (tgt_b - db) * t;
-        (l, a, b)
+        oklch_lerp(dark, tgt, t)
     } else {
+        // Beyond speed_cap: push L brighter and C more saturated via Oklch.
+        let (tl, tc, th) = to_lch(tgt.0, tgt.1, tgt.2);
         let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
-        let l = (tgt_l + (0.92 - tgt_l) * extra * 0.45).min(0.93);
-        let c_scale = 1.0 + extra * 0.40;
-        (l, tgt_a * c_scale, tgt_b * c_scale)
+        let l = (tl + (0.92 - tl) * extra * 0.45).min(0.93);
+        let c = tc * (1.0 + extra * 0.40);
+        (l, c * th.cos(), c * th.sin())
     };
 
     if dp.pos_rotation_output {
