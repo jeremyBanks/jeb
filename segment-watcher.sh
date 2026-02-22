@@ -56,18 +56,27 @@ make_preview() {
 
     echo "[watcher] preview seeks: a=${a0}+${a1} b=${b0}+${b1} c=${c0}+${c1} (dur=${dur})"
 
-    # Single input decoded once, split 6 ways, trim to each section.
-    # trim+setpts ensures correct timestamps regardless of keyframe alignment.
+    # Single input decoded once, split 6 ways for video + 6 ways for audio.
+    # trim+setpts/atrim+asetpts for accurate section extraction.
+    # Slow sections: video pts ×3, audio also trimmed to match (not pitch-shifted).
+    local slow_audio_dur; slow_audio_dur=$(echo "scale=3; $CLIP_SLOW_SRC * 3" | bc)
     ffmpeg -y -i "$seg" -filter_complex "
         [0:v]split=6[v0][v1][v2][v3][v4][v5];
-        [v0]trim=start=${a0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[af];
-        [v1]trim=start=${a1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[as];
-        [v2]trim=start=${b0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[bf];
-        [v3]trim=start=${b1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[bs];
-        [v4]trim=start=${c0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[cf];
-        [v5]trim=start=${c1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[cs];
-        [af][as][bf][bs][cf][cs]concat=n=6:v=1:a=0[out]
-    " -map "[out]" -c:v libx264 -crf 22 -preset fast "$out" 2>/tmp/watcher_ffmpeg.log
+        [0:a]asplit=6[a0][a1][a2][a3][a4][a5];
+        [v0]trim=start=${a0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[vaf];
+        [v1]trim=start=${a1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[vas];
+        [v2]trim=start=${b0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[vbf];
+        [v3]trim=start=${b1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[vbs];
+        [v4]trim=start=${c0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[vcf];
+        [v5]trim=start=${c1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[vcs];
+        [a0]atrim=start=${a0}:duration=${CLIP_FULL},asetpts=PTS-STARTPTS[aaf];
+        [a1]atrim=start=${a1}:duration=${slow_audio_dur},asetpts=PTS-STARTPTS[aas];
+        [a2]atrim=start=${b0}:duration=${CLIP_FULL},asetpts=PTS-STARTPTS[abf];
+        [a3]atrim=start=${b1}:duration=${slow_audio_dur},asetpts=PTS-STARTPTS[abs];
+        [a4]atrim=start=${c0}:duration=${CLIP_FULL},asetpts=PTS-STARTPTS[acf];
+        [a5]atrim=start=${c1}:duration=${slow_audio_dur},asetpts=PTS-STARTPTS[acs];
+        [vaf][aaf][vas][aas][vbf][abf][vbs][abs][vcf][acf][vcs][acs]concat=n=6:v=1:a=1[vout][aout]
+    " -map "[vout]" -map "[aout]" -c:v libx264 -crf 22 -preset fast -c:a aac -b:a 128k "$out" 2>/tmp/watcher_ffmpeg.log
 }
 
 # ── main loop ───────────────────────────────────────────────────────────────
