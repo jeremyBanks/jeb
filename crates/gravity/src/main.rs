@@ -2763,7 +2763,7 @@ const PALETTE_SRGB: [(u8, u8, u8); 9] = [
 ];
 
 /// Zero-speed (still) anchor colour — dark navy.
-const SLOW_RGB: (u8, u8, u8) = (0x06, 0x1B, 0x31);
+const SLOW_RGB: (u8, u8, u8) = (0x08, 0x22, 0x3D);
 
 fn srgb_u8_to_linear(x: u8) -> f32 {
     let x = x as f32 / 255.0;
