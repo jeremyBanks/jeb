@@ -45,35 +45,36 @@ make_preview() {
         return
     fi
 
-    # Each clip: 2s full-speed then 1s source → 3s slow (at 20fps)
-    local mid_start last_start
-    mid_start=$(echo  "scale=3; $dur / 2 - $clip_total / 2" | bc)
-    last_start=$(echo "scale=3; $dur - $clip_total"          | bc)
+    # Compute start times for each of the 3 positions (beginning / middle / end)
+    local a0=0
+    local b0; b0=$(echo "scale=3; $dur / 2 - $clip_total / 2" | bc)
+    local c0; c0=$(echo "scale=3; $dur - $clip_total"          | bc)
+    # Slow section starts 2s into each clip
+    local a1; a1=$(echo "scale=3; $a0 + $CLIP_FULL" | bc)
+    local b1; b1=$(echo "scale=3; $b0 + $CLIP_FULL" | bc)
+    local c1; c1=$(echo "scale=3; $c0 + $CLIP_FULL" | bc)
 
-    local tmp; tmp=$(mktemp -d)
-    make_clip() {
-        local ss="$1" name="$2"
-        local slow_ss; slow_ss=$(echo "scale=3; $ss + $CLIP_FULL" | bc)
-        ffmpeg -y -ss "$ss"      -i "$seg" -t $CLIP_FULL     -vf "$scale" \
-            -r $SLOW_FPS -c:v libx264 -crf 22 -preset fast "$tmp/${name}_fast.mp4" 2>/dev/null
-        ffmpeg -y -ss "$slow_ss" -i "$seg" -t $CLIP_SLOW_SRC -vf "${scale},setpts=3*PTS" \
-            -r $SLOW_FPS -c:v libx264 -crf 22 -preset fast "$tmp/${name}_slow.mp4" 2>/dev/null
-        printf "file '%s'\nfile '%s'\n" "$tmp/${name}_fast.mp4" "$tmp/${name}_slow.mp4" > "$tmp/${name}_list.txt"
-        ffmpeg -y -f concat -safe 0 -i "$tmp/${name}_list.txt" -c copy "$tmp/${name}.mp4" 2>/dev/null
-    }
-    make_clip 0            "a"
-    make_clip "$mid_start" "b"
-    make_clip "$last_start" "c"
+    echo "[watcher] preview seeks: a=${a0}+${a1} b=${b0}+${b1} c=${c0}+${c1} (dur=${dur})"
 
-    ffmpeg -y -f lavfi -i "color=black:s=${PREVIEW_W}x${PREVIEW_H}:r=60" \
-        -t $GAP_DUR -c:v libx264 -crf 22 -preset fast "$tmp/gap.mp4" 2>/dev/null
-
-    printf "file '%s'\nfile '%s'\nfile '%s'\nfile '%s'\nfile '%s'\n" \
-        "$tmp/a.mp4" "$tmp/gap.mp4" \
-        "$tmp/b.mp4" "$tmp/gap.mp4" \
-        "$tmp/c.mp4" > "$tmp/list.txt"
-    ffmpeg -y -f concat -safe 0 -i "$tmp/list.txt" -c copy "$out" 2>/dev/null
-    rm -rf "$tmp"
+    # Single ffmpeg call: 6 inputs (3 positions × fast+slow), concat via filter_complex.
+    # Uniform fps throughout — no VFR, no intermediate files.
+    ffmpeg -y \
+        -ss "$a0" -i "$seg" -t $CLIP_FULL     \
+        -ss "$a1" -i "$seg" -t $CLIP_SLOW_SRC \
+        -ss "$b0" -i "$seg" -t $CLIP_FULL     \
+        -ss "$b1" -i "$seg" -t $CLIP_SLOW_SRC \
+        -ss "$c0" -i "$seg" -t $CLIP_FULL     \
+        -ss "$c1" -i "$seg" -t $CLIP_SLOW_SRC \
+        -filter_complex "
+            [0:v]${scale},fps=${SLOW_FPS}[af];
+            [1:v]${scale},setpts=3*PTS,fps=${SLOW_FPS}[as];
+            [2:v]${scale},fps=${SLOW_FPS}[bf];
+            [3:v]${scale},setpts=3*PTS,fps=${SLOW_FPS}[bs];
+            [4:v]${scale},fps=${SLOW_FPS}[cf];
+            [5:v]${scale},setpts=3*PTS,fps=${SLOW_FPS}[cs];
+            [af][as][bf][bs][cf][cs]concat=n=6:v=1:a=0[out]
+        " \
+        -map "[out]" -c:v libx264 -crf 22 -preset fast "$out" 2>/tmp/watcher_ffmpeg.log
 }
 
 # ── main loop ───────────────────────────────────────────────────────────────
