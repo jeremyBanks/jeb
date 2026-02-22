@@ -423,11 +423,12 @@ impl Sim {
                           .min((W().min(H()) as f32) * 0.45 / (circles as f32).sqrt());
             let margin = radius + 1.0;
 
-            // Candidate grid: full axis range when wrapped, margin-inset when not.
+            // Candidate grid: full valid-cell range when wrapped, margin-inset when not.
+            // x_max is W()-1 (not W()) on wrapped axes — cell positions are 0..W()-1.
             let x_min = if wrap_x { 0.0 } else { margin };
-            let x_max = if wrap_x { W() as f32 } else { W() as f32 - margin };
+            let x_max = if wrap_x { (W() - 1) as f32 } else { W() as f32 - margin };
             let y_min = if wrap_y { 0.0 } else { margin };
-            let y_max = if wrap_y { H() as f32 } else { H() as f32 - margin };
+            let y_max = if wrap_y { (H() - 1) as f32 } else { H() as f32 - margin };
             let mut candidates: Vec<(f32, f32)> = Vec::new();
             let mut cx = x_min;
             while cx <= x_max {
@@ -491,10 +492,11 @@ impl Sim {
                         if d2 > r_sq { continue; }
                         let xi_i = disk_cx as isize + dx;
                         let yi_i = disk_cy as isize + dy;
-                        if xi_i < 0 || xi_i >= W() as isize { continue; }
-                        if yi_i < 0 || yi_i >= H() as isize { continue; }
-                        let xi = xi_i as usize;
-                        let yi = yi_i as usize;
+                        // On non-wrapped axes skip out-of-bounds; on wrapped axes fold around.
+                        if !wrap_x && (xi_i < 0 || xi_i >= W() as isize) { continue; }
+                        if !wrap_y && (yi_i < 0 || yi_i >= H() as isize) { continue; }
+                        let xi = xi_i.rem_euclid(W() as isize) as usize;
+                        let yi = yi_i.rem_euclid(H() as isize) as usize;
                         if !occupied[yi * W() + xi] {
                             pts.push((xi, yi, d2));
                         }
