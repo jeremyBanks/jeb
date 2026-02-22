@@ -1594,12 +1594,8 @@ fn main() {
 
     // Write settings file alongside video and run_info for the watcher
     let init_pop = if circles > 0 {
-        use std::f32::consts::PI;
-        let cells_per = (target_pop / circles).max(1);
-        // Checkerboard → radius×√2, actual cells ≈ target_pop
-        let r = ((2.0 * cells_per as f32 / PI).sqrt()).max(4.0)
-                 .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
-        (PI * r * r * 0.5) as usize * circles  // 50% of disk area
+        // ~50% coin-flip density over disk area → expected placed ≈ target_pop
+        target_pop
     } else if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
     let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
