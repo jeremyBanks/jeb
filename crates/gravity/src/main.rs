@@ -574,13 +574,14 @@ impl Sim {
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
-    fn save_checkpoint(&self, canvas: &[f32], chunk_index: usize, path: &str) {
+    /// `resume_frame` = the absolute frame offset at which to resume (= chunk_end_frame of last chunk).
+    fn save_checkpoint(&self, canvas: &[f32], resume_frame: usize, path: &str) {
         let mut buf: Vec<u8> = Vec::new();
         // header
         buf.extend_from_slice(&(self.cells.len() as u64).to_le_bytes());
         buf.extend_from_slice(&self.rng.to_le_bytes());
         buf.extend_from_slice(&(self.tick_count as u64).to_le_bytes());
-        buf.extend_from_slice(&(chunk_index as u64).to_le_bytes());
+        buf.extend_from_slice(&(resume_frame as u64).to_le_bytes()); // was chunk_index, now frame offset
         buf.extend_from_slice(&self.next_id.to_le_bytes());
         // cells
         for c in &self.cells {
