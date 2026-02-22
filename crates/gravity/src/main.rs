@@ -1556,12 +1556,13 @@ struct DirectionalPalette {
     c_left:         (f32, f32, f32),  // #533AFD  violet      — −x
     c_down:         (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
     c_up:           (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
-    wheel_rotation:      f32,   // turns; negative = CCW in screen space
-    pos_rotation_enabled: bool, // if true, add position-based rotation per cell
+    wheel_rotation:       f32,   // turns; negative = CCW in screen space
+    pos_rotation_enabled: bool,  // apply position-based hue rotation to velocity input
+    pos_rotation_output:  bool,  // also rotate output (a,b) by same angle (default: off)
 }
 
 impl DirectionalPalette {
-    fn build(pos_rotation_enabled: bool) -> Self {
+    fn build(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Self {
         DirectionalPalette {
             dark:                rgb_to_oklab(0x06, 0x1B, 0x31),  // dark navy — zero-speed anchor
             c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — +x
@@ -1570,6 +1571,7 @@ impl DirectionalPalette {
             c_up:                rgb_to_oklab(0xF6, 0xF9, 0xFC),  // cool near-white — −y
             wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
             pos_rotation_enabled,
+            pos_rotation_output,
         }
     }
 
@@ -1606,13 +1608,13 @@ enum PaletteMode {
     Radical(DirectionalPalette),
 }
 
-fn load_palette(pos_rotation_enabled: bool) -> PaletteMode {
+fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> PaletteMode {
     let raw = std::fs::read_to_string("/tmp/gravity_palette").unwrap_or_default();
     let s = raw.trim().to_lowercase();
     if s.starts_with("classic") {
         PaletteMode::Classic
     } else {
-        PaletteMode::Radical(DirectionalPalette::build(pos_rotation_enabled))
+        PaletteMode::Radical(DirectionalPalette::build(pos_rotation_enabled, pos_rotation_output))
     }
 }
 
@@ -1660,9 +1662,9 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, pale
                 (l, tgt_a * c_scale, tgt_b * c_scale)
             };
 
-            // Output hue rotation: only when pos_rotation enabled.
-            // wheel_rotation is input-only (velocity remapping); pos_rot drives output too.
-            if dp.pos_rotation_enabled {
+            // Output hue rotation: only when explicitly enabled (--pos-color-out).
+            // wheel_rotation is input-only by default; pos_rot also drives output when opted in.
+            if dp.pos_rotation_output {
                 let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
                 let (oca, osa) = (out_angle.cos(), out_angle.sin());
                 (l, a * oca - b * osa, a * osa + b * oca)
@@ -1824,7 +1826,8 @@ fn main() {
     let bounce_x  = args.iter().any(|a| a == "--bounce-x");
     let bounce_y  = args.iter().any(|a| a == "--bounce-y");
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
-    let pos_rotation_enabled = args.iter().any(|a| a == "--pos-color"); // default: off; opt-in
+    let pos_rotation_enabled = !args.iter().any(|a| a == "--no-pos-color"); // default: on
+    let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
@@ -1933,6 +1936,7 @@ fn main() {
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nsteer:         {steer}\n\
+         pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
     );
@@ -2017,7 +2021,7 @@ fn main() {
 
         println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
         // Hot-reload palette at chunk boundary — drop a file to change mid-run.
-        let palette = load_palette(pos_rotation_enabled);
+        let palette = load_palette(pos_rotation_enabled, pos_rotation_output);
         if !headless { println!("  palette: {:?}", palette); }
         let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2); // stereo interleaved
 
@@ -2078,7 +2082,7 @@ fn main() {
 
     // ── Epilogue phase ────────────────────────────────────────────────────
     if do_epilogue {
-        let palette = load_palette(pos_rotation_enabled);
+        let palette = load_palette(pos_rotation_enabled, pos_rotation_output);
         println!("\n[epilogue] converging to original {} cells...", orig.count);
         const MAX_EPILOGUE_TICKS: usize = 240; // 4s hard cap
         let mut ep_tick = 0usize;
