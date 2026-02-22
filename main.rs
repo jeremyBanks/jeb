@@ -1549,7 +1549,6 @@ fn main() {
 
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
-        .or_else(|| parse_arg("-G"))
         .and_then(|s| s.parse().ok())
         .unwrap_or(0.125_f32);
     let softening: f32 = parse_arg("--softening")
