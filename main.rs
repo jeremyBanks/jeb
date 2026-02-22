@@ -1570,7 +1570,7 @@ fn main() {
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
-         circles:       {circles_str}\n\
+         circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap:          {wrap}\ndampen:        {dampen}\nsteer:         {steer}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
