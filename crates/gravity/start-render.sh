@@ -46,6 +46,12 @@ echo "[start-render] render PID=$RENDER_PID"
 for i in $(seq 15); do sleep 1; [ -f state/run_info.txt ] && break; done
 grep "gravity:\|softening:\|speed_cap:\|pop_band:\|rate_limit:\|init_vel:\|wrap:\|dampen:" state/run_info.txt 2>/dev/null || echo "run_info not yet written"
 
+# Stage the run config (not commit — just index it so it survives cleanup)
+RUN_CFG="runs/${RUN_ID}/run_info.txt"
+if [ -f "$RUN_CFG" ]; then
+    git add "$RUN_CFG" 2>/dev/null && echo "[start-render] staged $RUN_CFG"
+fi
+
 # Start watcher AFTER run_info exists so it reads correct run_id
 nohup bash segment-watcher.sh > /tmp/watcher.log 2>&1 &
 echo "[start-render] watcher PID=$!"

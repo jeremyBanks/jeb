@@ -6,4 +6,7 @@ gravity_*.mp4
 test_epilogue/
 segments_partial.txt
 
-runs/
+# runs/ — ignore everything except the run config txt
+runs/**
+!runs/*/
+!runs/*/run_info.txt
