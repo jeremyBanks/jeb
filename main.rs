@@ -1511,7 +1511,9 @@ fn main() {
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
     let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
     let no_audio    = headless || args.iter().any(|a| a == "--no-audio"); // skip audio synthesis
-    let wrap   = args.iter().any(|a| a == "--wrap");    // default: hard walls (no wrap)
+    let wrap_both = args.iter().any(|a| a == "--wrap"); // --wrap enables both axes
+    let wrap_x = wrap_both || args.iter().any(|a| a == "--wrap-x");
+    let wrap_y = wrap_both || args.iter().any(|a| a == "--wrap-y");
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
