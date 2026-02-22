@@ -1520,6 +1520,11 @@ fn main() {
     let init_vel: String = parse_arg("--init-vel")
         .unwrap_or_else(|| "swirl".to_string());
 
+    // --vel-scale F: multiply all initial velocities by F (default 1.0).
+    let vel_scale: f32 = parse_arg("--vel-scale")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1.0_f32);
+
     // --circles N: place N filled disks instead of random scatter.
     // Each disk gets target_pop/N cells; radius derived from cell count.
     // Disk centres maximise min-distance from walls and each other.
