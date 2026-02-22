@@ -1,0 +1,42 @@
+# ── KNOWN-GOOD CONFIGS ────────────────────────────────────────────────────────
+threads_clumping:--gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 16 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160
+great_rate64:--gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160
+3am_baseline:--gravity 0.03125 --softening 6 --speed-cap 4.5 --pop-target 5120 --pop-band 160 --rate-limit 4 --init-vel zero --wrap --width 256 --height 160
+radout_x2_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --vel-nudge-rate 0.03125 --width 256 --height 160
+
+# ── WILDLY DIFFERENT EXPLORATIONS ────────────────────────────────────────────
+# 1. Slow Conway gas cloud — low gravity, huge population, swirl, both axes damped
+gas_cloud:--gravity 0.015625 --softening 6 --speed-cap 3 --pop-target 4096 --pop-band 512 --rate-limit 32 --init-vel swirl --wrap --dampen-x 0.03125 --dampen-y 0.03125 --width 256 --height 160
+
+# 2. Mosh pit — high rate, random chaos, medium gravity
+mosh_pit:--gravity 0.125 --softening 4 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 256 --init-vel random --wrap --width 256 --height 160
+
+# 3. Bounce walls — no wrap, spin into hard walls
+bounce_spin:--gravity 0.2 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 1.5 --init-vel spin --bounce-x --bounce-y --width 256 --height 160
+
+# 4. Eight circles, zero velocity — pure gravity collapse from arranged clusters
+eight_circles_collapse:--gravity 0.1 --softening 5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 32 --circles 8 --init-vel zero --wrap --width 256 --height 160
+
+# 5. Strong gravity, tiny population — intense tight-cluster dynamics
+strong_g_tiny:--gravity 0.5 --softening 6 --speed-cap 8 --pop-target 512 --pop-band 64 --rate-limit 32 --circles 1 --vel-scale 1 --init-vel spin --wrap --width 256 --height 160
+
+# 6. Velocity decay — speed bleeds off every frame, patterns crystallize
+vel_decay:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --vel-nudge-rate 0.03125 --width 256 --height 160
+
+# 7. Spin-flat — flattened vortex, horizontal band dynamics
+spin_flat:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel spin-flat --wrap --dampen-y 0.0625 --width 256 --height 160
+
+# 8. Upward nudge — all cells steered toward up over time
+nudge_up:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.25 --vel-nudge-rate 0.0625 --width 256 --height 160
+
+# 9. Three-body spin — three circles creating chaotic orbital dance
+three_body:--gravity 0.165 --softening 3 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 3 --vel-scale 1.5 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160
+
+# 10. Pos-color on — cells shift color as they travel across the canvas
+pos_color_spin:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --pos-color --width 256 --height 160
+
+# 11. Inverted damping — strong X, weak Y (normally strong Y, weak X)
+inverted_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-x 0.0625 --dampen-y 0.015625 --vel-nudge-rate 0.03125 --width 256 --height 160
+
+# 12. Extreme softening — very mushy gravity wells, cells deflect everywhere
+mushy_gravity:--gravity 0.25 --softening 12 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160
