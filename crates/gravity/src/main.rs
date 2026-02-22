@@ -2252,16 +2252,17 @@ use std::io::{BufWriter, Write};
                 cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
 
 // [recovery] edit target not found, appending:
-        // Momentum damping: nudge system COM velocity toward zero by 1/512 per tick.
-        // Only active when --dampen flag is set (useful for wrap mode to prevent COM drift).
-        if self.dampen && !self.cells.is_empty() {
+        // Momentum damping: remove a fraction of COM velocity each tick.
+        // dampen_x/dampen_y are scale factors; 1.0 = 1/512 removed per tick.
+        if (self.dampen_x > 0.0 || self.dampen_y > 0.0) && !self.cells.is_empty() {
             let n = self.cells.len() as f32;
             let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
             let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
-            let damp = 1.0 / 512.0;
+            let fx = self.dampen_x / 512.0;
+            let fy = self.dampen_y / 512.0;
             for c in &mut self.cells {
-                c.vx -= avg_vx * damp;
-                c.vy -= avg_vy * damp;
+                c.vx -= avg_vx * fx;
+                c.vy -= avg_vy * fy;
             }
         }
 
