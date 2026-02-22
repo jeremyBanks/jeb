@@ -1671,7 +1671,7 @@ fn main() {
             (s, c, 0)
         });
 
-    let orig_state_path = "state/orig_state.bin";
+    let orig_state_path = format!("{}/orig_state.bin", run_dir);
 
     // OriginalState = tick=0 layout. On fresh start: capture now and persist.
     // On checkpoint resume: load from disk so epilogue targets the actual first frame.
