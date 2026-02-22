@@ -2695,11 +2695,12 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (lab_l, lab_a, lab_b)
 }
 
-/// Directional colour anchors (OKLab).  Velocity components select four basis colours
-/// via squared-clamp weights (normalised).  Blue axes rotated 11° off horizontal:
-///   w_right = max( ux·cos11 − uy·sin11, 0)²  (peaks at 11° above right)
-///   w_left  = max(−ux·cos11 + uy·sin11, 0)²  (peaks at 11° below left)
-///   w_down  = max(uy, 0)²   w_up = max(−uy, 0)²   (unchanged)
+/// Directional colour anchors (OKLab).  Velocity direction selects four basis colours
+/// via squared-clamp weights that sum to 1 on the unit circle:
+///   w_right = max(rx, 0)²   w_left = max(−rx, 0)²
+///   w_down  = max(ry, 0)²   w_up   = max(−ry, 0)²
+/// where (rx, ry) is the velocity rotated by `wheel_rotation` turns
+/// (negative = CCW in screen space).  Weights sum to 1 naturally; no normalisation needed.
 ///
 /// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
 /// down  / up    → warm family (#F44BCC hot-pink    / #F6F9FC near-white)
@@ -2707,37 +2708,39 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 /// zero-speed anchor: #061B31 dark navy.
 #[derive(Clone, Debug)]
 struct DirectionalPalette {
-    dark:    (f32, f32, f32),  // #061B31
-    c_right: (f32, f32, f32),  // #635BFF  periwinkle — +x
-    c_left:  (f32, f32, f32),  // #533AFD  violet     — −x
-    c_down:  (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
-    c_up:    (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
+    dark:           (f32, f32, f32),  // #061B31
+    c_right:        (f32, f32, f32),  // #635BFF  periwinkle — +x
+    c_left:         (f32, f32, f32),  // #533AFD  violet     — −x
+    c_down:         (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
+    c_up:           (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
+    wheel_rotation: f32,              // turns; negative = CCW in screen space
 }
 
 impl DirectionalPalette {
     fn build() -> Self {
         DirectionalPalette {
-            dark:    rgb_to_oklab(0x06, 0x1B, 0x31),
-            c_right: rgb_to_oklab(0x63, 0x5B, 0xFF),
-            c_left:  rgb_to_oklab(0x53, 0x3A, 0xFD),
-            c_down:  rgb_to_oklab(0xF4, 0x4B, 0xCC),
-            c_up:    rgb_to_oklab(0xF6, 0xF9, 0xFC),
+            dark:           rgb_to_oklab(0x06, 0x1B, 0x31),
+            c_right:        rgb_to_oklab(0x63, 0x5B, 0xFF),
+            c_left:         rgb_to_oklab(0x53, 0x3A, 0xFD),
+            c_down:         rgb_to_oklab(0xF4, 0x4B, 0xCC),
+            c_up:           rgb_to_oklab(0xF6, 0xF9, 0xFC),
+            wheel_rotation: -11.0 / 360.0,  // 11° CCW — current scheme
         }
     }
 
     /// Blend the four directional anchors for a unit velocity (ux, uy).
-    /// Blue anchors are rotated 11° off horizontal: right-blue peaks at 11° above right,
-    /// left-blue peaks at 11° below left.  Weights are normalised (rotation breaks sum=1).
+    /// The whole colour wheel is rotated by wheel_rotation turns before projecting.
     fn directional_color(&self, ux: f32, uy: f32) -> (f32, f32, f32) {
-        const THETA: f32 = 11.0 * std::f32::consts::PI / 180.0;
-        let (ct, st) = (THETA.cos(), THETA.sin());
-        // Project onto rotated axes; up in screen coords = negative uy
-        let w_r = ( ux * ct - uy * st).max(0.0).powi(2); // peaks at 11° above right
-        let w_l = (-ux * ct + uy * st).max(0.0).powi(2); // peaks at 11° below left
-        let w_d = uy.max(0.0).powi(2);
-        let w_u = (-uy).max(0.0).powi(2);
-        let sum = (w_r + w_l + w_d + w_u).max(1e-9);
-        let (w_r, w_l, w_d, w_u) = (w_r/sum, w_l/sum, w_d/sum, w_u/sum);
+        let angle = self.wheel_rotation * 2.0 * std::f32::consts::PI;
+        let (ca, sa) = (angle.cos(), angle.sin());
+        // Screen-space CCW rotation: rx = ux·cos + uy·sin, ry = −ux·sin + uy·cos
+        let rx =  ux * ca + uy * sa;
+        let ry = -ux * sa + uy * ca;
+        let w_r = rx.max(0.0).powi(2);
+        let w_l = (-rx).max(0.0).powi(2);
+        let w_d = ry.max(0.0).powi(2);
+        let w_u = (-ry).max(0.0).powi(2);
+        // w_r + w_l + w_d + w_u = rx²+ ry² = |rotated unit vector|² = 1 — no normalisation needed
         let l = w_r*self.c_right.0 + w_l*self.c_left.0 + w_d*self.c_down.0 + w_u*self.c_up.0;
         let a = w_r*self.c_right.1 + w_l*self.c_left.1 + w_d*self.c_down.1 + w_u*self.c_up.1;
         let b = w_r*self.c_right.2 + w_l*self.c_left.2 + w_d*self.c_down.2 + w_u*self.c_up.2;
