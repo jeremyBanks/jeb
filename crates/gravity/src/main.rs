@@ -2370,7 +2370,6 @@ use std::io::{BufWriter, Write};
 
             // Mid-side reverb (same topology as before)
             let wet  = self.reverb.process(reverb_in.tanh() * 0.7);
-            let mid  = (sum_l + sum_r) * 0.5;
             let side = (sum_l - sum_r) * 0.5;
             chunk_audio.push((wet + side).tanh()); // L
             chunk_audio.push((wet - side).tanh()); // R
