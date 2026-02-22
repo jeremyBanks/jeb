@@ -1584,16 +1584,16 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (lab_l, lab_a, lab_b)
 }
 
-/// Directional colour anchors (OKLab).  Velocity direction selects four basis colours
-/// via squared-clamp weights that sum to 1 on the unit circle:
+/// Directional colour anchors blended in Oklch (polar Oklab).
+/// Velocity direction selects four basis colours via squared-clamp weights:
 ///   w_right = max(rx, 0)²   w_left = max(−rx, 0)²
 ///   w_down  = max(ry, 0)²   w_up   = max(−ry, 0)²
-/// where (rx, ry) is the velocity rotated by `wheel_rotation` turns
-/// (negative = CCW in screen space).  Weights sum to 1 naturally; no normalisation needed.
+/// where (rx, ry) is the velocity rotated by `wheel_rotation` turns.
+/// L and C blend linearly; H blends via unit-vector mean (arc, not through neutral).
+/// This keeps diagonals on the hue arc — no accidental white from opposite hue cancellation.
 ///
 /// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
-/// down  / up    → warm family (#F44BCC hot-pink    / #F6F9FC near-white)
-/// diagonal blends give intermediate colours.
+/// down  / up    → warm family (#FFC01F gold / #EA2261 hot-pink)
 /// zero-speed anchor: #061B31 dark navy.
 #[derive(Clone, Debug)]
 struct DirectionalPalette {
@@ -1639,10 +1639,33 @@ impl DirectionalPalette {
         let w_l = (-rx).max(0.0).powi(2);
         let w_d = ry.max(0.0).powi(2);
         let w_u = (-ry).max(0.0).powi(2);
-        // w_r + w_l + w_d + w_u = rx²+ ry² = |rotated unit vector|² = 1 — no normalisation needed
-        let l = w_r*self.c_right.0 + w_l*self.c_left.0 + w_d*self.c_down.0 + w_u*self.c_up.0;
-        let a = w_r*self.c_right.1 + w_l*self.c_left.1 + w_d*self.c_down.1 + w_u*self.c_up.1;
-        let b = w_r*self.c_right.2 + w_l*self.c_left.2 + w_d*self.c_down.2 + w_u*self.c_up.2;
+        // w_r + w_l + w_d + w_u = 1 on the unit circle — no normalisation needed.
+
+        // Blend in Oklch (polar Oklab) to stay on the hue arc, avoiding neutral desaturation
+        // when opposite hues mix in Cartesian (a,b) space.
+        // Convert each anchor: C = sqrt(a²+b²), H = atan2(b,a)
+        let to_lch = |(l, a, b): (f32, f32, f32)| -> (f32, f32, f32) {
+            let c = (a*a + b*b).sqrt();
+            let h = b.atan2(a);  // radians, −π..π
+            (l, c, h)
+        };
+        let (lr, cr, hr) = to_lch(self.c_right);
+        let (ll, cl, hl) = to_lch(self.c_left);
+        let (ld, cd, hd) = to_lch(self.c_down);
+        let (lu, cu, hu) = to_lch(self.c_up);
+
+        // L and C blend linearly.
+        let l = w_r*lr + w_l*ll + w_d*ld + w_u*lu;
+        let c = w_r*cr + w_l*cl + w_d*cd + w_u*cu;
+
+        // H blends via unit-vector mean — correct circular interpolation across 0/2π wrap.
+        let hx = w_r*hr.cos() + w_l*hl.cos() + w_d*hd.cos() + w_u*hu.cos();
+        let hy = w_r*hr.sin() + w_l*hl.sin() + w_d*hd.sin() + w_u*hu.sin();
+        let h  = hy.atan2(hx);
+
+        // Back to Oklab (a, b).
+        let a = c * h.cos();
+        let b = c * h.sin();
         (l, a, b)
     }
 }
