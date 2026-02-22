@@ -1702,9 +1702,6 @@ fn main() {
     let _ = fs::write("state/run_info.txt", &run_info_content);
     // Settings copy to shared dir for reference
     let _ = fs::write(format!("{}/{}.txt", shared_dir, run_id), &settings);
-    // Also persist to configs/ in the gravity crate dir — the only tracked files in the crate.
-    fs::create_dir_all("configs").ok();
-    let _ = fs::write(format!("configs/{run_id}.txt"), &settings);
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
