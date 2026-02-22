@@ -1714,7 +1714,7 @@ fn main() {
     // Open/append segments list
     let mut seg_list = fs::OpenOptions::new()
         .create(true).append(true)
-        .open(segments_file).unwrap();
+        .open(&segments_file).unwrap();
 
     'chunks: for chunk in start_chunk..n_chunks {
         let chunk_start_frame = chunk * CHUNK_FRAMES;
