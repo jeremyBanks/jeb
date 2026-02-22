@@ -1658,7 +1658,7 @@ struct DirectionalPalette {
 impl DirectionalPalette {
     fn build(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Self {
         DirectionalPalette {
-            dark:                rgb_to_oklab(0x06, 0x1B, 0x31),  // dark navy — zero-speed anchor
+            dark:                { let (l,a,b) = rgb_to_oklab(0x06, 0x1B, 0x31); (l * 1.25, a, b) },  // dark navy +25% L — zero-speed anchor
             c_right:             rgb_to_oklab(0x53, 0x3A, 0xFD),  // violet          — +x
             c_left:              rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — −x
             c_down:              rgb_to_oklab(0xFF, 0xC0, 0x1F),  // golden yellow   — +y
