@@ -1355,7 +1355,7 @@ fn load_palette() -> PaletteMode {
     }
 }
 
-fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
+fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
     use std::f32::consts::PI;
     let spd = (vx * vx + vy * vy).sqrt();
 
