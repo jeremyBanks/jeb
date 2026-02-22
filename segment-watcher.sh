@@ -184,6 +184,7 @@ ${STATE_MSG}"
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
                 -m "$MSG"; then
+                (( chunk_count++ )) || true
                 echo "[watcher] sent chunk $chunk_num ($META)"
                 echo "$seg" >> "$SEEN_FILE"
                 LAST_TIME=$NOW
