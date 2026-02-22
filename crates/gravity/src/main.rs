@@ -102,11 +102,11 @@ struct Cell {
     moved: bool,  // true if cell changed grid square this tick
 }
 impl Cell {
-    #[inline] fn gx(&self) -> usize { (self.px.round() as i32).rem_euclid(W as i32) as usize }
-    #[inline] fn gy(&self) -> usize { (self.py.round() as i32).rem_euclid(H as i32) as usize }
+    #[inline] fn gx(&self) -> usize { (self.px.floor() as i32).rem_euclid(W as i32) as usize }
+    #[inline] fn gy(&self) -> usize { (self.py.floor() as i32).rem_euclid(H as i32) as usize }
     #[inline] fn in_bounds(&self) -> bool {
-        let x = self.px.round() as i32;
-        let y = self.py.round() as i32;
+        let x = self.px.floor() as i32;
+        let y = self.py.floor() as i32;
         x >= 0 && x < W as i32 && y >= 0 && y < H as i32
     }
 }
@@ -851,8 +851,8 @@ impl Sim {
                 if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 { continue; }
                 new_px = rx; new_py = ry;
             }
-            let tgx = (new_px.round() as i32).rem_euclid(W as i32) as usize;
-            let tgy = (new_py.round() as i32).rem_euclid(H as i32) as usize;
+            let tgx = (new_px.floor() as i32).rem_euclid(W as i32) as usize;
+            let tgy = (new_py.floor() as i32).rem_euclid(H as i32) as usize;
             let old_gx = c.gx(); let old_gy = c.gy();
             if tgx == old_gx && tgy == old_gy {
                 // Same grid square — update float position freely
