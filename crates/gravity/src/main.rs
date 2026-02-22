@@ -3100,3 +3100,12 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
             let x_max = if wrap_x { (W() - 1) as f32 } else { W() as f32 - margin };
             let y_min = if wrap_y { 0.0 } else { margin };
             let y_max = if wrap_y { (H() - 1) as f32 } else { H() as f32 - margin };
+
+// [recovery] edit target not found, appending:
+                        let xi_i = disk_cx as isize + dx;
+                        let yi_i = disk_cy as isize + dy;
+                        // On non-wrapped axes skip out-of-bounds; on wrapped axes fold around.
+                        if !wrap_x && (xi_i < 0 || xi_i >= W() as isize) { continue; }
+                        if !wrap_y && (yi_i < 0 || yi_i >= H() as isize) { continue; }
+                        let xi = xi_i.rem_euclid(W() as isize) as usize;
+                        let yi = yi_i.rem_euclid(H() as isize) as usize;
