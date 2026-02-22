@@ -618,7 +618,7 @@ impl Sim {
         let target_pop = W * H / 32;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit,
-                        tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen,
+                        tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen_x, dampen_y,
                         conway_births: 0, conway_deaths: 0,
                         next_id, voice_pool: HashMap::new() };
         Some((sim, canvas, chunk_index))
