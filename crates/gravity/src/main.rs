@@ -2759,8 +2759,8 @@ struct DirectionalPalette {
     dark:           (f32, f32, f32),  // #061B31  dark navy — slow/still anchor
     c_right:        (f32, f32, f32),  // #635BFF  periwinkle — +x
     c_left:         (f32, f32, f32),  // #533AFD  violet      — −x
-    c_down:         (f32, f32, f32),  // #061B31  dark navy  — +y (screen-down)
-    c_up:           (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
+    c_down:         (f32, f32, f32),  // #FFC01F  golden yellow — +y (screen-down)
+    c_up:           (f32, f32, f32),  // #EA2261  hot pink      — −y (screen-up)
     wheel_rotation:       f32,   // turns; negative = CCW in screen space
     pos_rotation_enabled: bool,  // apply position-based hue rotation to velocity input
     pos_rotation_output:  bool,  // also rotate output (a,b) by same angle (default: off)
