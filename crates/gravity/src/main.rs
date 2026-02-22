@@ -1,14 +1,15 @@
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{Arc, OnceLock, atomic::{AtomicBool, Ordering}};
 
-const W: usize = 256;
-const H: usize = 160; // raw sim grid; upscaled to 3840×2400 at concat time
-
-// Output video settings
-const OUT_W: u32 = 256; // raw — ffmpeg upscales to 3840×2400 at concat
-const OUT_H: u32 = 160;
+// Runtime-configurable grid resolution (set once in main before any use).
+static W_CELL: OnceLock<usize> = OnceLock::new();
+static H_CELL: OnceLock<usize> = OnceLock::new();
+#[inline] fn W() -> usize { *W_CELL.get().expect("W not initialised") }
+#[inline] fn H() -> usize { *H_CELL.get().expect("H not initialised") }
+#[inline] fn OUT_W() -> u32 { W() as u32 }
+#[inline] fn OUT_H() -> u32 { H() as u32 }
 const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 4096; // 68.3s at 60fps → 64 segments for a 64³-frame run
@@ -80,8 +81,8 @@ impl RegionVoice {
 }
 
 struct Cell {
-    px: f32,   // continuous world position, x ∈ [0, W)
-    py: f32,   // continuous world position, y ∈ [0, H)
+    px: f32,   // continuous world position, x ∈ [0, W())
+    py: f32,   // continuous world position, y ∈ [0, H())
     vx: f32,
     vy: f32,
     prev_speed: f32,
@@ -89,12 +90,12 @@ struct Cell {
     moved: bool,  // true if cell changed grid square this tick
 }
 impl Cell {
-    #[inline] fn gx(&self) -> usize { (self.px.floor() as i32).rem_euclid(W as i32) as usize }
-    #[inline] fn gy(&self) -> usize { (self.py.floor() as i32).rem_euclid(H as i32) as usize }
+    #[inline] fn gx(&self) -> usize { (self.px.floor() as i32).rem_euclid(W() as i32) as usize }
+    #[inline] fn gy(&self) -> usize { (self.py.floor() as i32).rem_euclid(H() as i32) as usize }
     #[inline] fn in_bounds(&self) -> bool {
         let x = self.px.floor() as i32;
         let y = self.py.floor() as i32;
-        x >= 0 && x < W as i32 && y >= 0 && y < H as i32
+        x >= 0 && x < W() as i32 && y >= 0 && y < H() as i32
     }
 }
 
@@ -305,8 +306,8 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
     if node.body == -2 { return (0.0, 0.0); } // empty node
     let raw_dx = node.com_x - px;
     let raw_dy = node.com_y - py;
-    let dx = if wrap_x { min_image(raw_dx, W as f32) } else { raw_dx };
-    let dy = if wrap_y { min_image(raw_dy, H as f32) } else { raw_dy };
+    let dx = if wrap_x { min_image(raw_dx, W() as f32) } else { raw_dx };
+    let dy = if wrap_y { min_image(raw_dy, H() as f32) } else { raw_dy };
     // Leaf: exact pairwise force (skip self)
     if node.body >= 0 {
         if node.body as usize == body { return (0.0, 0.0); }
@@ -348,20 +349,20 @@ impl Sim {
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
         let mut cells: Vec<Cell> = Vec::new();
-        let mut occupied = vec![false; W * H];
+        let mut occupied = vec![false; W() * H()];
 
         // Helper: compute velocity for a seeded cell at grid (xi, yi).
-        let cx_global = W as f32 / 2.0;
-        let cy_global = H as f32 / 2.0;
-        let aspect = W as f32 / H as f32; // e.g. 256/160 = 1.6
+        let cx_global = W() as f32 / 2.0;
+        let cy_global = H() as f32 / 2.0;
+        let aspect = W() as f32 / H() as f32; // e.g. 256/160 = 1.6
         let make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
             let (vx, vy) = match init_vel {
                 "swirl" => {
-                    if xi < W / 2 && yi < H / 2 {
+                    if xi < W() / 2 && yi < H() / 2 {
                         (xorf32(rng) * 0.75 - 0.25, (xorf32(rng) - 0.5) * 0.25)
-                    } else if xi >= W / 2 && yi >= H / 2 {
+                    } else if xi >= W() / 2 && yi >= H() / 2 {
                         (xorf32(rng) * 0.75 - 0.5,  (xorf32(rng) - 0.5) * 0.25)
-                    } else if xi >= W / 2 {
+                    } else if xi >= W() / 2 {
                         ((xorf32(rng) - 0.5) * 0.25, (xorf32(rng) - 0.5) * 0.25)
                     } else {
                         ((xorf32(rng) - 0.5) * 0.25, xorf32(rng) * 0.25)
@@ -417,14 +418,14 @@ impl Sim {
             let base_cells  = (target_pop / circles).max(1);
             let extra_circles = target_pop % circles; // first N circles get base+1
             let radius = ((2.0 * base_cells as f32 / PI).sqrt()).max(4.0)
-                          .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
+                          .min((W().min(H()) as f32) * 0.45 / (circles as f32).sqrt());
             let margin = radius + 1.0;
 
             // Candidate grid: full axis range when wrapped, margin-inset when not.
             let x_min = if wrap_x { 0.0 } else { margin };
-            let x_max = if wrap_x { W as f32 } else { W as f32 - margin };
+            let x_max = if wrap_x { W() as f32 } else { W() as f32 - margin };
             let y_min = if wrap_y { 0.0 } else { margin };
-            let y_max = if wrap_y { H as f32 } else { H as f32 - margin };
+            let y_max = if wrap_y { H() as f32 } else { H() as f32 - margin };
             let mut candidates: Vec<(f32, f32)> = Vec::new();
             let mut cx = x_min;
             while cx <= x_max {
@@ -440,16 +441,16 @@ impl Sim {
             // (walls only count for non-wrapped axes). Tie-break toward canvas centre.
             let score = |px: f32, py: f32, chosen: &[(f32, f32)]| -> f32 {
                 // Wall clearance only applies on non-wrapped axes.
-                let wall_x = if wrap_x { f32::INFINITY } else { px.min(W as f32 - px) };
-                let wall_y = if wrap_y { f32::INFINITY } else { py.min(H as f32 - py) };
+                let wall_x = if wrap_x { f32::INFINITY } else { px.min(W() as f32 - px) };
+                let wall_y = if wrap_y { f32::INFINITY } else { py.min(H() as f32 - py) };
                 let wall = wall_x.min(wall_y);
                 // Wrap-aware distance to nearest chosen circle.
                 let nbr = chosen.iter()
                     .map(|&(qx, qy)| {
                         let dx_r = (px - qx).abs();
                         let dy_r = (py - qy).abs();
-                        let dx = if wrap_x { dx_r.min(W as f32 - dx_r) } else { dx_r };
-                        let dy = if wrap_y { dy_r.min(H as f32 - dy_r) } else { dy_r };
+                        let dx = if wrap_x { dx_r.min(W() as f32 - dx_r) } else { dx_r };
+                        let dy = if wrap_y { dy_r.min(H() as f32 - dy_r) } else { dy_r };
                         (dx*dx + dy*dy).sqrt()
                     })
                     .fold(f32::INFINITY, f32::min);
@@ -488,11 +489,11 @@ impl Sim {
                         if d2 > r_sq { continue; }
                         let xi_i = disk_cx as isize + dx;
                         let yi_i = disk_cy as isize + dy;
-                        if xi_i < 0 || xi_i >= W as isize { continue; }
-                        if yi_i < 0 || yi_i >= H as isize { continue; }
+                        if xi_i < 0 || xi_i >= W() as isize { continue; }
+                        if yi_i < 0 || yi_i >= H() as isize { continue; }
                         let xi = xi_i as usize;
                         let yi = yi_i as usize;
-                        if !occupied[yi * W + xi] {
+                        if !occupied[yi * W() + xi] {
                             pts.push((xi, yi, d2));
                         }
                     }
@@ -505,14 +506,14 @@ impl Sim {
                 // Primary pass: 50% coin flip at each point in distance order.
                 for &(xi, yi, _) in &pts {
                     if placed >= cells_this_circle { break; }
-                    if occupied[yi * W + xi] { continue; }
+                    if occupied[yi * W() + xi] { continue; }
                     if xoru64(&mut rng) & 1 == 0 { continue; } // 50% skip
                     let (vx, vy) = make_vel(xi, yi, &mut rng);
                     let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                     cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                       prev_speed: 0.0, id: next_id, moved: false });
                     next_id += 1;
-                    occupied[yi * W + xi] = true;
+                    occupied[yi * W() + xi] = true;
                     placed += 1;
                 }
 
@@ -520,13 +521,13 @@ impl Sim {
                 if placed < cells_this_circle {
                     for &(xi, yi, _) in &pts {
                         if placed >= cells_this_circle { break; }
-                        if occupied[yi * W + xi] { continue; }
+                        if occupied[yi * W() + xi] { continue; }
                         let (vx, vy) = make_vel(xi, yi, &mut rng);
                         let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                         cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                           prev_speed: 0.0, id: next_id, moved: false });
                         next_id += 1;
-                        occupied[yi * W + xi] = true;
+                        occupied[yi * W() + xi] = true;
                         placed += 1;
                     }
                 }
@@ -534,14 +535,14 @@ impl Sim {
         } else {
         // ── Default: random scatter (original behaviour) ─────────────────────
         let seed_count = if seed_density_inv > 0 {
-            (W * H) / seed_density_inv
+            (W() * H()) / seed_density_inv
         } else { 0 };
         let mut seeded = 0;
-        for _ in 0..W * H * 4 {
+        for _ in 0..W() * H() * 4 {
             if seeded >= seed_count { break; }
-            let xi = (xoru64(&mut rng) as usize) % W;
-            let yi = (xoru64(&mut rng) as usize) % H;
-            let idx = yi * W + xi;
+            let xi = (xoru64(&mut rng) as usize) % W();
+            let yi = (xoru64(&mut rng) as usize) % H();
+            let idx = yi * W() + xi;
             if !occupied[idx] {
                 let (vx, vy) = make_vel(xi, yi, &mut rng);
                 let (vx, vy) = (vx * vel_scale, vy * vel_scale);
@@ -557,7 +558,7 @@ impl Sim {
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W * H], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
+              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
               conway_births: 0, conway_deaths: 0, next_id,
               region_stats: [RegionStats::default(); 9],
               region_voices: std::array::from_fn(|i| RegionVoice::new(
@@ -628,21 +629,21 @@ impl Sim {
             cells.push(Cell { px, py, vx, vy, prev_speed: ps, id, moved: false });
         }
 
-        let mut prev_live = vec![false; W * H];
+        let mut prev_live = vec![false; W() * H()];
         for b in prev_live.iter_mut() {
             *b = buf[pos] != 0; pos += 1;
         }
 
-        let mut canvas = vec![0.0f32; W * H * 3];
+        let mut canvas = vec![0.0f32; W() * H() * 3];
         for v in canvas.iter_mut() {
             *v = read_f32!();
         }
 
         // Rebuild prev_live from cell positions so first painted frame does correct 50% snap
         // (if we used the saved prev_live, a SIGTERM mid-tick could leave it stale)
-        let mut prev_live_rebuilt = vec![false; W * H];
+        let mut prev_live_rebuilt = vec![false; W() * H()];
         for c in &cells {
-            prev_live_rebuilt[c.gy() * W + c.gx()] = true;
+            prev_live_rebuilt[c.gy() * W() + c.gx()] = true;
         }
         let order = (0..cells.len()).collect();
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
@@ -704,9 +705,9 @@ impl Sim {
         let pop_min = self.start_pop.saturating_sub(self.pop_band as usize);
         let pop_max = self.start_pop + self.pop_band as usize;
 
-        let mut grid = vec![usize::MAX; W * H];
+        let mut grid = vec![usize::MAX; W() * H()];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W + c.gx()] = i;
+            grid[c.gy() * W() + c.gx()] = i;
         }
 
         let neighbour_offsets: [(i32, i32); 8] = [
@@ -717,18 +718,18 @@ impl Sim {
         let resolve_nbr = |gy: usize, gx: usize, dy: i32, dx: i32| -> Option<(usize, usize)> {
             let ry = gy as i32 + dy;
             let rx = gx as i32 + dx;
-            let ry = if wrap_y { Some(ry.rem_euclid(H as i32) as usize) }
-                     else if ry >= 0 && ry < H as i32 { Some(ry as usize) }
+            let ry = if wrap_y { Some(ry.rem_euclid(H() as i32) as usize) }
+                     else if ry >= 0 && ry < H() as i32 { Some(ry as usize) }
                      else { None };
-            let rx = if wrap_x { Some(rx.rem_euclid(W as i32) as usize) }
-                     else if rx >= 0 && rx < W as i32 { Some(rx as usize) }
+            let rx = if wrap_x { Some(rx.rem_euclid(W() as i32) as usize) }
+                     else if rx >= 0 && rx < W() as i32 { Some(rx as usize) }
                      else { None };
             match (ry, rx) { (Some(ry), Some(rx)) => Some((ry, rx)), _ => None }
         };
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
                 let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
-                let idx = grid[ny * W + nx];
+                let idx = grid[ny * W() + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect()
         };
@@ -752,7 +753,7 @@ impl Sim {
             let gy = c.gy();
             for &(dy, dx) in &neighbour_offsets {
                 if let Some((ny, nx)) = resolve_nbr(gy, gx, dy, dx) {
-                    if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
+                    if grid[ny * W() + nx] == usize::MAX { candidates.insert((ny, nx)); }
                 }
             }
         }
@@ -798,16 +799,16 @@ impl Sim {
         self.conway_deaths += death_indices.len();
         for i in death_indices { self.cells.swap_remove(i); }
 
-        let mut grid2 = vec![usize::MAX; W * H];
+        let mut grid2 = vec![usize::MAX; W() * H()];
         for (i, c) in self.cells.iter().enumerate() {
-            grid2[c.gy() * W + c.gx()] = i;
+            grid2[c.gy() * W() + c.gx()] = i;
         }
 
         // Uniform birth selection: shuffle candidates, take first max_births.
         let mut birth_indices: Vec<usize> = desired_births.iter()
             .enumerate()
             .filter_map(|(i, (gy, gx, _))| {
-                if grid2[gy * W + gx] != usize::MAX { return None; }
+                if grid2[gy * W() + gx] != usize::MAX { return None; }
                 Some(i)
             })
             .collect();
@@ -815,10 +816,10 @@ impl Sim {
 
         for bi in birth_indices.into_iter().take(max_births) {
             let (gy, gx, _) = desired_births[bi];
-            if grid2[gy * W + gx] != usize::MAX { continue; } // double-check: may have been filled
+            if grid2[gy * W() + gx] != usize::MAX { continue; } // double-check: may have been filled
             let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
                 let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
-                let idx = grid2[ny * W + nx];
+                let idx = grid2[ny * W() + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
             if live_nbrs.is_empty() { continue; }
@@ -840,7 +841,7 @@ impl Sim {
             let (bpx, bpy) = (gx as f32 + 0.5, gy as f32 + 0.5);
             self.cells.push(Cell { px: bpx, py: bpy, vx, vy, prev_speed: birth_spd, id, moved: false });
             // (no per-event audio in new direction-bucket system)
-            grid2[gy * W + gx] = new_idx;
+            grid2[gy * W() + gx] = new_idx;
             self.conway_births += 1;
         }
 
@@ -854,16 +855,16 @@ impl Sim {
         let n = self.cells.len();
 
         // Build quadtree with a SQUARE root centered on the grid center.
-        // The grid is W×H = 192×120 (non-square). A non-square root means
+        // The grid is W()×H() = 192×120 (non-square). A non-square root means
         // node.width() = max(x_range, y_range) always equals the x dimension,
         // making the BH opening criterion systematically less accurate for y forces.
-        // A square root at size max(W,H) makes every sub-node square, so the
+        // A square root at size max(W(),H()) makes every sub-node square, so the
         // criterion is identical for x and y — no directional bias.
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
         {
             let half = 128.0_f32; // 256×256 square, power-of-2 subdivisions
-            let cx = W as f32 * 0.5; // 96
-            let cy = H as f32 * 0.5; // 60
+            let cx = W() as f32 * 0.5; // 96
+            let cy = H() as f32 * 0.5; // 60
             // Root: [-32, 224] × [-68, 188] — 256×256, centred on grid centre
             nodes.push(QNode::empty(cx - half, cy - half, cx + half, cy + half));
         }
@@ -918,9 +919,9 @@ impl Sim {
         // If the target grid square is free: move (update both float pos and grid).
         // If occupied or same square: stay put entirely — no float accumulation.
         // In no-wrap mode: if target would be out of bounds, stay put — gravity must pull back.
-        let mut grid = vec![usize::MAX; W * H];
+        let mut grid = vec![usize::MAX; W() * H()];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W + c.gx()] = i;
+            grid[c.gy() * W() + c.gx()] = i;
         }
         let n = self.order.len();
         for i in (1..n).rev() {
@@ -932,8 +933,8 @@ impl Sim {
             let (cvx, cvy, cpx, cpy) = {
                 let c = &self.cells[idx]; (c.vx, c.vy, c.px, c.py)
             };
-            let old_gx = ((cpx.floor() as i32).rem_euclid(W as i32)) as usize;
-            let old_gy = ((cpy.floor() as i32).rem_euclid(H as i32)) as usize;
+            let old_gx = ((cpx.floor() as i32).rem_euclid(W() as i32)) as usize;
+            let old_gy = ((cpy.floor() as i32).rem_euclid(H() as i32)) as usize;
             // Resolve position per axis: wrap / bounce / hard-wall
             let mut nx = cpx + cvx;
             let mut ny = cpy + cvy;
@@ -941,24 +942,24 @@ impl Sim {
             let mut nvy = cvy;
             // X axis
             if self.wrap_x {
-                nx = nx.rem_euclid(W as f32);
+                nx = nx.rem_euclid(W() as f32);
             } else if self.bounce_x {
                 if nx < 0.0       { nx = -nx;                      nvx = -nvx; }
-                else if nx >= W as f32 { nx = 2.0 * W as f32 - nx; nvx = -nvx; }
-            } else if nx < 0.0 || nx >= W as f32 { continue; }
+                else if nx >= W() as f32 { nx = 2.0 * W() as f32 - nx; nvx = -nvx; }
+            } else if nx < 0.0 || nx >= W() as f32 { continue; }
             // Y axis
             if self.wrap_y {
-                ny = ny.rem_euclid(H as f32);
+                ny = ny.rem_euclid(H() as f32);
             } else if self.bounce_y {
                 if ny < 0.0       { ny = -ny;                      nvy = -nvy; }
-                else if ny >= H as f32 { ny = 2.0 * H as f32 - ny; nvy = -nvy; }
-            } else if ny < 0.0 || ny >= H as f32 { continue; }
+                else if ny >= H() as f32 { ny = 2.0 * H() as f32 - ny; nvy = -nvy; }
+            } else if ny < 0.0 || ny >= H() as f32 { continue; }
             // Apply any velocity changes from bounce before grid logic
             if nvx != cvx { self.cells[idx].vx = nvx; }
             if nvy != cvy { self.cells[idx].vy = nvy; }
             let (new_px, new_py) = (nx, ny);
-            let tgx = (new_px.floor() as i32).rem_euclid(W as i32) as usize;
-            let tgy = (new_py.floor() as i32).rem_euclid(H as i32) as usize;
+            let tgx = (new_px.floor() as i32).rem_euclid(W() as i32) as usize;
+            let tgy = (new_py.floor() as i32).rem_euclid(H() as i32) as usize;
             let crossing = tgx != old_gx || tgy != old_gy;
             let moved_cross;
             if !crossing {
@@ -966,10 +967,10 @@ impl Sim {
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
                 moved_cross = false;
-            } else if grid[tgy * W + tgx] == usize::MAX {
+            } else if grid[tgy * W() + tgx] == usize::MAX {
                 // Target square free — move
-                grid[old_gy * W + old_gx] = usize::MAX;
-                grid[tgy * W + tgx] = idx;
+                grid[old_gy * W() + old_gx] = usize::MAX;
+                grid[tgy * W() + tgx] = idx;
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
                 self.cells[idx].moved = true;
@@ -984,8 +985,8 @@ impl Sim {
         // Divide canvas into 3×3 regions. Each cell contributes to its region's
         // population count, total speed, and CoG sum.
         for c in &self.cells {
-            let col = ((c.px / W as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
-            let row = ((c.py / H as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
+            let col = ((c.px / W() as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
+            let row = ((c.py / H() as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
             let ri = row * 3 + col;
             let speed = (c.vx * c.vx + c.vy * c.vy).sqrt();
             let rs = &mut self.region_stats[ri];
@@ -1026,9 +1027,9 @@ impl Sim {
         let revive_chance = 0.375 * t;
 
         // Build current live set
-        let mut grid = vec![usize::MAX; W * H];
+        let mut grid = vec![usize::MAX; W() * H()];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W + c.gx()] = i;
+            grid[c.gy() * W() + c.gx()] = i;
         }
 
         // Per-cell nudges: every non-original live cell has kill_chance of dying,
@@ -1043,14 +1044,14 @@ impl Sim {
         for i in to_kill { self.cells.swap_remove(i); }
 
         // Rebuild grid after kills
-        let mut grid2 = vec![usize::MAX; W * H];
+        let mut grid2 = vec![usize::MAX; W() * H()];
         for (i, c) in self.cells.iter().enumerate() {
-            grid2[c.gy() * W + c.gx()] = i;
+            grid2[c.gy() * W() + c.gx()] = i;
         }
 
         // Every dead original cell has revive_chance of being born
         for &(ox, oy) in &orig.positions {
-            if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+            if grid2[oy * W() + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
                 let id = self.next_id; self.next_id += 1;
                 self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
                                        vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
@@ -1103,9 +1104,9 @@ impl Sim {
         let kill_chance   = 0.75  * vel_scale;
         let revive_chance = 0.375 * vel_scale;
         {
-            let mut grid = vec![usize::MAX; W * H];
+            let mut grid = vec![usize::MAX; W() * H()];
             for (i, c) in self.cells.iter().enumerate() {
-                grid[c.gy() * W + c.gx()] = i;
+                grid[c.gy() * W() + c.gx()] = i;
             }
             let mut to_kill: Vec<usize> = self.cells.iter().enumerate()
                 .filter(|(_, c)| !orig.positions.contains(&(c.gx(), c.gy())))
@@ -1115,12 +1116,12 @@ impl Sim {
             to_kill.sort_unstable_by(|a, b| b.cmp(a));
             for i in to_kill { self.cells.swap_remove(i); }
 
-            let mut grid2 = vec![usize::MAX; W * H];
+            let mut grid2 = vec![usize::MAX; W() * H()];
             for (i, c) in self.cells.iter().enumerate() {
-                grid2[c.gy() * W + c.gx()] = i;
+                grid2[c.gy() * W() + c.gx()] = i;
             }
             for &(ox, oy) in &orig.positions {
-                if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                if grid2[oy * W() + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
                     let id = self.next_id; self.next_id += 1;
                     self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
                                            vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
@@ -1160,18 +1161,18 @@ impl Sim {
     }
 
     fn epilogue_conway_deaths_only(&mut self, max_deaths: usize) {
-        let mut grid = vec![usize::MAX; W * H];
+        let mut grid = vec![usize::MAX; W() * H()];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W + c.gx()] = i;
+            grid[c.gy() * W() + c.gx()] = i;
         }
         let neighbour_offsets: [(i32, i32); 8] = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)];
         let mut deaths: Vec<usize> = Vec::new();
         for (i, c) in self.cells.iter().enumerate() {
             let gx = c.gx(); let gy = c.gy();
             let cnt = neighbour_offsets.iter().filter(|&&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
-                grid[ny * W + nx] != usize::MAX
+                let ny = ((gy as i32 + dy).rem_euclid(H() as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W() as i32)) as usize;
+                grid[ny * W() + nx] != usize::MAX
             }).count();
             if cnt != 2 && cnt != 3 { deaths.push(i); }
         }
@@ -1188,18 +1189,18 @@ impl Sim {
         // Simplified Conway step with fixed max births/deaths (no pop_band logic)
         shuffle_vec(&mut self.cells, &mut self.rng);
         let n = self.cells.len();
-        let mut grid = vec![usize::MAX; W * H];
+        let mut grid = vec![usize::MAX; W() * H()];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W + c.gx()] = i;
+            grid[c.gy() * W() + c.gx()] = i;
         }
         let neighbour_offsets: [(i32, i32); 8] = [
             (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
         ];
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
-                let idx = grid[ny * W + nx];
+                let ny = ((gy as i32 + dy).rem_euclid(H() as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W() as i32)) as usize;
+                let idx = grid[ny * W() + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect()
         };
@@ -1215,9 +1216,9 @@ impl Sim {
         for c in &self.cells {
             let gx = c.gx(); let gy = c.gy();
             for &(dy, dx) in &neighbour_offsets {
-                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
-                if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
+                let ny = ((gy as i32 + dy).rem_euclid(H() as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W() as i32)) as usize;
+                if grid[ny * W() + nx] == usize::MAX { candidates.insert((ny, nx)); }
             }
         }
         for (gy, gx) in candidates {
@@ -1234,16 +1235,16 @@ impl Sim {
         let mut di: Vec<usize> = dying.iter().cloned().collect();
         di.sort_unstable_by(|a, b| b.cmp(a));
         for i in di { self.cells.swap_remove(i); }
-        let mut grid2 = vec![usize::MAX; W * H];
+        let mut grid2 = vec![usize::MAX; W() * H()];
         for (i, c) in self.cells.iter().enumerate() {
-            grid2[c.gy() * W + c.gx()] = i;
+            grid2[c.gy() * W() + c.gx()] = i;
         }
         for (gy, gx, _) in births {
-            if grid2[gy * W + gx] != usize::MAX { continue; }
+            if grid2[gy * W() + gx] != usize::MAX { continue; }
             let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
-                let idx = grid2[ny * W + nx];
+                let ny = ((gy as i32 + dy).rem_euclid(H() as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W() as i32)) as usize;
+                let idx = grid2[ny * W() + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
             if live_nbrs.is_empty() { continue; }
@@ -1254,7 +1255,7 @@ impl Sim {
             let spd = (vx*vx+vy*vy).sqrt();
             let id = self.next_id; self.next_id += 1;
             self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd, id, moved: false });
-            grid2[gy * W + gx] = new_idx;
+            grid2[gy * W() + gx] = new_idx;
         }
         self.order = (0..self.cells.len()).collect();
     }
@@ -1266,7 +1267,7 @@ impl Sim {
         // Original-position cells are frozen (no force applied); non-originals get force
         // but movement is handled by the kill/revive nudges, not direct position update.
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
-        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        nodes.push(QNode::empty(0.0, 0.0, W() as f32, H() as f32));
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
             qt_insert(&mut nodes, 0, i, px, py, 0);
@@ -1298,8 +1299,8 @@ impl Sim {
 
         // ── 1. Derive targets from accumulated region stats ────────────────
         // Region dimensions in world units
-        let rw = W as f32 / 3.0; // width of one region column
-        let rh = H as f32 / 3.0; // height of one region row
+        let rw = W() as f32 / 3.0; // width of one region column
+        let rh = H() as f32 / 3.0; // height of one region row
 
         for (ri, v) in self.region_voices.iter_mut().enumerate() {
             let rs = &self.region_stats[ri];
@@ -1382,10 +1383,10 @@ impl Sim {
         // Epsilon ensures L hits 0 within ~28s at 60fps (not stuck at grey asymptote).
         // At FADE_SLOW, without epsilon, a cell starting at L=0.75 would asymptote to ~0.32.
         const FADE_EPSILON: f32 = 0.0003;
-        for py in 0..H {
-            for px in 0..W {
-                let i = (py * W + px) * 3;
-                if self.prev_live[py * W + px] {
+        for py in 0..H() {
+            for px in 0..W() {
+                let i = (py * W() + px) * 3;
+                if self.prev_live[py * W() + px] {
                     // Was alive last tick, now gone — fast brightness drop (trail burst)
                     canvas[i] = (canvas[i] * 0.5).max(0.0);
                     // a, b unchanged
@@ -1403,11 +1404,11 @@ impl Sim {
             // Stuck cells dimmed by 1/8 of their value (×0.875), not to 1/8.
             let (cvx, cvy) = if c.moved { (c.vx, c.vy) } else { (c.vx * 0.875, c.vy * 0.875) };
             let (l, a, b) = velocity_color_oklab(cvx, cvy, c.px, c.py, self.speed_cap, palette);
-            let i = (yi * W + xi) * 3;
+            let i = (yi * W() + xi) * 3;
             canvas[i]     = l;
             canvas[i + 1] = a;
             canvas[i + 2] = b;
-            self.prev_live[yi * W + xi] = true;
+            self.prev_live[yi * W() + xi] = true;
         }
     }
 
@@ -1420,7 +1421,7 @@ impl Sim {
             })
             .collect();
         let file = fs::File::create(path).unwrap();
-        let mut enc = png::Encoder::new(BufWriter::new(file), W as u32, H as u32);
+        let mut enc = png::Encoder::new(BufWriter::new(file), W() as u32, H() as u32);
         enc.set_color(png::ColorType::Rgb);
         enc.set_depth(png::BitDepth::Eight);
         let mut writer = enc.write_header().unwrap();
@@ -1466,16 +1467,16 @@ impl Sim {
         // Clustering: divide grid into BLK×BLK blocks, count occupied blocks
         // Low blk = tight clusters; high blk = spread across grid
         const BLK: usize = 8;
-        const BROWS: usize = (H + BLK - 1) / BLK;  // 20
-        const BCOLS: usize = (W + BLK - 1) / BLK;  // 32
-        const BTOTAL: usize = BROWS * BCOLS;          // 640
-        let mut block_occ = [false; BTOTAL];
+        let brows = (H() + BLK - 1) / BLK;
+        let bcols = (W() + BLK - 1) / BLK;
+        let btotal = brows * bcols;
+        let mut block_occ = vec![false; btotal];
         let mut max_in_block = 0u16;
-        let mut block_counts = [0u16; BTOTAL];
+        let mut block_counts = vec![0u16; btotal];
         for c in &self.cells {
-            let bx = (c.px as usize / BLK).min(BCOLS - 1);
-            let by = (c.py as usize / BLK).min(BROWS - 1);
-            let bi = by * BCOLS + bx;
+            let bx = (c.px as usize / BLK).min(bcols - 1);
+            let by = (c.py as usize / BLK).min(brows - 1);
+            let bi = by * bcols + bx;
             block_occ[bi] = true;
             block_counts[bi] += 1;
             if block_counts[bi] > max_in_block { max_in_block = block_counts[bi]; }
@@ -1485,14 +1486,14 @@ impl Sim {
         // Top-3 densest block coordinates — track these across samples to detect blob drift
         let mut block_list: Vec<(u16, usize, usize)> = block_counts.iter().enumerate()
             .filter(|(_, &c)| c > 0)
-            .map(|(bi, &c)| (c, bi % BCOLS, bi / BCOLS))
+            .map(|(bi, &c)| (c, bi % bcols, bi / bcols))
             .collect();
         block_list.sort_by(|a, b| b.0.cmp(&a.0));
         let hot: String = block_list.iter().take(3)
             .map(|(_, bx, by)| format!("({},{})", bx * BLK, by * BLK))
             .collect::<Vec<_>>().join(";");
 
-        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} eff_spd={eff_spd:.3} moved={moved_pct:.0}% max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{BTOTAL} dense={max_in_block} hot=[{hot}] com=({cx:.1},{cy:.1})",
+        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} eff_spd={eff_spd:.3} moved={moved_pct:.0}% max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{btotal} dense={max_in_block} hot=[{hot}] com=({cx:.1},{cy:.1})",
             self.conway_births, self.conway_deaths,
             moved_pct = moved_frac * 100.0)
     }
@@ -1596,12 +1597,12 @@ impl DirectionalPalette {
 
     /// Blend the four directional anchors for a unit velocity (ux, uy).
     /// Rotation = scheme wheel_rotation + optional position-based rotation:
-    ///   max 1 turn total; axes weighted by W/(W+H) and H/(W+H) respectively.
-    ///   Formula: px/W + (py/H)*3 — 1 turn across width, 3 turns across height.
+    ///   max 1 turn total; axes weighted by W()/(W()+H()) and H()/(W()+H()) respectively.
+    ///   Formula: px/W() + (py/H())*3 — 1 turn across width, 3 turns across height.
     fn directional_color(&self, ux: f32, uy: f32, px: f32, py: f32) -> (f32, f32, f32) {
         let pos_rot = if self.pos_rotation_enabled {
             // 1 full turn across width, 3 full turns across height.
-            px / W as f32 + (py / H as f32) * 3.0
+            px / W() as f32 + (py / H() as f32) * 3.0
         } else { 0.0 };
         let angle = (self.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
         let (ca, sa) = (angle.cos(), angle.sin());
@@ -1657,7 +1658,7 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, pale
             // Position-based rotation (same formula as directional_color input rotation).
             // Applied twice: once to input (inside directional_color), once to output ab.
             let pos_rot = if dp.pos_rotation_enabled {
-                px / W as f32 + (py / H as f32) * 3.0
+                px / W() as f32 + (py / H() as f32) * 3.0
             } else { 0.0 };
 
             // Directional blend: unit velocity selects among four palette colours.
@@ -1753,8 +1754,8 @@ fn xorf32(s: &mut u64) -> f32 {
 
 fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize, tile_2x2: bool) {
     // ffmpeg glob requires sorted files — they're zero-padded so glob order = numeric order
-    let ow = OUT_W * 2;
-    let oh = OUT_H * 2;
+    let ow = OUT_W() * 2;
+    let oh = OUT_H() * 2;
     let status = if tile_2x2 {
         // Tile the frame 2×2 then scale back to normal output size (each copy is half-size).
         let fc = format!(
@@ -1858,6 +1859,12 @@ fn main() {
     let parse_arg = |flag: &str| -> Option<String> {
         args.iter().rposition(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
     };
+    // Initialise resolution FIRST — W() and H() are used everywhere below.
+    let width:  usize = parse_arg("--width") .and_then(|s| s.parse().ok()).unwrap_or(256);
+    let height: usize = parse_arg("--height").and_then(|s| s.parse().ok()).unwrap_or(160);
+    W_CELL.set(width).expect("W already set");
+    H_CELL.set(height).expect("H already set");
+
     let seconds: usize = parse_arg("--seconds")
         .and_then(|s| s.parse().ok())
         .expect("Usage: gravity --seconds <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
@@ -1971,7 +1978,7 @@ fn main() {
     let init_pop = if circles > 0 {
         // ~50% coin-flip density over disk area → expected placed ≈ target_pop
         target_pop
-    } else if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
+    } else if seed_density_inv > 0 { W() * H() / seed_density_inv } else { 0 };
     let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
         "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
@@ -1982,8 +1989,8 @@ fn main() {
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nsteer:         {steer}\n\
          pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\ntile_2x2:      {tile_2x2}\n\
-         resolution:    {}x{} → 2048x1280\n",
-        OUT_W * 2, OUT_H * 2
+         resolution:    {}x{} → {}x{}\n",
+        width, height, width * 2, height * 2
     );
     fs::create_dir_all(&segments_dir).unwrap();
     fs::create_dir_all(&frames_dir).unwrap();
@@ -2010,7 +2017,7 @@ fn main() {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
             let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, &init_vel, circles, vel_scale);
-            let c = vec![0.0f32; W * H * 3];
+            let c = vec![0.0f32; W() * H() * 3];
             (s, c, 0)
         });
 
