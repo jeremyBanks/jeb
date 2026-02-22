@@ -4,22 +4,16 @@
 # 1. Slow Conway gas cloud — low gravity, huge population, swirl, both axes damped
 
 # 2. Mosh pit — high rate, random chaos, medium gravity
-mosh_pit:--gravity 0.125 --softening 4 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 256 --init-vel random --wrap --width 256 --height 160 --tile-2x2
 
 # 3. Bounce walls — no wrap, spin into hard walls
-bounce_spin:--gravity 0.2 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 1.5 --init-vel spin --bounce-x --bounce-y --width 256 --height 160 --tile-2x2
 
 # 4. Eight circles, zero velocity — pure gravity collapse from arranged clusters
-eight_circles_collapse:--gravity 0.1 --softening 5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 32 --circles 8 --init-vel zero --wrap --width 256 --height 160 --tile-2x2
 
 # 5. Strong gravity, tiny population — intense tight-cluster dynamics
-strong_g_tiny:--gravity 0.5 --softening 6 --speed-cap 8 --pop-target 512 --pop-band 64 --rate-limit 32 --circles 1 --vel-scale 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
 
 # 6. Velocity decay — speed bleeds off every frame, patterns crystallize
-vel_decay:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --vel-nudge-rate 0.03125 --width 256 --height 160 --tile-2x2
 
 # 7. Spin-flat — flattened vortex, horizontal band dynamics
-spin_flat:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel spin-flat --wrap --dampen-y 0.0625 --width 256 --height 160 --tile-2x2
 
 # 8. Upward nudge — all cells steered toward up over time
 nudge_up:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.25 --vel-nudge-rate 0.0625 --width 256 --height 160 --tile-2x2
@@ -94,3 +88,77 @@ four_vortex:--width 256 --height 160 --gravity 0.165 --softening 3 --speed-cap 5
 
 # Nudge sideways — everything slowly steered rightward while spinning
 nudge_drift:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.0 --vel-nudge-rate 0.0625 --tile-2x2
+
+# ── PARAMETER SWEEPS ──────────────────────────────────────────────────────────
+
+# GRAVITY sweep
+high_g_tight:--gravity 0.5 --softening 4 --speed-cap 6 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+low_g_drift:--gravity 0.005 --softening 8 --speed-cap 2 --pop-target 2048 --pop-band 256 --rate-limit 32 --circles 0 --init-vel random --wrap --width 256 --height 160 --tile-2x2
+medium_g:--gravity 0.1 --softening 5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+
+# SOFTENING sweep
+sharp_gravity:--gravity 0.1 --softening 1 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+very_mushy:--gravity 0.2 --softening 12 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+
+# SPEED CAP sweep
+glacial:--gravity 0.1 --softening 5 --speed-cap 1.5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+hypersonic:--gravity 0.1 --softening 4 --speed-cap 12 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+
+# POPULATION sweep
+tiny_pop:--gravity 0.2 --softening 4 --speed-cap 5 --pop-target 256 --pop-band 32 --rate-limit 32 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+mega_pop:--gravity 0.05 --softening 6 --speed-cap 4 --pop-target 4096 --pop-band 512 --rate-limit 64 --circles 0 --init-vel random --wrap --width 256 --height 160 --tile-2x2
+
+# RATE sweep
+rare_conway:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 8 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+turbo_conway:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 512 --circles 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+
+# INIT VEL sweep — one per mode
+init_zero:--gravity 0.2 --softening 4 --speed-cap 5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 2 --init-vel zero --wrap --width 256 --height 160 --tile-2x2
+init_random:--gravity 0.165 --softening 4 --speed-cap 5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel random --wrap --width 256 --height 160 --tile-2x2
+init_spin_ccw:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin-ccw --wrap --width 256 --height 160 --tile-2x2
+init_spin_flat:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin-flat --wrap --width 256 --height 160 --tile-2x2
+init_radial:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1.5 --init-vel radial-out --wrap --width 256 --height 160 --tile-2x2
+init_swirl:--gravity 0.1 --softening 5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel swirl --wrap --width 256 --height 160 --tile-2x2
+
+# CIRCLES sweep
+zero_circles:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --init-vel random --wrap --width 256 --height 160 --tile-2x2
+two_circles:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 2 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+four_circles:--gravity 0.2 --softening 4 --speed-cap 5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 4 --init-vel zero --wrap --width 256 --height 160 --tile-2x2
+six_circles_spin:--gravity 0.1 --softening 5 --speed-cap 5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 6 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+
+# VEL SCALE sweep
+fast_spin:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 4 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+gentle_spin:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 0.5 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+
+# BOUNCE configs
+bounce_x_only:--gravity 0.2 --softening 4 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --bounce-x --width 256 --height 160 --tile-2x2
+bounce_y_only:--gravity 0.2 --softening 4 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --bounce-y --width 256 --height 160 --tile-2x2
+bounce_mixed:--gravity 0.2 --softening 4 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --bounce-x --wrap-y --width 256 --height 160 --tile-2x2
+
+# DAMPEN sweep
+heavy_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-x 0.125 --dampen-y 0.125 --width 256 --height 160 --tile-2x2
+x_damp_only:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-x 0.0625 --width 256 --height 160 --tile-2x2
+y_damp_only:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160 --tile-2x2
+
+# VEL DECAY sweep
+slow_decay:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --vel-decay 0.9999 --width 256 --height 160 --tile-2x2
+fast_decay:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --vel-decay 0.999 --width 256 --height 160 --tile-2x2
+
+# VEL NUDGE sweep
+nudge_right:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --vel-nudge 0 --vel-nudge-rate 0.0625 --width 256 --height 160 --tile-2x2
+nudge_diagonal:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --vel-nudge 0.125 --vel-nudge-rate 0.0625 --width 256 --height 160 --tile-2x2
+
+# ASPECT RATIO sweep
+ultrawide:--gravity 0.165 --softening 4 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 512 --height 80 --tile-2x2
+tall_portrait:--gravity 0.165 --softening 4 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 96 --height 320 --tile-2x2
+square_big:--gravity 0.165 --softening 4 --speed-cap 5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --width 320 --height 320 --tile-2x2
+
+# INTERESTING COMBOS
+crystal_collapse:--gravity 0.4 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 32 --circles 3 --init-vel zero --wrap --vel-decay 0.9998 --width 256 --height 160 --tile-2x2
+turbulent_plasma:--gravity 0.08 --softening 6 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 256 --circles 0 --init-vel random --wrap --width 256 --height 160 --tile-2x2
+orbiting_trio:--gravity 0.4 --softening 3 --speed-cap 8 --pop-target 768 --pop-band 96 --rate-limit 32 --circles 3 --vel-scale 1.5 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
+double_helix:--gravity 0.15 --softening 5 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 2 --vel-scale 1 --init-vel spin-ccw --wrap --width 256 --height 160 --tile-2x2
+slow_collapse_damp:--gravity 0.5 --softening 2 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 32 --circles 1 --init-vel zero --wrap --dampen-x 0.03125 --dampen-y 0.03125 --width 256 --height 160 --tile-2x2
+drift_field:--gravity 0.02 --softening 8 --speed-cap 2 --pop-target 2048 --pop-band 256 --rate-limit 16 --init-vel random --wrap --width 256 --height 160 --tile-2x2
+spinning_ring:--gravity 0.1 --softening 5 --speed-cap 5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 6 --vel-scale 2 --init-vel radial-out --wrap --width 256 --height 160 --tile-2x2
+swirl_decay:--gravity 0.1 --softening 5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 2 --init-vel swirl --wrap --vel-decay 0.9997 --dampen-x 0.03125 --width 256 --height 160 --tile-2x2

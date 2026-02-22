@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 
 BIN="/Users/matte/jeb/target/release/gravity"
 QUEUE_FILE="batch-queue.txt"
-SECONDS_EACH=1092   # 64*64*16 / 60
+SECONDS_EACH=546   # half of original
 
 if [ ! -f "$QUEUE_FILE" ]; then
     echo "[batch] no queue file at $QUEUE_FILE — nothing to do"
