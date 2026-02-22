@@ -2777,7 +2777,7 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
             // Directional blend: unit velocity selects among four palette colours.
             let (dl, da, db) = dp.dark;
             let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
-                dp.directional_color(vx / spd, vy / spd)
+                dp.directional_color(vx / spd, vy / spd, px, py)
             } else {
                 (dl, da, db)
             };
