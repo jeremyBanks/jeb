@@ -2873,6 +2873,7 @@ impl DirectionalPalette {
         left:  (u8,u8,u8),
         down:  (u8,u8,u8),
         up:    (u8,u8,u8),
+        wheel_rotation: f32,
         pos_rotation_enabled: bool,
         pos_rotation_output:  bool,
     ) -> Self {
@@ -2882,7 +2883,7 @@ impl DirectionalPalette {
             c_left:  rgb_to_oklab(left.0,  left.1,  left.2),
             c_down:  rgb_to_oklab(down.0,  down.1,  down.2),
             c_up:    rgb_to_oklab(up.0,    up.1,    up.2),
-            wheel_rotation:      -11.0 / 360.0,
+            wheel_rotation,
             pos_rotation_enabled,
             pos_rotation_output,
         }
