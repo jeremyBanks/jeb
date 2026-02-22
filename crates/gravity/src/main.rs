@@ -2794,7 +2794,7 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
             // Position-based rotation (same formula as directional_color input rotation).
             // Applied twice: once to input (inside directional_color), once to output ab.
             let pos_rot = if dp.pos_rotation_enabled {
-                (px + py) / (W + H) as f32
+                px / W as f32 + (py / H as f32) * 3.0
             } else { 0.0 };
 
             // Directional blend: unit velocity selects among four palette colours.
