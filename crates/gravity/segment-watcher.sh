@@ -110,13 +110,14 @@ while true; do
                 POP=$(  grep "^pop_target:" state/run_info.txt | awk '{print $2}')
                 BAND=$( grep "^pop_band:"   state/run_info.txt | awk '{print $2}')
                 RATE=$( grep "^rate_limit:" state/run_info.txt | awk '{print $2}')
-                WRAP=$( grep "^wrap:"       state/run_info.txt | awk '{print $2}')
+                WRAP_X=$(grep "^wrap_x:"    state/run_info.txt | awk '{print $2}')
+                WRAP_Y=$(grep "^wrap_y:"    state/run_info.txt | awk '{print $2}')
                 INITV=$(grep "^init_vel:"   state/run_info.txt | awk '{print $2}')
                 CMT=$(  grep "^commit:"     state/run_info.txt | awk '{print $2}')
                 DAMP_X=$(  grep "^dampen_x:"  state/run_info.txt | awk '{print $2}')
                 DAMP_Y=$(  grep "^dampen_y:"  state/run_info.txt | awk '{print $2}')
                 INITPOP=$( grep "^init_pop:"  state/run_info.txt | awk '{print $2}')
-                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} wrap=${WRAP} dx=${DAMP_X} dy=${DAMP_Y} vel=${INITV}"
+                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} wx=${WRAP_X} wy=${WRAP_Y} dx=${DAMP_X} dy=${DAMP_Y} vel=${INITV}"
             fi
 
             # Current state from render log (last stats line before chunk boundary)
