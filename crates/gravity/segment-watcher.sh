@@ -24,8 +24,12 @@ if [ -z "$RUN_ID" ]; then echo "[watcher] no run_id, exiting"; exit 1; fi
 
 SEEN_FILE="/tmp/gravity_seen_${RUN_ID}.txt"
 touch "$SEEN_FILE"
-TOTAL=137
 LAST_TIME=$(date +%s)
+chunk_count=0  # incremented per segment; no hardcoded total
+
+# Estimate total frames from run_info (seconds * 60fps)
+RUN_SECONDS=$(grep "^seconds:" state/run_info.txt 2>/dev/null | awk '{print $2}')
+TOTAL_FRAMES=$(( ${RUN_SECONDS:-0} * 60 ))
 
 echo "[watcher] started for run $RUN_ID"
 
@@ -107,7 +111,14 @@ while true; do
         seg_name=$(basename "$seg" .mp4)
         frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
         frame_offset=${frame_offset:-0}
-        chunk_num=$(( frame_offset / 1920 + 1 ))
+        (( chunk_count++ )) || true
+        chunk_num=$chunk_count
+        # Percentage based on actual frame offset (accurate regardless of chunk size)
+        if [ "$TOTAL_FRAMES" -gt 0 ]; then
+            PCT=$(( frame_offset * 100 / TOTAL_FRAMES ))
+        else
+            PCT="?"
+        fi
 
         preview="${PREVIEW_DIR}/preview_${RUN_ID}_chunk${chunk_num}.mp4"
 
@@ -145,7 +156,7 @@ while true; do
             STATE_MSG=""
             [ -n "$CUR_POP" ] && STATE_MSG="pop=${CUR_POP} avg_spd=${CUR_SPD} p10=${CUR_P10}"
 
-            MSG="chunk ${chunk_num}/${TOTAL} | ${META}${EXTRA}"
+            MSG="chunk ${chunk_num} (${PCT}%) | ${META}${EXTRA}"
             [ -n "$STATE_MSG" ] && MSG="${MSG}
 ${STATE_MSG}"
 
