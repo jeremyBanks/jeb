@@ -400,14 +400,17 @@ impl Sim {
 
         if circles > 0 {
             // ── Circle placement ────────────────────────────────────────────
-            // Each circle is a filled disk containing target_pop/circles cells.
-            // Radius is derived so cells fill the disk at natural density.
+            // Cells are distributed evenly across circles (off-by-one handled):
+            //   first (target_pop % circles) circles get one extra cell.
+            // Each circle is filled at ~50% average density by iterating grid
+            // points in order of distance from centre (closest first) and
+            // flipping a 50% coin at each point until the target count is placed.
+            // Radius is sized so ≈2× target cells fit inside (at 50% fill rate).
             // Circle centres are chosen greedily to maximise minimum distance
             // from canvas walls and from each other (tie-break: closer to centre).
-            let cells_per_circle = (target_pop / circles).max(1);
-            // Checkerboard: only (xi+yi)%2==0 cells are filled → 50% density.
-            // Area must be 2× larger to contain the same cell count, so radius × √2.
-            let radius = ((2.0 * cells_per_circle as f32 / PI).sqrt()).max(4.0)
+            let base_cells  = (target_pop / circles).max(1);
+            let extra_circles = target_pop % circles; // first N circles get base+1
+            let radius = ((2.0 * base_cells as f32 / PI).sqrt()).max(4.0)
                           .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
             let margin = radius + 1.0;
 
@@ -443,29 +446,67 @@ impl Sim {
                 }
             }
 
-            // Fill each disk with cells_per_circle cells (random uniform in disk).
-            for &(disk_cx, disk_cy) in &centres {
-                let mut placed = 0;
-                for _ in 0..cells_per_circle * 200 {
-                    if placed >= cells_per_circle { break; }
-                    // Uniform random point in disk: sqrt for area-uniform radial sampling.
-                    let angle = xorf32(&mut rng) * 2.0 * PI;
-                    let r     = xorf32(&mut rng).sqrt() * radius;
-                    let fpx   = disk_cx + r * angle.cos();
-                    let fpy   = disk_cy + r * angle.sin();
-                    let xi    = fpx as usize;
-                    let yi    = fpy as usize;
-                    if xi >= W || yi >= H { continue; }
-                    if (xi + yi) % 2 != 0 { continue; }  // checkerboard: 50% density
-                    let idx = yi * W + xi;
-                    if occupied[idx] { continue; }
+            // Fill each disk using distance-sorted grid walk with 50% coin flip.
+            // Points are visited closest-to-centre first; a coin flip decides
+            // whether each point is populated.  We continue until target count
+            // is placed.  If the inner radius is exhausted before the target is
+            // reached (rare — variance of binomial), a fallback pass places all
+            // remaining unoccupied points unconditionally.
+            for (ci, &(disk_cx, disk_cy)) in centres.iter().enumerate() {
+                let cells_this_circle = base_cells + if ci < extra_circles { 1 } else { 0 };
+
+                // Collect integer grid points within a search radius (1.5× for buffer).
+                let r_search = radius * 1.5;
+                let r_sq     = r_search * r_search;
+                let r_ceil   = r_search.ceil() as isize;
+                let mut pts: Vec<(usize, usize, f32)> = Vec::new();
+                for dy in -r_ceil..=r_ceil {
+                    for dx in -r_ceil..=r_ceil {
+                        let d2 = (dx as f32).powi(2) + (dy as f32).powi(2);
+                        if d2 > r_sq { continue; }
+                        let xi_i = disk_cx as isize + dx;
+                        let yi_i = disk_cy as isize + dy;
+                        if xi_i < 0 || xi_i >= W as isize { continue; }
+                        if yi_i < 0 || yi_i >= H as isize { continue; }
+                        let xi = xi_i as usize;
+                        let yi = yi_i as usize;
+                        if !occupied[yi * W + xi] {
+                            pts.push((xi, yi, d2));
+                        }
+                    }
+                }
+                // Sort by distance from centre (closest first).
+                pts.sort_unstable_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
+
+                let mut placed = 0usize;
+
+                // Primary pass: 50% coin flip at each point in distance order.
+                for &(xi, yi, _) in &pts {
+                    if placed >= cells_this_circle { break; }
+                    if occupied[yi * W + xi] { continue; }
+                    if xoru64(&mut rng) & 1 == 0 { continue; } // 50% skip
                     let (vx, vy) = make_vel(xi, yi, &mut rng);
                     let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                     cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                       prev_speed: 0.0, id: next_id, moved: false });
                     next_id += 1;
-                    occupied[idx] = true;
+                    occupied[yi * W + xi] = true;
                     placed += 1;
+                }
+
+                // Fallback pass: fill remaining slots from inner points outward.
+                if placed < cells_this_circle {
+                    for &(xi, yi, _) in &pts {
+                        if placed >= cells_this_circle { break; }
+                        if occupied[yi * W + xi] { continue; }
+                        let (vx, vy) = make_vel(xi, yi, &mut rng);
+                        let (vx, vy) = (vx * vel_scale, vy * vel_scale);
+                        cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                          prev_speed: 0.0, id: next_id, moved: false });
+                        next_id += 1;
+                        occupied[yi * W + xi] = true;
+                        placed += 1;
+                    }
                 }
             }
         } else {
@@ -1878,12 +1919,8 @@ fn main() {
 
     // Write settings file alongside video and run_info for the watcher
     let init_pop = if circles > 0 {
-        use std::f32::consts::PI;
-        let cells_per = (target_pop / circles).max(1);
-        // Checkerboard → radius×√2, actual cells ≈ target_pop
-        let r = ((2.0 * cells_per as f32 / PI).sqrt()).max(4.0)
-                 .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
-        (PI * r * r * 0.5) as usize * circles  // 50% of disk area
+        // ~50% coin-flip density over disk area → expected placed ≈ target_pop
+        target_pop
     } else if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
     let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
