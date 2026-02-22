@@ -1602,7 +1602,7 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
 
 const PALETTE_SRGB: &[(u8, u8, u8)] = &[
     (0x53, 0x3A, 0xFD), // #533AFD — violet
-    (0x06, 0x1B, 0x31), // #061B31 — dark navy  (also zero-speed anchor)
+    (0x08, 0x22, 0x3D), // #08223D — dark navy  (also zero-speed anchor)
     (0x50, 0x61, 0x7A), // #50617A — steel blue-gray
     (0xF6, 0xF9, 0xFC), // #F6F9FC — near white  (C < 0.02, skipped from wheel)
     (0xFF, 0xC0, 0x1F), // #FFC01F — golden yellow
@@ -1613,7 +1613,7 @@ const PALETTE_SRGB: &[(u8, u8, u8)] = &[
 ];
 
 /// Zero-speed (still cell) colour — dark navy.
-const SLOW_RGB: (u8, u8, u8) = (0x06, 0x1B, 0x31);
+const SLOW_RGB: (u8, u8, u8) = (0x08, 0x22, 0x3D);
 
 fn srgb_u8_to_linear(x: u8) -> f32 {
     let x = x as f32 / 255.0;
@@ -1658,7 +1658,7 @@ struct DirectionalPalette {
 impl DirectionalPalette {
     fn build(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Self {
         DirectionalPalette {
-            dark:                { let (l,a,b) = rgb_to_oklab(0x06, 0x1B, 0x31); (l * 1.25, a, b) },  // dark navy +25% L — zero-speed anchor
+            dark:                rgb_to_oklab(0x08, 0x22, 0x3D),  // dark navy (brighter) — zero-speed anchor
             c_right:             rgb_to_oklab(0x53, 0x3A, 0xFD),  // violet          — +x
             c_left:              rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — −x
             c_down:              rgb_to_oklab(0xFF, 0xC0, 0x1F),  // golden yellow   — +y
