@@ -1553,7 +1553,7 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 struct DirectionalPalette {
     dark:           (f32, f32, f32),  // slow/still anchor colour
     c_right:        (f32, f32, f32),  // #635BFF  periwinkle — +x
-    c_left:         (f32, f32, f32),  // #FF9B3B  orange-gold — −x
+    c_left:         (f32, f32, f32),  // #533AFD  violet      — −x
     c_down:         (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
     c_up:           (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
     wheel_rotation:      f32,   // turns; negative = CCW in screen space
@@ -1563,11 +1563,11 @@ struct DirectionalPalette {
 impl DirectionalPalette {
     fn build(pos_rotation_enabled: bool) -> Self {
         DirectionalPalette {
-            dark:                rgb_to_oklab(0x06, 0x1B, 0x31),  // dark navy — distinct zero-speed anchor
-            c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue  — +x
-            c_left:              rgb_to_oklab(0xFF, 0x9B, 0x3B),  // orange-gold       — −x (opposite hue)
-            c_down:              rgb_to_oklab(0xF4, 0x4B, 0xCC),  // hot-pink          — +y
-            c_up:                rgb_to_oklab(0xFA, 0xF0, 0xF5),  // soft blush        — −y
+            dark:                rgb_to_oklab(0x06, 0x1B, 0x31),  // dark navy — zero-speed anchor
+            c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — +x
+            c_left:              rgb_to_oklab(0x53, 0x3A, 0xFD),  // violet          — −x
+            c_down:              rgb_to_oklab(0xF4, 0x4B, 0xCC),  // hot-pink        — +y
+            c_up:                rgb_to_oklab(0xF6, 0xF9, 0xFC),  // cool near-white — −y
             wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
             pos_rotation_enabled,
         }
@@ -1660,11 +1660,15 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, pale
                 (l, tgt_a * c_scale, tgt_b * c_scale)
             };
 
-            // Output hue rotation: rotate (a, b) by the full combined angle in OKLab.
-            // Both wheel_rotation AND pos_rot applied to both input and output — symmetric.
-            let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
-            let (oca, osa) = (out_angle.cos(), out_angle.sin());
-            (l, a * oca - b * osa, a * osa + b * oca)
+            // Output hue rotation: only when pos_rotation enabled.
+            // wheel_rotation is input-only (velocity remapping); pos_rot drives output too.
+            if dp.pos_rotation_enabled {
+                let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
+                let (oca, osa) = (out_angle.cos(), out_angle.sin());
+                (l, a * oca - b * osa, a * osa + b * oca)
+            } else {
+                (l, a, b)
+            }
         }
     }
 }
@@ -1820,7 +1824,7 @@ fn main() {
     let bounce_x  = args.iter().any(|a| a == "--bounce-x");
     let bounce_y  = args.iter().any(|a| a == "--bounce-y");
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
-    let pos_rotation_enabled = !args.iter().any(|a| a == "--no-pos-color"); // default: on
+    let pos_rotation_enabled = args.iter().any(|a| a == "--pos-color"); // default: off; opt-in
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
