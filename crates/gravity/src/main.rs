@@ -2698,25 +2698,32 @@ struct DirectionalPalette {
     c_left:         (f32, f32, f32),  // #533AFD  violet     — −x
     c_down:         (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
     c_up:           (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
-    wheel_rotation: f32,              // turns; negative = CCW in screen space
+    wheel_rotation:      f32,   // turns; negative = CCW in screen space
+    pos_rotation_enabled: bool, // if true, add position-based rotation per cell
 }
 
 impl DirectionalPalette {
-    fn build() -> Self {
+    fn build(pos_rotation_enabled: bool) -> Self {
         DirectionalPalette {
-            dark:           rgb_to_oklab(0x06, 0x1B, 0x31),
-            c_right:        rgb_to_oklab(0x63, 0x5B, 0xFF),
-            c_left:         rgb_to_oklab(0x53, 0x3A, 0xFD),
-            c_down:         rgb_to_oklab(0xF4, 0x4B, 0xCC),
-            c_up:           rgb_to_oklab(0xF6, 0xF9, 0xFC),
-            wheel_rotation: -11.0 / 360.0,  // 11° CCW — current scheme
+            dark:                rgb_to_oklab(0x06, 0x1B, 0x31),
+            c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),
+            c_left:              rgb_to_oklab(0x53, 0x3A, 0xFD),
+            c_down:              rgb_to_oklab(0xF4, 0x4B, 0xCC),
+            c_up:                rgb_to_oklab(0xF6, 0xF9, 0xFC),
+            wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
+            pos_rotation_enabled,
         }
     }
 
     /// Blend the four directional anchors for a unit velocity (ux, uy).
-    /// The whole colour wheel is rotated by wheel_rotation turns before projecting.
-    fn directional_color(&self, ux: f32, uy: f32) -> (f32, f32, f32) {
-        let angle = self.wheel_rotation * 2.0 * std::f32::consts::PI;
+    /// Rotation = scheme wheel_rotation + optional position-based rotation:
+    ///   full left  (px=0) adds 3 full turns; full right (px=W) adds 0.
+    ///   full bottom (py=H) adds 2 full turns; full top  (py=0) adds 0.
+    fn directional_color(&self, ux: f32, uy: f32, px: f32, py: f32) -> (f32, f32, f32) {
+        let pos_rot = if self.pos_rotation_enabled {
+            (1.0 - px / W as f32) * 3.0 + (py / H as f32) * 2.0
+        } else { 0.0 };
+        let angle = (self.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
         let (ca, sa) = (angle.cos(), angle.sin());
         // Screen-space CCW rotation: rx = ux·cos + uy·sin, ry = −ux·sin + uy·cos
         let rx =  ux * ca + uy * sa;
