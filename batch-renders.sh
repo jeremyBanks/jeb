@@ -1,8 +1,8 @@
 #!/bin/bash
 # batch-renders.sh — queue-driven sequential renderer.
-# Reads configs one at a time from batch-queue.txt (in the gravity crate root).
-# Each line: "label:extra args..."
-# Append lines to batch-queue.txt while running to add more to the queue.
+# Reads configs one at a time from batch-queue.txt (gravity crate root).
+# Each line: "label:extra args..."  — blank lines and # comments ignored.
+# Append lines to batch-queue.txt at any time to add more to the queue.
 # Empty queue = script exits cleanly.
 #
 # Duration: 64×64×16 = 65536 frames @ 60fps = 1092s per render (~18 min).
@@ -25,23 +25,19 @@ echo "=== batch-renders.sh started | ${SECONDS_EACH}s per render | commit=$COMMI
 echo "=== queue: $QUEUE_FILE ==="
 echo ""
 
+pop_queue() {
+    # Find first non-empty, non-comment line; delete it; print it.
+    local lnum
+    lnum=$(grep -n "^[^#[:space:]]" "$QUEUE_FILE" 2>/dev/null | head -1 | cut -d: -f1)
+    [ -z "$lnum" ] && return 1
+    sed -n "${lnum}p" "$QUEUE_FILE"
+    # macOS sed needs '' after -i; GNU sed does not
+    sed -i '' "${lnum}d" "$QUEUE_FILE" 2>/dev/null || sed -i "${lnum}d" "$QUEUE_FILE"
+    return 0
+}
+
 while true; do
-    # ── Pop first non-empty, non-comment line from queue ──────────────────
-    entry=""
-    while IFS= read -r line || [ -n "$line" ]; do
-        [[ -z "$line" || "$line" == \#* ]] && continue
-        entry="$line"
-        break
-    done < "$QUEUE_FILE"
-
-    if [ -z "$entry" ]; then
-        echo "[batch] queue empty — done."
-        exit 0
-    fi
-
-    # Remove that line from queue (first occurrence)
-    sed -i '' "0,/$(echo "$entry" | sed 's/[\/&]/\\&/g')/{/$(echo "$entry" | sed 's/[\/&]/\\&/g')/d;}" "$QUEUE_FILE" 2>/dev/null || \
-    sed -i "0,/$(echo "$entry" | sed 's/[\/&]/\\&/g')/{/$(echo "$entry" | sed 's/[\/&]/\\&/g')/d;}" "$QUEUE_FILE" 2>/dev/null || true
+    entry=$(pop_queue) || { echo "[batch] queue empty — done."; exit 0; }
 
     label="${entry%%:*}"
     raw_args="${entry#*:}"
@@ -51,10 +47,9 @@ while true; do
     SEED=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
     RUN_ID="$(date +%Y%m%d_%H%M%S)_${label}"
 
+    remaining=$(grep -c "^[^#[:space:]]" "$QUEUE_FILE" 2>/dev/null || echo 0)
     echo "──────────────────────────────────────────────────────"
-    echo "[batch] $label  run_id=$RUN_ID  seed=$SEED"
-    remaining=$(grep -c "^[^#]" "$QUEUE_FILE" 2>/dev/null || echo 0)
-    echo "[batch] $remaining more in queue after this one"
+    echo "[batch] $label  run_id=$RUN_ID  seed=$SEED  (${remaining} more in queue)"
     echo "──────────────────────────────────────────────────────"
 
     # ── Kill any existing non-headless render ──────────────────────────────
@@ -67,7 +62,7 @@ while true; do
         sleep 3
     fi
 
-    # ── Clean up state from previous run ──────────────────────────────────
+    # ── Clean state ────────────────────────────────────────────────────────
     rm -f state/checkpoint.bin state/orig_state.bin state/run_info.txt state/last_stats.txt
     rm -f segments.txt 2>/dev/null || true
 
@@ -102,7 +97,7 @@ while true; do
     if wait "$RENDER_PID"; then
         echo "[batch] ✓ $label complete"
     else
-        echo "[batch] ✗ $label exited non-zero — check /tmp/gravity_render_${label}.log"
+        echo "[batch] ✗ $label exited non-zero — see /tmp/gravity_render_${label}.log"
     fi
 
     kill "$WATCHER_PID" 2>/dev/null || true
