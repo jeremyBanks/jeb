@@ -21,7 +21,8 @@ if [ ! -f "$QUEUE_FILE" ]; then
 fi
 
 COMMIT=$(git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
-echo "=== batch-renders.sh started | ${SECONDS_EACH}s per render | commit=$COMMIT ==="
+ALWAYS_ARGS="--tile-2x2"  # applied to every render regardless of queue entry
+echo "=== batch-renders.sh started | ${SECONDS_EACH}s per render | always: $ALWAYS_ARGS | commit=$COMMIT ==="
 echo "=== queue: $QUEUE_FILE ==="
 echo ""
 
