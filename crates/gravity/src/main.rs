@@ -1580,12 +1580,11 @@ impl DirectionalPalette {
     /// Blend the four directional anchors for a unit velocity (ux, uy).
     /// Rotation = scheme wheel_rotation + optional position-based rotation:
     ///   max 1 turn total; axes weighted by W/(W+H) and H/(W+H) respectively.
-    ///   Formula: (px + py) / (W + H) — top-left=0, bottom-right=1 turn.
+    ///   Formula: px/W + (py/H)*3 — 1 turn across width, 3 turns across height.
     fn directional_color(&self, ux: f32, uy: f32, px: f32, py: f32) -> (f32, f32, f32) {
         let pos_rot = if self.pos_rotation_enabled {
-            // Max 1 turn total; each axis contributes proportional to its share of W+H.
-            // Horizontal flipped: max at right. Formula: (px + py) / (W + H)
-            (px + py) / (W + H) as f32
+            // 1 full turn across width, 3 full turns across height.
+            px / W as f32 + (py / H as f32) * 3.0
         } else { 0.0 };
         let angle = (self.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
         let (ca, sa) = (angle.cos(), angle.sin());
@@ -1641,7 +1640,7 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, pale
             // Position-based rotation (same formula as directional_color input rotation).
             // Applied twice: once to input (inside directional_color), once to output ab.
             let pos_rot = if dp.pos_rotation_enabled {
-                (px + py) / (W + H) as f32
+                px / W as f32 + (py / H as f32) * 3.0
             } else { 0.0 };
 
             // Directional blend: unit velocity selects among four palette colours.
