@@ -3247,15 +3247,16 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
         let _ = fs::write("state/last_stats.txt",
             format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
 
-        // Adjust chunk_frames for next chunk: target CHUNK_TARGET_SECS wall time.
+        // Adjust chunk_frames for next chunk: target CHUNK_TARGET_SECS wall time,
+        // clamped to [CHUNK_MIN_SECS, CHUNK_MAX_SECS].
         if wall_secs > 0.5 {
             let scale = CHUNK_TARGET_SECS / wall_secs;
             let next = (chunk_frames as f64 * scale).round() as usize;
-            // Also enforce max wall time
             let fps_render = this_chunk_frames as f64 / wall_secs;
+            let min_by_time = (fps_render * CHUNK_MIN_SECS).round() as usize;
             let max_by_time = (fps_render * CHUNK_MAX_SECS).round() as usize;
-            chunk_frames = next.clamp(CHUNK_MIN_FRAMES, CHUNK_MAX_FRAMES).min(max_by_time).max(CHUNK_MIN_FRAMES);
-            println!("  next chunk_frames={chunk_frames} (wall={wall_secs:.1}s target={CHUNK_TARGET_SECS}s)");
+            chunk_frames = next.clamp(min_by_time.max(CHUNK_MIN_FRAMES), max_by_time.max(CHUNK_MIN_FRAMES));
+            println!("  next chunk_frames={chunk_frames} (wall={wall_secs:.1}s target={CHUNK_TARGET_SECS}s [{CHUNK_MIN_SECS}..{CHUNK_MAX_SECS}])");
         }
 
         chunk_start_frame = chunk_end_frame;
