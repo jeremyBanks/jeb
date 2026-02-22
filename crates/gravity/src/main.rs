@@ -1449,7 +1449,7 @@ impl Sim {
         self.region_stats = [RegionStats::default(); 9];
     }
 
-    fn paint_frame(&mut self, canvas: &mut Vec<f32>, palette: &PaletteMode) {
+    fn paint_frame(&mut self, canvas: &mut Vec<f32>, palette: &DirectionalPalette) {
         // Canvas stores Oklab (L, a, b) as f32 per channel.
         // Fade only L (brightness): multiplicative + constant drain so L always reaches 0.
         // a and b (chroma) are left intact — they become invisible as L→0.
@@ -1585,35 +1585,20 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
 //
 // "Radical" mode (default): perceptual hue-wheel interpolation.
 //   Velocity direction θ → position on a circular spline through the palette colours.
-//   Speed ramp: #061B31 (dark navy, still) → palette colour at speed_cap.
+//   Speed ramp: zero-speed anchor → palette colour at speed_cap.
 //   Beyond speed_cap (cells can reach 2×): L and C extrapolated with √ taper.
 //   Out-of-gamut colours → OKLCH chroma binary-search reduction (hue-preserving).
 //
-// "Classic" mode (write "classic" to /tmp/gravity_palette): original uniform hue wheel.
-//
-// Palette (9 colours). Near-achromatic ones (C < 0.02 in Oklch) are excluded from
-// the hue wheel but #061B31 is used as the zero-speed anchor regardless.
-//
-//   #533AFD  violet           #635BFF  periwinkle
-//   #F44BCC  hot pink         #EA2261  crimson
-//   #FF6118  orange           #FFC01F  golden yellow
-//   #50617A  steel blue-gray  #061B31  dark navy (zero-speed anchor)
-//   #F6F9FC  near white       (excluded: C < 0.02)
+// Palette loaded from palettes/active.txt at the start of each segment.
+// Copy any file from palettes/ to palettes/active.txt to switch schemes mid-render.
 
-const PALETTE_SRGB: &[(u8, u8, u8)] = &[
-    (0x53, 0x3A, 0xFD), // #533AFD — violet
-    (0x08, 0x22, 0x3D), // #08223D — dark navy  (also zero-speed anchor)
-    (0x50, 0x61, 0x7A), // #50617A — steel blue-gray
-    (0xF6, 0xF9, 0xFC), // #F6F9FC — near white  (C < 0.02, skipped from wheel)
-    (0xFF, 0xC0, 0x1F), // #FFC01F — golden yellow
-    (0xFF, 0x61, 0x18), // #FF6118 — orange
-    (0xF4, 0x4B, 0xCC), // #F44BCC — hot pink
-    (0xEA, 0x22, 0x61), // #EA2261 — crimson
-    (0x63, 0x5B, 0xFF), // #635BFF — periwinkle
-];
-
-/// Zero-speed (still cell) colour — dark navy.
-const SLOW_RGB: (u8, u8, u8) = (0x08, 0x22, 0x3D);
+/// Parse a hex colour string like "#08223D" or "08223D" → (r, g, b).
+fn parse_hex_color(s: &str) -> Option<(u8, u8, u8)> {
+    let s = s.trim().trim_start_matches('#');
+    if s.len() != 6 { return None; }
+    let n = u32::from_str_radix(s, 16).ok()?;
+    Some(((n >> 16) as u8, ((n >> 8) & 0xFF) as u8, (n & 0xFF) as u8))
+}
 
 fn srgb_u8_to_linear(x: u8) -> f32 {
     let x = x as f32 / 255.0;
@@ -1630,6 +1615,24 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     let lab_a =  1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
     let lab_b =  0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
     (lab_l, lab_a, lab_b)
+}
+
+/// Oklab → Oklch: (L, C, H) where H is in radians −π..π.
+#[inline] fn to_lch(l: f32, a: f32, b: f32) -> (f32, f32, f32) {
+    (l, (a*a + b*b).sqrt(), b.atan2(a))
+}
+
+/// Polar Oklch lerp: blend two Oklab colors via Oklch (arc hue, linear L+C).
+/// Returns result as Oklab (L, a, b).
+#[inline] fn oklch_lerp(lab0: (f32,f32,f32), lab1: (f32,f32,f32), t: f32) -> (f32, f32, f32) {
+    let (l0, c0, h0) = to_lch(lab0.0, lab0.1, lab0.2);
+    let (l1, c1, h1) = to_lch(lab1.0, lab1.1, lab1.2);
+    let l = l0 + (l1 - l0) * t;
+    let c = c0 + (c1 - c0) * t;
+    let hx = (1.0 - t) * h0.cos() + t * h1.cos();
+    let hy = (1.0 - t) * h0.sin() + t * h1.sin();
+    let h  = hy.atan2(hx);
+    (l, c * h.cos(), c * h.sin())
 }
 
 /// Directional colour anchors blended in Oklch (polar Oklab).
@@ -1656,14 +1659,22 @@ struct DirectionalPalette {
 }
 
 impl DirectionalPalette {
-    fn build(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Self {
+    fn build(
+        zero:  (u8,u8,u8),
+        right: (u8,u8,u8),
+        left:  (u8,u8,u8),
+        down:  (u8,u8,u8),
+        up:    (u8,u8,u8),
+        pos_rotation_enabled: bool,
+        pos_rotation_output:  bool,
+    ) -> Self {
         DirectionalPalette {
-            dark:                rgb_to_oklab(0x08, 0x22, 0x3D),  // dark navy (brighter) — zero-speed anchor
-            c_right:             rgb_to_oklab(0x53, 0x3A, 0xFD),  // violet          — +x
-            c_left:              rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — −x
-            c_down:              rgb_to_oklab(0xFF, 0xC0, 0x1F),  // golden yellow   — +y
-            c_up:                rgb_to_oklab(0xEA, 0x22, 0x61),  // hot pink        — −y
-            wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
+            dark:    rgb_to_oklab(zero.0,  zero.1,  zero.2),
+            c_right: rgb_to_oklab(right.0, right.1, right.2),
+            c_left:  rgb_to_oklab(left.0,  left.1,  left.2),
+            c_down:  rgb_to_oklab(down.0,  down.1,  down.2),
+            c_up:    rgb_to_oklab(up.0,    up.1,    up.2),
+            wheel_rotation:      -11.0 / 360.0,
             pos_rotation_enabled,
             pos_rotation_output,
         }
@@ -1689,18 +1700,10 @@ impl DirectionalPalette {
         let w_u = (-ry).max(0.0).powi(2);
         // w_r + w_l + w_d + w_u = 1 on the unit circle — no normalisation needed.
 
-        // Blend in Oklch (polar Oklab) to stay on the hue arc, avoiding neutral desaturation
-        // when opposite hues mix in Cartesian (a,b) space.
-        // Convert each anchor: C = sqrt(a²+b²), H = atan2(b,a)
-        let to_lch = |(l, a, b): (f32, f32, f32)| -> (f32, f32, f32) {
-            let c = (a*a + b*b).sqrt();
-            let h = b.atan2(a);  // radians, −π..π
-            (l, c, h)
-        };
-        let (lr, cr, hr) = to_lch(self.c_right);
-        let (ll, cl, hl) = to_lch(self.c_left);
-        let (ld, cd, hd) = to_lch(self.c_down);
-        let (lu, cu, hu) = to_lch(self.c_up);
+        let (lr, cr, hr) = to_lch(self.c_right.0, self.c_right.1, self.c_right.2);
+        let (ll, cl, hl) = to_lch(self.c_left.0,  self.c_left.1,  self.c_left.2);
+        let (ld, cd, hd) = to_lch(self.c_down.0,  self.c_down.1,  self.c_down.2);
+        let (lu, cu, hu) = to_lch(self.c_up.0,    self.c_up.1,    self.c_up.2);
 
         // L and C blend linearly.
         let l = w_r*lr + w_l*ll + w_d*ld + w_u*lu;
@@ -1718,78 +1721,77 @@ impl DirectionalPalette {
     }
 }
 
-#[derive(Clone, Debug)]
-enum PaletteMode {
-    /// Original: speed→L/C, direction→hue uniformly (fallback).
-    Classic,
-    /// 4-directional weights: left/right=blue, up/down=warm, zero-speed=dark navy.
-    Radical(DirectionalPalette),
-}
 
-fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> PaletteMode {
-    let raw = std::fs::read_to_string("/tmp/gravity_palette").unwrap_or_default();
-    let s = raw.trim().to_lowercase();
-    if s.starts_with("classic") {
-        PaletteMode::Classic
-    } else {
-        PaletteMode::Radical(DirectionalPalette::build(pos_rotation_enabled, pos_rotation_output))
-    }
-}
+fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> DirectionalPalette {
+    let raw = std::fs::read_to_string("palettes/active.txt")
+        .expect("palettes/active.txt not found — copy a palette file there before running");
 
-fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
-    let spd = (vx * vx + vy * vy).sqrt();
+    let mut zero:  Option<(u8,u8,u8)> = None;
+    let mut right: Option<(u8,u8,u8)> = None;
+    let mut left:  Option<(u8,u8,u8)> = None;
+    let mut down:  Option<(u8,u8,u8)> = None;
+    let mut up:    Option<(u8,u8,u8)> = None;
 
-    match palette {
-        PaletteMode::Classic => {
-            let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
-            let l = 0.45 + 0.30 * t;
-            let c = 0.20 * t;
-            let h = vy.atan2(vx);
-            (l, c * h.cos(), c * h.sin())
-        }
-
-        PaletteMode::Radical(dp) => {
-            // t = 0 → still (dark navy), t = 1 → speed_cap, up to ~2.0 beyond.
-            let t = spd / speed_cap;
-
-            // Position-based rotation (same formula as directional_color input rotation).
-            // Applied twice: once to input (inside directional_color), once to output ab.
-            let pos_rot = if dp.pos_rotation_enabled {
-                px / W() as f32 + (py / H() as f32) * 3.0
-            } else { 0.0 };
-
-            // Directional blend: unit velocity selects among four palette colours.
-            let (dl, da, db) = dp.dark;
-            let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
-                dp.directional_color(vx / spd, vy / spd, px, py)
-            } else {
-                (dl, da, db)
-            };
-
-            let (l, a, b) = if t <= 1.0 {
-                // Linear blend in OKLab: dark navy → directional palette colour.
-                let l = dl + (tgt_l - dl) * t;
-                let a = da + (tgt_a - da) * t;
-                let b = db + (tgt_b - db) * t;
-                (l, a, b)
-            } else {
-                // Beyond speed_cap: push L brighter and C more saturated.
-                let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
-                let l = (tgt_l + (0.92 - tgt_l) * extra * 0.45).min(0.93);
-                let c_scale = 1.0 + extra * 0.40;
-                (l, tgt_a * c_scale, tgt_b * c_scale)
-            };
-
-            // Output hue rotation: only when explicitly enabled (--pos-color-out).
-            // wheel_rotation is input-only by default; pos_rot also drives output when opted in.
-            if dp.pos_rotation_output {
-                let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
-                let (oca, osa) = (out_angle.cos(), out_angle.sin());
-                (l, a * oca - b * osa, a * osa + b * oca)
-            } else {
-                (l, a, b)
+    for line in raw.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') { continue; }
+        if let Some((key, val)) = line.split_once('=') {
+            let rgb = parse_hex_color(val)
+                .unwrap_or_else(|| panic!("invalid hex colour {:?} in palettes/active.txt", val.trim()));
+            match key.trim() {
+                "zero"  => zero  = Some(rgb),
+                "right" => right = Some(rgb),
+                "left"  => left  = Some(rgb),
+                "down"  => down  = Some(rgb),
+                "up"    => up    = Some(rgb),
+                other   => panic!("unknown palette key {:?} in palettes/active.txt", other),
             }
         }
+    }
+
+    let zero  = zero .expect("palettes/active.txt missing 'zero'");
+    let right = right.expect("palettes/active.txt missing 'right'");
+    let left  = left .expect("palettes/active.txt missing 'left'");
+    let down  = down .expect("palettes/active.txt missing 'down'");
+    let up    = up   .expect("palettes/active.txt missing 'up'");
+
+    DirectionalPalette::build(zero, right, left, down, up, pos_rotation_enabled, pos_rotation_output)
+}
+
+fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, dp: &DirectionalPalette) -> (f32, f32, f32) {
+    let spd = (vx * vx + vy * vy).sqrt();
+
+    // t = 0 → still (zero-speed anchor), t = 1 → speed_cap, up to ~2.0 beyond.
+    let t = spd / speed_cap;
+
+    let pos_rot = if dp.pos_rotation_enabled {
+        px / W() as f32 + (py / H() as f32) * 3.0
+    } else { 0.0 };
+
+    let dark = dp.dark;
+    let tgt = if spd > 1e-6 {
+        dp.directional_color(vx / spd, vy / spd, px, py)
+    } else {
+        dark
+    };
+
+    let (l, a, b) = if t <= 1.0 {
+        oklch_lerp(dark, tgt, t)
+    } else {
+        // Beyond speed_cap: push L brighter and C more saturated via Oklch.
+        let (tl, tc, th) = to_lch(tgt.0, tgt.1, tgt.2);
+        let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
+        let l = (tl + (0.92 - tl) * extra * 0.45).min(0.93);
+        let c = tc * (1.0 + extra * 0.40);
+        (l, c * th.cos(), c * th.sin())
+    };
+
+    if dp.pos_rotation_output {
+        let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
+        let (oca, osa) = (out_angle.cos(), out_angle.sin());
+        (l, a * oca - b * osa, a * osa + b * oca)
+    } else {
+        (l, a, b)
     }
 }
 
