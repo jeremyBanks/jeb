@@ -1605,10 +1605,10 @@ fn main() {
         .unwrap_or(128);
 
     let total_frames = seconds * FPS as usize;
-    let n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES;
+    let est_n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES; // estimate only; actual varies
 
-    println!("gravity: {}s × {}fps = {} frames, {} chunks of {} frames",
-        seconds, FPS, total_frames, n_chunks, CHUNK_FRAMES);
+    println!("gravity: {}s × {}fps = {} frames, ~{} chunks (dynamic sizing {}..{}s per chunk)",
+        seconds, FPS, total_frames, est_n_chunks, CHUNK_TARGET_SECS as usize, CHUNK_MAX_SECS as usize);
 
     // ── GOOD SETTINGS (local optimum, Feb 21 2026) ───────────────────────────
     // These defaults produce genuinely interesting dynamics: Conway-active clusters
