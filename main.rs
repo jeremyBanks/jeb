@@ -1510,7 +1510,8 @@ fn main() {
     let no_audio    = headless || args.iter().any(|a| a == "--no-audio"); // skip audio synthesis
     let wrap   = args.iter().any(|a| a == "--wrap");    // default: hard walls (no wrap)
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
-    let dampen = args.iter().any(|a| a == "--dampen");  // default: off
+    let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+    let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
         .and_then(|s| s.parse().ok())
         .unwrap_or(44);
