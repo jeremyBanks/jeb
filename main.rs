@@ -1530,7 +1530,8 @@ fn main() {
     let bounce_x  = args.iter().any(|a| a == "--bounce-x");
     let bounce_y  = args.iter().any(|a| a == "--bounce-y");
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
-    let pos_rotation_enabled = args.iter().any(|a| a == "--pos-color"); // default: off; opt-in
+    let pos_rotation_enabled = !args.iter().any(|a| a == "--no-pos-color"); // default: on
+    let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
