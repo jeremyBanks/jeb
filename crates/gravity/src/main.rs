@@ -2771,16 +2771,16 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (lab_l, lab_a, lab_b)
 }
 
-/// Directional colour anchors (OKLab).  Velocity direction selects four basis colours
-/// via squared-clamp weights that sum to 1 on the unit circle:
+/// Directional colour anchors blended in Oklch (polar Oklab).
+/// Velocity direction selects four basis colours via squared-clamp weights:
 ///   w_right = max(rx, 0)²   w_left = max(−rx, 0)²
 ///   w_down  = max(ry, 0)²   w_up   = max(−ry, 0)²
-/// where (rx, ry) is the velocity rotated by `wheel_rotation` turns
-/// (negative = CCW in screen space).  Weights sum to 1 naturally; no normalisation needed.
+/// where (rx, ry) is the velocity rotated by `wheel_rotation` turns.
+/// L and C blend linearly; H blends via unit-vector mean (arc, not through neutral).
+/// This keeps diagonals on the hue arc — no accidental white from opposite hue cancellation.
 ///
 /// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
-/// down  / up    → warm family (#F44BCC hot-pink    / #F6F9FC near-white)
-/// diagonal blends give intermediate colours.
+/// down  / up    → warm family (#FFC01F gold / #EA2261 hot-pink)
 /// zero-speed anchor: #061B31 dark navy.
 #[derive(Clone, Debug)]
 struct DirectionalPalette {
