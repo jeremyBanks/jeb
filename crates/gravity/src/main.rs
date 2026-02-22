@@ -1734,23 +1734,47 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize) {
+fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize, tile_2x2: bool) {
     // ffmpeg glob requires sorted files — they're zero-padded so glob order = numeric order
-    let scale = format!("scale={}:{}:flags=neighbor", OUT_W * 2, OUT_H * 2); // 2× NN upscale in segments
-    let status = Command::new("ffmpeg")
-        .args([
-            "-y",
-            "-framerate", &FPS.to_string(),
-            "-pattern_type", "glob",
-            "-i", &format!("{frames_dir}/*.png"),
-            "-vf", &scale,
-            "-c:v", "libx264",
-            "-crf", &CRF.to_string(),
-            "-pix_fmt", "yuv420p",
-            seg_path,
-        ])
-        .status()
-        .expect("ffmpeg failed");
+    let ow = OUT_W * 2;
+    let oh = OUT_H * 2;
+    let status = if tile_2x2 {
+        // Tile the frame 2×2 then scale back to normal output size (each copy is half-size).
+        let fc = format!(
+            "[0:v]split=4[a][b][c][d];[a][b]hstack[top];[c][d]hstack[bot];[top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        );
+        Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate", &FPS.to_string(),
+                "-pattern_type", "glob",
+                "-i", &format!("{frames_dir}/*.png"),
+                "-filter_complex", &fc,
+                "-map", "[out]",
+                "-c:v", "libx264",
+                "-crf", &CRF.to_string(),
+                "-pix_fmt", "yuv420p",
+                seg_path,
+            ])
+            .status()
+            .expect("ffmpeg failed")
+    } else {
+        let scale = format!("scale={ow}:{oh}:flags=neighbor");
+        Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate", &FPS.to_string(),
+                "-pattern_type", "glob",
+                "-i", &format!("{frames_dir}/*.png"),
+                "-vf", &scale,
+                "-c:v", "libx264",
+                "-crf", &CRF.to_string(),
+                "-pix_fmt", "yuv420p",
+                seg_path,
+            ])
+            .status()
+            .expect("ffmpeg failed")
+    };
     assert!(status.success(), "ffmpeg exited non-zero for {seg_path}");
     println!("  encoded {n_frames} frames → {seg_path}");
 }
@@ -1831,6 +1855,7 @@ fn main() {
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
     let pos_rotation_enabled = !args.iter().any(|a| a == "--no-pos-color"); // default: on
     let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
+    let tile_2x2             =  args.iter().any(|a| a == "--tile-2x2");      // default: off
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
@@ -1939,7 +1964,7 @@ fn main() {
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nsteer:         {steer}\n\
-         pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\n\
+         pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\ntile_2x2:      {tile_2x2}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
     );
@@ -2058,7 +2083,7 @@ fn main() {
             // Encode chunk
             let enc_t0 = std::time::Instant::now();
             let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
-            encode_chunk(&frames_dir, &seg_path, this_chunk_frames);
+            encode_chunk(&frames_dir, &seg_path, this_chunk_frames, tile_2x2);
             mux_audio_into_segment(&seg_path, &chunk_audio);
             enc_ms = enc_t0.elapsed().as_millis();
 
@@ -2102,7 +2127,7 @@ fn main() {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
                         ep_seg_start + ep_frame - ep_chunk_frames.len());
-                    encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len());
+                    encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len(), tile_2x2);
                     writeln!(seg_list, "file '{seg_path}'").unwrap();
                     seg_list.flush().unwrap();
                     delete_frames(&frames_dir);
@@ -2148,7 +2173,7 @@ fn main() {
             if ep_chunk_frames.len() == CHUNK_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
-                    encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len());
+                    encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len(), tile_2x2);
                     writeln!(seg_list, "file '{seg_path}'").unwrap();
                     seg_list.flush().unwrap();
                     delete_frames(&frames_dir);
