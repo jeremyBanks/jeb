@@ -15,79 +15,63 @@ const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 1920; // 32s at 60fps
 
 // ── Audio constants ────────────────────────────────────────────────────────
-const SAMPLE_RATE: u32    = 44100;
-const SAMPLES_PER_FRAME: usize = 735; // 44100 / 60, truncated (acceptable drift)
-const AUDIO_BASE_FREQ: f32  = 130.81; // C3
-const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
-const AUDIO_SLEW: f32       = 0.05;   // per-sample freq snap (fast — less glide between scale degrees)
-const AUDIO_AMP_SCALE: f32  = 0.0015; // per-voice amplitude scale; tanh handles headroom
-const AUDIO_ATTACK: usize   = 1058;   // 24 ms — softer onset, less click
-const AUDIO_RELEASE: usize  = 88200;  // 2 seconds — long enough to outlive Conway deaths smoothly
+const SAMPLE_RATE: u32         = 44100;
+const SAMPLES_PER_FRAME: usize = 735;    // 44100 / 60, truncated (acceptable drift)
+const AUDIO_AMP_SCALE: f32     = 0.0015; // per-voice scale; tanh handles headroom
 
-#[derive(Clone, Copy, PartialEq)]
-enum VoiceKind {
-    Sustain,  // moving cell — sustained while cell keeps moving
-    Birth,    // Conway birth — sine ping, 150ms decay, no sustain
-    Death,    // Conway death — saw thud, 70ms decay + pitch drop
+// 8 direction buckets (clockwise from East): C major pentatonic over 2 octaves
+// E=C4  SE=D4  S=E4  SW=G4  W=A4  NW=C5  N=E5  NE=G5
+const BUCKET_FREQS: [f32; 8] = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 659.25, 783.99];
+
+const TREM_RATE:        f32 = 5.5;   // Hz
+const PITCH_BEND_MAX:   f32 = 30.0;  // cents ±
+const PAN_MAX:          f32 = 0.25;  // ± — signal stays strong in both channels at all times
+const BASE_REVERB_SEND: f32 = 0.55;
+const REVERB_Y_RANGE:   f32 = 0.12;  // top of screen → this much extra reverb vs bottom
+const MAX_TREMOLO:      f32 = 0.35;
+const MAX_NOISE:        f32 = 0.04;
+const FIXED_CUTOFF:     f32 = 0.1568; // one-pole LP ≈ 1200 Hz: 1-exp(-2π×1200/44100)
+
+// Slew rates per frame: val += (target - val) * α
+const SLEW_AMP:    f32 = 0.15; // half-life ~4 frames / 72 ms
+const SLEW_PITCH:  f32 = 0.12;
+const SLEW_TREM:   f32 = 0.10;
+const SLEW_NOISE:  f32 = 0.10;
+const SLEW_PAN:    f32 = 0.08; // half-life ~8 frames / 133 ms
+const SLEW_REVERB: f32 = 0.05; // half-life ~14 frames / 230 ms — most stable
+
+/// Per-frame statistics accumulated for one 45° direction bucket.
+#[derive(Default, Clone, Copy)]
+struct BucketStats {
+    move_mag_sum:  f32, // Σ speed of cells that actually crossed a grid square in this dir
+    stuck_mag_sum: f32, // Σ speed of cells blocked from crossing in this dir
+    angle_dev_sum: f32, // Σ (vel_angle − bucket_centre_angle) for movers
+    angle_dev_n:   f32, // count of movers contributing to angle_dev
+    wx_sum:        f32, // weighted Σ x-position (movers weight=1, stuck weight=1/64)
+    wy_sum:        f32, // weighted Σ y-position
+    w_total:       f32, // Σ weight
 }
 
-struct AudioEvent {
-    kind: VoiceKind,
-    px: f32, py: f32,
-    vx: f32, vy: f32,
+/// One persistent directional voice — always active, amplitude→0 when idle.
+struct DirVoice {
+    base_freq:     f32,
+    phase:         f32,
+    tremolo_phase: f32,
+    filter_state:  f32,
+    // smoothed parameters (slewed each frame)
+    amplitude:     f32,
+    pitch_cents:   f32,
+    tremolo_depth: f32,
+    noise_level:   f32,
+    pan:           f32,
+    reverb_send:   f32,
 }
-
-struct Voice {
-    kind: VoiceKind,
-    phase: f32,
-    current_freq: f32,
-    target_freq: f32,
-    pitch_drop: f32,           // per-sample pitch multiplier for Death glide
-    filter_state: f32,         // one-pole LP memory
-    current_cutoff: f32,
-    target_cutoff: f32,
-    sin_angle: f32,            // waveform blend: -1=pure sine, +1=triangle
-    current_amp: f32,
-    target_amp: f32,
-    current_pan: f32,          // stereo position: -1=full left, 0=center, +1=full right
-    target_pan: f32,
-    attack_samples: usize,
-    releasing: bool,
-    release_samples: usize,
-    release_total: usize,      // varies by kind
-    refreshed: bool,
-    init_delay: usize,         // samples to skip before voice starts (event temporal spreading)
-}
-
-impl Voice {
-    fn new_sustain(freq: f32) -> Self {
-        Voice {
-            kind: VoiceKind::Sustain,
-            phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop: 1.0,
-            filter_state: 0.0, current_cutoff: 0.02, target_cutoff: 0.02,
-            sin_angle: 0.0, current_amp: 0.0, target_amp: 0.0,
-            current_pan: 0.0, target_pan: 0.0,
-            attack_samples: 0, releasing: false,
-            release_samples: 0, release_total: AUDIO_RELEASE, refreshed: true,
-            init_delay: 0,
-        }
-    }
-    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32, pan: f32, delay: usize) -> Self {
-        let (release_total, pitch_drop) = match kind {
-            VoiceKind::Birth => (6615_usize,  1.0_f32),         // 150ms
-            VoiceKind::Death => (3087_usize,  0.9997_f32),      // 70ms, drops ~half-step
-            VoiceKind::Sustain => (AUDIO_RELEASE, 1.0),
-        };
-        Voice {
-            kind,
-            phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop,
-            filter_state: 0.0, current_cutoff: cutoff, target_cutoff: cutoff,
-            sin_angle, current_amp: amp, target_amp: amp,
-            current_pan: pan, target_pan: pan,
-            attack_samples: 0,              // ramp up through attack before releasing
-            releasing: false,               // attack first, then release kicks in
-            release_samples: 0, release_total, refreshed: true,
-            init_delay: delay,
+impl DirVoice {
+    fn new(base_freq: f32) -> Self {
+        DirVoice {
+            base_freq, phase: 0.0, tremolo_phase: 0.0, filter_state: 0.0,
+            amplitude: 0.0, pitch_cents: 0.0, tremolo_depth: 0.0,
+            noise_level: 0.0, pan: 0.0, reverb_send: BASE_REVERB_SEND,
         }
     }
 }
