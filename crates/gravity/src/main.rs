@@ -3398,3 +3398,20 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
                     ep_chunk_frames.clear();
                 }
             }
+
+// [recovery] edit target not found, appending:
+//   Velocity direction θ → position on a circular spline through the palette colours.
+//   Speed ramp: zero-speed anchor → palette colour at speed_cap.
+//   Beyond speed_cap (cells can reach 2×): L and C extrapolated with √ taper.
+//   Out-of-gamut colours → OKLCH chroma binary-search reduction (hue-preserving).
+//
+// Palette loaded from palettes/active.txt at the start of each segment.
+// Copy any file from palettes/ to palettes/active.txt to switch schemes mid-render.
+
+/// Parse a hex colour string like "#08223D" or "08223D" → (r, g, b).
+fn parse_hex_color(s: &str) -> Option<(u8, u8, u8)> {
+    let s = s.trim().trim_start_matches('#');
+    if s.len() != 6 { return None; }
+    let n = u32::from_str_radix(s, 16).ok()?;
+    Some(((n >> 16) as u8, ((n >> 8) & 0xFF) as u8, (n & 0xFF) as u8))
+}
