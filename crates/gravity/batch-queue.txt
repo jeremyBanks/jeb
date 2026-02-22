@@ -20,7 +20,7 @@
 # 9. Three-body spin — three circles creating chaotic orbital dance
 
 # 10. Pos-color on — cells shift color as they travel across the canvas
-pos_color_spin:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --pos-color --width 256 --height 160 --tile-2x2
+# pos_color_spin removed — no more positional color
 
 # 11. Inverted damping — strong X, weak Y (normally strong Y, weak X)
 inverted_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-x 0.0625 --dampen-y 0.015625 --vel-nudge-rate 0.03125 --width 256 --height 160 --tile-2x2
