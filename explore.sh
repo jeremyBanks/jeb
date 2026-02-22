@@ -41,7 +41,7 @@ trap "rm -rf $WORKDIR" EXIT
 
 # ── BASE PARAMS (explicitly set; configs override individual flags) ────────────
 # These match the known-good production config. Override any in CONFIGS entries.
-BASE_ARGS="--gravity 0.075 --softening 3 --speed-cap 2 --pop-target 768 --pop-band 256 --rate-limit 16 --seed-density 128 --init-vel swirl --wrap --dampen"
+BASE_ARGS="--gravity 0.125 --softening 3 --speed-cap 2 --pop-target 768 --pop-band 256 --seed-density 128 --init-vel swirl --wrap --dampen"
 # GOOD SETTINGS baseline (local optimum, Feb 21 2026).
 # eff_spd≈2.2, moved≈68-75%, p10≈2.4, spread≈50-70 — genuinely interesting dynamics.
 # Override individual flags in CONFIGS entries to explore around this point.
