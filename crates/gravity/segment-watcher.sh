@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 DISCORD_CHANNEL="1467063568712339561"
 PREVIEW_DIR="/Users/matte/.openclaw/workspace/shared/gravity"
 PREVIEW_W=512
-PREVIEW_H=320
+PREVIEW_H=-2   # auto-height preserves aspect ratio (use -2 for codec alignment)
 CLIP_FULL=2      # seconds at full speed per clip section
 CLIP_SLOW_SRC=1  # seconds of source for slow section (→ 3s output at 1/3 speed)
 SLOW_FPS=20
