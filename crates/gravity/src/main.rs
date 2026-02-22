@@ -2706,7 +2706,7 @@ struct DirectionalPalette {
 impl DirectionalPalette {
     fn build(pos_rotation_enabled: bool) -> Self {
         DirectionalPalette {
-            dark:                rgb_to_oklab(0x06, 0x1B, 0x31),
+            dark:                rgb_to_oklab(0xF4, 0x4B, 0xCC),  // #F44BCC hot-pink (was dark navy)
             c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),
             c_left:              rgb_to_oklab(0x53, 0x3A, 0xFD),
             c_down:              rgb_to_oklab(0xF4, 0x4B, 0xCC),
