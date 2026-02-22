@@ -1559,6 +1559,12 @@ fn main() {
     let parse_arg = |flag: &str| -> Option<String> {
         args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
     };
+    // Initialise resolution FIRST — W() and H() are used everywhere below.
+    let width:  usize = parse_arg("--width") .and_then(|s| s.parse().ok()).unwrap_or(256);
+    let height: usize = parse_arg("--height").and_then(|s| s.parse().ok()).unwrap_or(160);
+    W_CELL.set(width).expect("W already set");
+    H_CELL.set(height).expect("H already set");
+
     let seconds: usize = parse_arg("--seconds")
         .and_then(|s| s.parse().ok())
         .expect("Usage: gravity --seconds <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
