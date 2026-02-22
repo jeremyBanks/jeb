@@ -2919,22 +2919,40 @@ impl DirectionalPalette {
     }
 }
 
-#[derive(Clone, Debug)]
-enum PaletteMode {
-    /// Original: speed→L/C, direction→hue uniformly (fallback).
-    Classic,
-    /// 4-directional weights: left/right=blue, up/down=warm, zero-speed=dark navy.
-    Radical(DirectionalPalette),
-}
+/// Default fallback colors used when palettes/active.txt is missing or unparseable.
+const DEFAULT_ZERO:  (u8,u8,u8) = (0x08, 0x22, 0x3D);
+const DEFAULT_RIGHT: (u8,u8,u8) = (0x53, 0x3A, 0xFD);
+const DEFAULT_LEFT:  (u8,u8,u8) = (0x63, 0x5B, 0xFF);
+const DEFAULT_DOWN:  (u8,u8,u8) = (0xFF, 0xC0, 0x1F);
+const DEFAULT_UP:    (u8,u8,u8) = (0xEA, 0x22, 0x61);
 
-fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> PaletteMode {
-    let raw = std::fs::read_to_string("/tmp/gravity_palette").unwrap_or_default();
-    let s = raw.trim().to_lowercase();
-    if s.starts_with("classic") {
-        PaletteMode::Classic
-    } else {
-        PaletteMode::Radical(DirectionalPalette::build(pos_rotation_enabled, pos_rotation_output))
+fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> DirectionalPalette {
+    let mut zero  = DEFAULT_ZERO;
+    let mut right = DEFAULT_RIGHT;
+    let mut left  = DEFAULT_LEFT;
+    let mut down  = DEFAULT_DOWN;
+    let mut up    = DEFAULT_UP;
+
+    if let Ok(raw) = std::fs::read_to_string("palettes/active.txt") {
+        for line in raw.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') { continue; }
+            if let Some((key, val)) = line.split_once('=') {
+                if let Some(rgb) = parse_hex_color(val) {
+                    match key.trim() {
+                        "zero"  => zero  = rgb,
+                        "right" => right = rgb,
+                        "left"  => left  = rgb,
+                        "down"  => down  = rgb,
+                        "up"    => up    = rgb,
+                        _ => {}
+                    }
+                }
+            }
+        }
     }
+
+    DirectionalPalette::build(zero, right, left, down, up, pos_rotation_enabled, pos_rotation_output)
 }
 
 fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
