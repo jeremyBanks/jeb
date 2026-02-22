@@ -2112,7 +2112,7 @@ use std::io::{BufWriter, Write};
         // e.g. vel_nudge = -11/360 → "11° above right" target; convergence half-life ≈ 22 frames.
         if self.vel_nudge != 0.0 {
             let target_h = self.vel_nudge * std::f32::consts::TAU;  // turns → radians
-            const RATE: f32 = 1.0 / 32.0;
+            let rate = self.vel_nudge_rate;
             for c in &mut self.cells {
                 let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
                 if spd < 1e-6 { continue; }
@@ -2121,7 +2121,7 @@ use std::io::{BufWriter, Write};
                 let mut dh = target_h - cur_h;
                 while dh >  std::f32::consts::PI { dh -= std::f32::consts::TAU; }
                 while dh < -std::f32::consts::PI { dh += std::f32::consts::TAU; }
-                let theta = dh * RATE;
+                let theta = dh * rate;
                 let (sin_t, cos_t) = theta.sin_cos();
                 let nvx = c.vx * cos_t - c.vy * sin_t;
                 let nvy = c.vx * sin_t + c.vy * cos_t;
