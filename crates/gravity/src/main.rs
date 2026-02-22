@@ -2104,6 +2104,20 @@ use std::io::{BufWriter, Write};
             }
         }
 
+        // Per-frame velocity nudge: rotate every cell's velocity vector by vel_nudge turns.
+        // Positive = CCW (standard math); negative = CW (nudges rightward cells upward on screen).
+        // e.g. vel_nudge = -1/1024 turns/frame ≈ -0.35°/frame → steady-state clockwise orbit.
+        if self.vel_nudge != 0.0 {
+            let theta = self.vel_nudge * std::f32::consts::TAU;
+            let (sin_t, cos_t) = theta.sin_cos();
+            for c in &mut self.cells {
+                let nvx = c.vx * cos_t - c.vy * sin_t;
+                let nvy = c.vx * sin_t + c.vy * cos_t;
+                c.vx = nvx;
+                c.vy = nvy;
+            }
+        }
+
         // Movement: float positions, collision by grid square.
         // Process in shuffled order. Each cell computes its target float position (px+vx, py+vy).
         // If the target grid square is free: move (update both float pos and grid).
