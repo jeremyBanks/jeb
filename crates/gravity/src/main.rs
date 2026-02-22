@@ -11,7 +11,7 @@ const OUT_W: u32 = 256; // raw — ffmpeg upscales to 3840×2400 at concat
 const OUT_H: u32 = 160;
 const FPS: u32 = 60;
 const CRF: u32 = 12;
-const CHUNK_FRAMES: usize = 1920; // 32s at 60fps
+const CHUNK_FRAMES: usize = 4096; // 68.3s at 60fps → 64 segments for a 64³-frame run
 
 // ── Audio constants ────────────────────────────────────────────────────────
 const SAMPLE_RATE: u32         = 44100;
@@ -174,7 +174,8 @@ struct Sim {
     prev_live: Vec<bool>,
     wrap: bool,    // toroidal wrapping (false = hard walls)
     steer: bool,   // counter-rotate velocity to compensate discrete-move angular error
-    dampen: bool,  // nudge system COM velocity toward zero each tick (--dampen flag)
+    dampen_x: f32, // horizontal COM-drift removal per tick: fraction = dampen_x/512 (0=off)
+    dampen_y: f32, // vertical   COM-drift removal per tick: fraction = dampen_y/512 (0=off)
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
@@ -333,7 +334,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool,
-           dampen: bool, init_vel: &str, circles: usize, vel_scale: f32) -> Self {
+           dampen_x: f32, dampen_y: f32, init_vel: &str, circles: usize, vel_scale: f32) -> Self {
         use std::f32::consts::PI;
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
@@ -531,7 +532,7 @@ impl Sim {
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
+              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen_x, dampen_y,
               conway_births: 0, conway_deaths: 0, next_id,
               bucket_stats: [BucketStats::default(); 8],
               dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
@@ -570,7 +571,7 @@ impl Sim {
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
                        pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
-                       target_pop: usize, wrap: bool, steer: bool, dampen: bool)
+                       target_pop: usize, wrap: bool, steer: bool, dampen_x: f32, dampen_y: f32)
         -> Option<(Self, Vec<f32>, usize)>
     {
         let buf = fs::read(path).ok()?;
@@ -617,7 +618,7 @@ impl Sim {
         let order = (0..cells.len()).collect();
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit,
-                        tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen,
+                        tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen_x, dampen_y,
                         conway_births: 0, conway_deaths: 0,
                         next_id,
                         bucket_stats: [BucketStats::default(); 8],
@@ -857,16 +858,17 @@ impl Sim {
             c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
         }
 
-        // Momentum damping: nudge system COM velocity toward zero by 1/512 per tick.
-        // Only active when --dampen flag is set (useful for wrap mode to prevent COM drift).
-        if self.dampen && !self.cells.is_empty() {
+        // Momentum damping: remove a fraction of COM velocity each tick.
+        // dampen_x/dampen_y are scale factors; 1.0 = 1/512 removed per tick.
+        if (self.dampen_x > 0.0 || self.dampen_y > 0.0) && !self.cells.is_empty() {
             let n = self.cells.len() as f32;
             let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
             let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
-            let damp = 1.0 / 512.0;
+            let fx = self.dampen_x / 512.0;
+            let fy = self.dampen_y / 512.0;
             for c in &mut self.cells {
-                c.vx -= avg_vx * damp;
-                c.vy -= avg_vy * damp;
+                c.vx -= avg_vx * fx;
+                c.vy -= avg_vy * fy;
             }
         }
 
@@ -1771,7 +1773,8 @@ fn main() {
     let no_audio    = headless || args.iter().any(|a| a == "--no-audio"); // skip audio synthesis
     let wrap   = args.iter().any(|a| a == "--wrap");    // default: hard walls (no wrap)
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
-    let dampen = args.iter().any(|a| a == "--dampen");  // default: off
+    let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+    let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
         .and_then(|s| s.parse().ok())
         .unwrap_or(44);
@@ -1868,7 +1871,7 @@ fn main() {
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
-         wrap:          {wrap}\ndampen:        {dampen}\nsteer:         {steer}\n\
+         wrap:          {wrap}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nsteer:         {steer}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
     );
@@ -1882,7 +1885,7 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen_x, dampen_y)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
@@ -1893,7 +1896,7 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen, &init_vel, circles, vel_scale);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap, steer, dampen_x, dampen_y, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
