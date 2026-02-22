@@ -3016,3 +3016,14 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
          pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\ntile_2x2:      {tile_2x2}\n\
          resolution:    {}x{} → {}x{}\n",
         width, height, width * 2, height * 2
+
+// [recovery] edit target not found, appending:
+        // Clustering: divide grid into BLK×BLK blocks, count occupied blocks
+        // Low blk = tight clusters; high blk = spread across grid
+        const BLK: usize = 8;
+        let brows = (H() + BLK - 1) / BLK;
+        let bcols = (W() + BLK - 1) / BLK;
+        let btotal = brows * bcols;
+        let mut block_occ = vec![false; btotal];
+        let mut max_in_block = 0u16;
+        let mut block_counts = vec![0u16; btotal];
