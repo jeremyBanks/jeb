@@ -2694,7 +2694,7 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 /// zero-speed anchor: #061B31 dark navy.
 #[derive(Clone, Debug)]
 struct DirectionalPalette {
-    dark:           (f32, f32, f32),  // #061B31
+    dark:           (f32, f32, f32),  // slow/still anchor colour
     c_right:        (f32, f32, f32),  // #635BFF  periwinkle — +x
     c_left:         (f32, f32, f32),  // #533AFD  violet     — −x
     c_down:         (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
