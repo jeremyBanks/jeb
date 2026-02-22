@@ -119,8 +119,6 @@ while true; do
             continue
         fi
 
-        (( chunk_count++ )) || true
-        chunk_num=$chunk_count
         # Percentage based on actual frame offset (accurate regardless of chunk size)
         if [ "$TOTAL_FRAMES" -gt 0 ]; then
             PCT=$(( frame_offset * 100 / TOTAL_FRAMES ))
@@ -128,6 +126,8 @@ while true; do
             PCT="?"
         fi
 
+        # chunk_num assigned tentatively; only incremented on successful send
+        chunk_num=$(( chunk_count + 1 ))
         preview="${PREVIEW_DIR}/preview_${RUN_ID}_chunk${chunk_num}.mp4"
 
         if make_preview "$seg" "$preview"; then
@@ -184,6 +184,7 @@ ${STATE_MSG}"
                 -t "$DISCORD_CHANNEL" \
                 --media "$preview" \
                 -m "$MSG"; then
+                (( chunk_count++ )) || true
                 echo "[watcher] sent chunk $chunk_num ($META)"
                 echo "$seg" >> "$SEEN_FILE"
                 LAST_TIME=$NOW

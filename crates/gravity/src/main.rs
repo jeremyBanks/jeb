@@ -2221,8 +2221,10 @@ fn main() {
         if !headless {
             let enc_t0 = std::time::Instant::now();
             let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
-            encode_chunk(&frames_dir, &seg_path, local_frame, tile_2x2);
-            mux_audio_into_segment(&seg_path, &chunk_audio);
+            let seg_tmp  = format!("{seg_path}.tmp");
+            encode_chunk(&frames_dir, &seg_tmp, local_frame, tile_2x2);
+            mux_audio_into_segment(&seg_tmp, &chunk_audio);
+            fs::rename(&seg_tmp, &seg_path).expect("rename segment");
             enc_ms = enc_t0.elapsed().as_millis();
             writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
             seg_list.flush().unwrap();
@@ -2262,7 +2264,9 @@ fn main() {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
                         ep_seg_start + ep_frame - ep_chunk_frames.len());
-                    encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len(), tile_2x2);
+                    let seg_tmp = format!("{seg_path}.tmp");
+                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2);
+                    fs::rename(&seg_tmp, &seg_path).expect("rename epilogue segment");
                     writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
                     seg_list.flush().unwrap();
                     delete_frames(&frames_dir);
@@ -2308,7 +2312,9 @@ fn main() {
             if ep_chunk_frames.len() >= CHUNK_MIN_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
-                    encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len(), tile_2x2);
+                    let seg_tmp = format!("{seg_path}.tmp");
+                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2);
+                    fs::rename(&seg_tmp, &seg_path).expect("rename epilogue segment");
                     writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
                     seg_list.flush().unwrap();
                     delete_frames(&frames_dir);

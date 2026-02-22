@@ -1,10 +1,7 @@
 # ── KNOWN-GOOD CONFIGS ────────────────────────────────────────────────────────
-3am_baseline:--gravity 0.03125 --softening 6 --speed-cap 4.5 --pop-target 5120 --pop-band 160 --rate-limit 4 --init-vel zero --wrap --width 256 --height 160 --tile-2x2
-radout_x2_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --vel-nudge-rate 0.03125 --width 256 --height 160 --tile-2x2
 
 # ── WILDLY DIFFERENT EXPLORATIONS ────────────────────────────────────────────
 # 1. Slow Conway gas cloud — low gravity, huge population, swirl, both axes damped
-gas_cloud:--gravity 0.015625 --softening 6 --speed-cap 3 --pop-target 4096 --pop-band 512 --rate-limit 32 --init-vel swirl --wrap --dampen-x 0.03125 --dampen-y 0.03125 --width 256 --height 160 --tile-2x2
 
 # 2. Mosh pit — high rate, random chaos, medium gravity
 mosh_pit:--gravity 0.125 --softening 4 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 256 --init-vel random --wrap --width 256 --height 160 --tile-2x2
