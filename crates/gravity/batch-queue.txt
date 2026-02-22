@@ -16,10 +16,8 @@
 # 7. Spin-flat — flattened vortex, horizontal band dynamics
 
 # 8. Upward nudge — all cells steered toward up over time
-nudge_up:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.25 --vel-nudge-rate 0.0625 --width 256 --height 160 --tile-2x2
 
 # 9. Three-body spin — three circles creating chaotic orbital dance
-three_body:--gravity 0.165 --softening 3 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 3 --vel-scale 1.5 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160 --tile-2x2
 
 # 10. Pos-color on — cells shift color as they travel across the canvas
 pos_color_spin:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --pos-color --width 256 --height 160 --tile-2x2
@@ -196,3 +194,39 @@ radout_xonly:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 -
 radout_ydamp_strong:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-y 0.125 --width 256 --height 160
 
 veldecay_slowerdecay:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --vel-decay 0.9998 --width 256 --height 160
+
+# ── SOFTENING SWEEP — fractional steps around known-good configs ──────────────
+# radout base: G=0.165, cap=4.9, damp_x=0.015625, damp_y=0.0625 (soft was 3.5)
+# veldecay base: G=0.165, cap=4.9, damp_y=0.0625, vel_decay=0.9995 (soft was 3.5)
+# bounce base: G=0.2, cap=4, no-wrap (soft was 3.0)
+# threads base: G=0.15, cap=4, 15 circles, wrap (soft was 4.0)
+
+veldecay_soft30:--gravity 0.165 --softening 3.0 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --width 256 --height 160
+
+radout_soft375:--gravity 0.165 --softening 3.75 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --width 256 --height 160
+
+threads_soft35:--gravity 0.15 --softening 3.5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --init-vel spin --wrap --width 256 --height 160
+
+bounce_soft35:--gravity 0.2 --softening 3.5 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --width 256 --height 160
+
+radout_soft30:--gravity 0.165 --softening 3.0 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --width 256 --height 160
+
+veldecay_soft375:--gravity 0.165 --softening 3.75 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --width 256 --height 160
+
+threads_soft45:--gravity 0.15 --softening 4.5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --init-vel spin --wrap --width 256 --height 160
+
+radout_soft325:--gravity 0.165 --softening 3.25 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --width 256 --height 160
+
+bounce_soft25:--gravity 0.2 --softening 2.5 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --width 256 --height 160
+
+veldecay_soft40:--gravity 0.165 --softening 4.0 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --width 256 --height 160
+
+threads_soft30:--gravity 0.15 --softening 3.0 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --init-vel spin --wrap --width 256 --height 160
+
+radout_soft40:--gravity 0.165 --softening 4.0 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --width 256 --height 160
+
+veldecay_soft325:--gravity 0.165 --softening 3.25 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --width 256 --height 160
+
+threads_soft50:--gravity 0.15 --softening 5.0 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --init-vel spin --wrap --width 256 --height 160
+
+radout_soft45:--gravity 0.165 --softening 4.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --width 256 --height 160
