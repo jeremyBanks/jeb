@@ -179,8 +179,8 @@ struct Sim {
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
-    voice_pool: HashMap<u64, Voice>,
-    audio_events: Vec<AudioEvent>,  // filled by conway_step, drained by generate_audio
+    bucket_stats: [BucketStats; 8], // accumulated per-frame, cleared after generate_audio
+    dir_voices:   [DirVoice; 8],    // persistent directional voices
     reverb: Reverb,
 }
 
