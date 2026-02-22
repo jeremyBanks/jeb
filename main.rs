@@ -186,7 +186,8 @@ struct Sim {
     dampen_x: f32, // fraction of COM horizontal velocity removed per tick (0=off, 0.125=fast)
     dampen_y: f32, // fraction of COM vertical   velocity removed per tick (0=off, 0.125=fast)
     vel_decay: f32,  // per-frame multiplicative speed drain applied to every cell (0=off, e.g. 1/1024)
-    vel_nudge: f32,  // target direction in turns (0=off); each frame steers velocity 1/32 of remaining angular gap toward this direction
+    vel_nudge: f32,       // target direction in turns (0=off); each frame steers velocity vel_nudge_rate of remaining angular gap
+    vel_nudge_rate: f32,  // convergence rate per frame (default 1/32); 1/8 = 4× stronger
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
