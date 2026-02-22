@@ -1430,9 +1430,10 @@ impl Sim {
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
 
-        // Speed stats: avg, max, p10 (10th percentile — "are most cells moving?")
+        // Speed stats: avg, max, p10 — stuck cells count at 1/128 speed (hint, not zero).
         let mut speeds: Vec<f32> = self.cells.iter()
-            .map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).collect();
+            .map(|c| { let s = (c.vx*c.vx+c.vy*c.vy).sqrt(); if c.moved { s } else { s / 128.0 } })
+            .collect();
         speeds.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let avg_spd = speeds.iter().sum::<f32>() / n;
         let max_spd = *speeds.last().unwrap_or(&0.0);
