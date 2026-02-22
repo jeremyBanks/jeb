@@ -2883,8 +2883,9 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
 
 // [recovery] edit target not found, appending:
                         next_id,
-                        bucket_stats: [BucketStats::default(); 8],
-                        dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
+                        region_stats: [RegionStats::default(); 9],
+                        region_voices: std::array::from_fn(|i| RegionVoice::new(
+                            REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
                         reverb: Reverb::new() };
 
 // [recovery] edit target not found, appending:
