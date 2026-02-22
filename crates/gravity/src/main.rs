@@ -2974,7 +2974,7 @@ fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Direct
     let left  = left .expect("palettes/active.txt missing 'left'");
     let down  = down .expect("palettes/active.txt missing 'down'");
     let up    = up   .expect("palettes/active.txt missing 'up'");
-    let wheel = wheel.unwrap_or(0.0);
+    let wheel = wheel.expect("palettes/active.txt missing 'wheel_rotation'");
 
     DirectionalPalette::build(zero, right, left, down, up, wheel, pos_rotation_enabled, pos_rotation_output)
 }
