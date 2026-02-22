@@ -174,6 +174,8 @@ struct Sim {
     prev_live: Vec<bool>,
     wrap_x: bool,  // toroidal wrapping on x-axis (horizontal)
     wrap_y: bool,  // toroidal wrapping on y-axis (vertical)
+    bounce_x: bool, // reflect velocity at x boundaries (gravity: no-wrap force)
+    bounce_y: bool, // reflect velocity at y boundaries (gravity: no-wrap force)
     steer: bool,   // counter-rotate velocity to compensate discrete-move angular error
     dampen_x: f32, // fraction of COM horizontal velocity removed per tick (0=off, 0.125=fast)
     dampen_y: f32, // fraction of COM vertical   velocity removed per tick (0=off, 0.125=fast)
@@ -335,7 +337,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, seed_density_inv: usize, target_pop: usize,
-           wrap_x: bool, wrap_y: bool, steer: bool,
+           wrap_x: bool, wrap_y: bool, bounce_x: bool, bounce_y: bool, steer: bool,
            dampen_x: f32, dampen_y: f32, init_vel: &str, circles: usize, vel_scale: f32) -> Self {
         use std::f32::consts::PI;
         let mut rng = rng_seed;
@@ -534,7 +536,7 @@ impl Sim {
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap_x, wrap_y, steer, dampen_x, dampen_y,
+              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
               conway_births: 0, conway_deaths: 0, next_id,
               bucket_stats: [BucketStats::default(); 8],
               dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
@@ -573,7 +575,8 @@ impl Sim {
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
                        pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
-                       target_pop: usize, wrap_x: bool, wrap_y: bool, steer: bool,
+                       target_pop: usize, wrap_x: bool, wrap_y: bool,
+                       bounce_x: bool, bounce_y: bool, steer: bool,
                        dampen_x: f32, dampen_y: f32)
         -> Option<(Self, Vec<f32>, usize)>
     {
@@ -621,7 +624,7 @@ impl Sim {
         let order = (0..cells.len()).collect();
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit,
-                        tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, steer, dampen_x, dampen_y,
+                        tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
                         conway_births: 0, conway_deaths: 0,
                         next_id,
                         bucket_stats: [BucketStats::default(); 8],
@@ -905,12 +908,29 @@ impl Sim {
             };
             let old_gx = ((cpx.floor() as i32).rem_euclid(W as i32)) as usize;
             let old_gy = ((cpy.floor() as i32).rem_euclid(H as i32)) as usize;
-            let rx = cpx + cvx; let ry = cpy + cvy;
-            // Per-axis: wrap or bounds-check independently
-            let new_px = if self.wrap_x { rx.rem_euclid(W as f32) }
-                         else { if rx < 0.0 || rx >= W as f32 { continue; } rx };
-            let new_py = if self.wrap_y { ry.rem_euclid(H as f32) }
-                         else { if ry < 0.0 || ry >= H as f32 { continue; } ry };
+            // Resolve position per axis: wrap / bounce / hard-wall
+            let mut nx = cpx + cvx;
+            let mut ny = cpy + cvy;
+            let mut nvx = cvx;
+            let mut nvy = cvy;
+            // X axis
+            if self.wrap_x {
+                nx = nx.rem_euclid(W as f32);
+            } else if self.bounce_x {
+                if nx < 0.0       { nx = -nx;                      nvx = -nvx; }
+                else if nx >= W as f32 { nx = 2.0 * W as f32 - nx; nvx = -nvx; }
+            } else if nx < 0.0 || nx >= W as f32 { continue; }
+            // Y axis
+            if self.wrap_y {
+                ny = ny.rem_euclid(H as f32);
+            } else if self.bounce_y {
+                if ny < 0.0       { ny = -ny;                      nvy = -nvy; }
+                else if ny >= H as f32 { ny = 2.0 * H as f32 - ny; nvy = -nvy; }
+            } else if ny < 0.0 || ny >= H as f32 { continue; }
+            // Apply any velocity changes from bounce before grid logic
+            if nvx != cvx { self.cells[idx].vx = nvx; }
+            if nvy != cvy { self.cells[idx].vy = nvy; }
+            let (new_px, new_py) = (nx, ny);
             let tgx = (new_px.floor() as i32).rem_euclid(W as i32) as usize;
             let tgy = (new_py.floor() as i32).rem_euclid(H as i32) as usize;
             let crossing = tgx != old_gx || tgy != old_gy;
@@ -1781,8 +1801,10 @@ fn main() {
     let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
     let no_audio    = headless || args.iter().any(|a| a == "--no-audio"); // skip audio synthesis
     let wrap_both = args.iter().any(|a| a == "--wrap"); // --wrap enables both axes
-    let wrap_x = wrap_both || args.iter().any(|a| a == "--wrap-x");
-    let wrap_y = wrap_both || args.iter().any(|a| a == "--wrap-y");
+    let wrap_x    = wrap_both || args.iter().any(|a| a == "--wrap-x");
+    let wrap_y    = wrap_both || args.iter().any(|a| a == "--wrap-y");
+    let bounce_x  = args.iter().any(|a| a == "--bounce-x");
+    let bounce_y  = args.iter().any(|a| a == "--bounce-y");
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
@@ -1882,7 +1904,7 @@ fn main() {
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
-         wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nsteer:         {steer}\n\
+         wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nsteer:         {steer}\n\
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
     );
@@ -1896,7 +1918,7 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap_x, wrap_y, steer, dampen_x, dampen_y)
+        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
@@ -1907,7 +1929,7 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap_x, wrap_y, steer, dampen_x, dampen_y, &init_vel, circles, vel_scale);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
