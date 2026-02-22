@@ -14,8 +14,9 @@ const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 4096; // initial chunk size; adjusted dynamically at runtime
 // Dynamic chunk target: each segment should take ~12s to render (range 12..64s).
-const CHUNK_TARGET_SECS: f64 = 12.0;
-const CHUNK_MAX_SECS:    f64 = 64.0;
+const CHUNK_MIN_SECS:    f64 = 64.0;
+const CHUNK_TARGET_SECS: f64 = 128.0;
+const CHUNK_MAX_SECS:    f64 = 512.0;
 const CHUNK_MIN_FRAMES:  usize = 64;
 const CHUNK_MAX_FRAMES:  usize = 1 << 20; // 1M frames hard cap
 
@@ -2211,7 +2212,7 @@ fn main() {
             encode_chunk(&frames_dir, &seg_path, this_chunk_frames, tile_2x2);
             mux_audio_into_segment(&seg_path, &chunk_audio);
             enc_ms = enc_t0.elapsed().as_millis();
-            writeln!(seg_list, "file '{seg_path}'").unwrap();
+            writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
             seg_list.flush().unwrap();
             delete_frames(&frames_dir);
         } else {
@@ -2227,15 +2228,16 @@ fn main() {
         let _ = fs::write("state/last_stats.txt",
             format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
 
-        // Adjust chunk_frames for next chunk: target CHUNK_TARGET_SECS wall time.
+        // Adjust chunk_frames for next chunk: target CHUNK_TARGET_SECS wall time,
+        // clamped to [CHUNK_MIN_SECS, CHUNK_MAX_SECS].
         if wall_secs > 0.5 {
             let scale = CHUNK_TARGET_SECS / wall_secs;
             let next = (chunk_frames as f64 * scale).round() as usize;
-            // Also enforce max wall time
             let fps_render = this_chunk_frames as f64 / wall_secs;
+            let min_by_time = (fps_render * CHUNK_MIN_SECS).round() as usize;
             let max_by_time = (fps_render * CHUNK_MAX_SECS).round() as usize;
-            chunk_frames = next.clamp(CHUNK_MIN_FRAMES, CHUNK_MAX_FRAMES).min(max_by_time).max(CHUNK_MIN_FRAMES);
-            println!("  next chunk_frames={chunk_frames} (wall={wall_secs:.1}s target={CHUNK_TARGET_SECS}s)");
+            chunk_frames = next.clamp(min_by_time.max(CHUNK_MIN_FRAMES), max_by_time.max(CHUNK_MIN_FRAMES));
+            println!("  next chunk_frames={chunk_frames} (wall={wall_secs:.1}s target={CHUNK_TARGET_SECS}s [{CHUNK_MIN_SECS}..{CHUNK_MAX_SECS}])");
         }
 
         chunk_start_frame = chunk_end_frame;
@@ -2261,7 +2263,7 @@ fn main() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
                         ep_seg_start + ep_frame - ep_chunk_frames.len());
                     encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len(), tile_2x2);
-                    writeln!(seg_list, "file '{seg_path}'").unwrap();
+                    writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
                     seg_list.flush().unwrap();
                     delete_frames(&frames_dir);
                     ep_chunk_frames.clear();
@@ -2307,7 +2309,7 @@ fn main() {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
                     encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len(), tile_2x2);
-                    writeln!(seg_list, "file '{seg_path}'").unwrap();
+                    writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
                     seg_list.flush().unwrap();
                     delete_frames(&frames_dir);
                     ep_chunk_frames.clear();
