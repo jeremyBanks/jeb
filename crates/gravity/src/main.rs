@@ -2291,194 +2291,98 @@ use std::io::{BufWriter, Write};
     // Pitch is attracted toward the nearest C major pentatonic degree but not
     // fully snapped — like a gravity well. Close to a note = nearly there.
     // Between two notes = pulled toward the nearer one, but still audibly between.
-    fn pentatonic_freq(t: f32) -> f32 {
-        const PULL: f32 = 0.82; // attraction strength: 0=continuous, 1=full snap
-        const DEGREES: &[f32] = &[
-            0., 2., 4., 7., 9.,
-            12., 14., 16., 19., 21.,
-            24., 26., 28., 31., 33.,
-            36.,
-        ];
-        let semitone = t.clamp(0.0, 1.0) * 36.0;
-        let nearest = DEGREES.iter().copied()
-            .min_by(|&a, &b| (a - semitone).abs().partial_cmp(&(b - semitone).abs()).unwrap())
-            .unwrap_or(0.0);
-        // Pull semitone toward nearest degree — gravity well, not hard snap
-        let attracted = semitone + (nearest - semitone) * PULL;
-        AUDIO_BASE_FREQ * 2.0_f32.powf(attracted / 12.0)
-    }
-
-    // ── Audio parameter helper ─────────────────────────────────────────────
-    // Shared by both sustain voices and event voices.
-    fn audio_params(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32)
-        -> (f32, f32, f32, f32, f32)  // (target_freq, target_cutoff, sin_angle, target_amp, pan)
-    {
-        use std::f32::consts::PI;
-        let speed = (vx * vx + vy * vy).sqrt();
-        let t = (speed / speed_cap).clamp(0.0, 1.0);
-        let (cos_th, sin_th) = if speed > 1e-6 {
-            (vx / speed, vy / speed)
-        } else { (0.0, 0.0) };
-
-        // Pitch: |sin(θ)| → pentatonic scale degree (horizontal=C3, vertical=C6)
-        // Position detune: ±5 cents shimmer — keeps clusters from sounding robotic
-        let px_a = px / W as f32 * 2.0 * PI;
-        let py_a = py / H as f32 * 2.0 * PI;
-        let detune = 2.0_f32.powf((px_a.cos() * 5.0 + py_a.sin() * 3.0) / 1200.0);
-        let target_freq = Self::pentatonic_freq(sin_th.abs()) * detune;
-
-        // Filter: cos(θ) → brightness (right=bright, left=dark), base 400 Hz ±1.5 oct
-        let cutoff_hz = 400.0 * 2.0_f32.powf(cos_th * 1.5);
-        let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-
-        // Amplitude: proportional to speed, sqrt curve
-        let target_amp = t.sqrt() * AUDIO_AMP_SCALE;
-
-        // Pan: cos(θ) — rightward=+1 (right), leftward=-1 (left), vertical=0 (center)
-        let pan = cos_th;
-
-        (target_freq, target_cutoff, sin_th, target_amp, pan)
-    }
-
     fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
         use std::f32::consts::PI;
 
-        // ── 1. Mark all sustain voices not refreshed ───────────────────────
-        for v in self.voice_pool.values_mut() {
-            if v.kind == VoiceKind::Sustain { v.refreshed = false; }
-        }
+        // ── 1. Compute raw targets from accumulated bucket stats ───────────
+        let mut amp_targets    = [0.0f32; 8];
+        let mut pitch_targets  = [0.0f32; 8];
+        let mut trem_targets   = [0.0f32; 8];
+        let mut noise_targets  = [0.0f32; 8];
+        let mut pan_targets    = [0.0f32; 8];
+        let mut reverb_targets = [BASE_REVERB_SEND; 8];
 
-        // ── 2. Update/spawn sustain voices for ALL alive cells ─────────────
-        // Voice lifetime = cell lifetime. Amplitude naturally = 0 when stationary.
-        // Release only triggers when the cell no longer exists (Conway death).
-        let speed_cap = self.speed_cap;
-        for c in &self.cells {
-            let (tfreq, tcutoff, sin_th, tamp, tpan) =
-                Self::audio_params(c.vx, c.vy, c.px, c.py, speed_cap);
-            let v = self.voice_pool.entry(c.id)
-                .or_insert_with(|| Voice::new_sustain(tfreq));
-            v.target_freq   = tfreq;
-            v.target_cutoff = tcutoff;
-            v.sin_angle     = sin_th;
-            v.target_amp    = tamp;
-            v.target_pan    = tpan;
-            v.refreshed     = true;
-            if v.releasing { v.releasing = false; v.release_samples = 0; }
-        }
+        for (bi, bs) in self.bucket_stats.iter().enumerate() {
+            amp_targets[bi] = bs.move_mag_sum + bs.stuck_mag_sum / 64.0;
 
-        // ── 3. Release sustain voices whose cell no longer exists ──────────
-        // (cell was removed by Conway death or epilogue — not by temporary blocking)
-        for v in self.voice_pool.values_mut() {
-            if v.kind == VoiceKind::Sustain && !v.refreshed && !v.releasing {
-                v.releasing = true;
+            if bs.angle_dev_n > 0.0 {
+                let dev_norm = (bs.angle_dev_sum / bs.angle_dev_n) / (PI / 8.0);
+                pitch_targets[bi] = dev_norm.clamp(-1.0, 1.0) * PITCH_BEND_MAX;
+            }
+
+            let total_mag = bs.move_mag_sum + bs.stuck_mag_sum;
+            if total_mag > 1e-6 {
+                let stuck_ratio = bs.stuck_mag_sum / total_mag;
+                trem_targets[bi]  = stuck_ratio * MAX_TREMOLO;
+                noise_targets[bi] = stuck_ratio * MAX_NOISE;
+            }
+
+            if bs.w_total > 1e-6 {
+                let avg_x = bs.wx_sum / bs.w_total;
+                let avg_y = bs.wy_sum / bs.w_total;
+                pan_targets[bi]    = (avg_x / W as f32 - 0.5) * 2.0 * PAN_MAX;
+                reverb_targets[bi] = BASE_REVERB_SEND
+                    + (1.0 - avg_y / H as f32) * REVERB_Y_RANGE;
             }
         }
 
-        // ── 4. Spawn one-shot voices for Conway events ────────────────────────
-        // Events use position-based pitch/timbre — NOT velocity.
-        // Fixed low amplitude: always audible as subtle texture, but when cells are
-        // moving the sustain voices naturally dominate the soundscape.
-        let events: Vec<AudioEvent> = self.audio_events.drain(..).collect();
-        for ev in events {
-            use std::f32::consts::PI;
-            let x_t = (ev.px / W as f32).clamp(0.0, 1.0); // 0=left … 1=right
-            let y_t = (ev.py / H as f32).clamp(0.0, 1.0); // 0=top  … 1=bottom
-            let (adj_freq, adj_cutoff, adj_sin, adj_amp) = match ev.kind {
-                VoiceKind::Birth => {
-                    let t = 0.5 + (1.0 - y_t) * 0.5;
-                    let freq = Self::pentatonic_freq(t);
-                    let cutoff_hz = 400.0 * 2.0_f32.powf(x_t * 3.0);
-                    let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-                    (freq, cutoff, -1.0_f32, AUDIO_AMP_SCALE * 0.03_f32)
-                },
-                VoiceKind::Death => {
-                    let t = x_t * 0.45;
-                    let freq = Self::pentatonic_freq(t);
-                    let cutoff_hz = 700.0 * 2.0_f32.powf((1.0 - y_t) * -2.0);
-                    let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-                    (freq, cutoff, 1.0_f32, AUDIO_AMP_SCALE * 0.02_f32)
-                },
-                VoiceKind::Sustain => unreachable!(),
-            };
-            // Temporal spreading: X position offsets event start across the frame
-            // Left=early, right=late — staggers simultaneous events, kills constructive buzzing
-            let delay = (x_t * (SAMPLES_PER_FRAME - 1) as f32) as usize;
-            // Pan: X position maps directly to stereo field
-            let pan = x_t * 2.0 - 1.0;  // 0..1 → -1..+1
-            let id = self.next_id; self.next_id += 1;
-            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp, pan, delay));
+        // ── 2. Slew voice parameters toward targets (once per frame) ───────
+        for (bi, v) in self.dir_voices.iter_mut().enumerate() {
+            v.amplitude     += (amp_targets[bi]    - v.amplitude)     * SLEW_AMP;
+            v.pitch_cents   += (pitch_targets[bi]  - v.pitch_cents)   * SLEW_PITCH;
+            v.tremolo_depth += (trem_targets[bi]   - v.tremolo_depth) * SLEW_TREM;
+            v.noise_level   += (noise_targets[bi]  - v.noise_level)   * SLEW_NOISE;
+            v.pan           += (pan_targets[bi]    - v.pan)           * SLEW_PAN;
+            v.reverb_send   += (reverb_targets[bi] - v.reverb_send)   * SLEW_REVERB;
         }
 
-        // ── 5. Remove fully-released voices ────────────────────────────────
-        self.voice_pool.retain(|_, v| {
-            !(v.releasing && v.release_samples >= v.release_total)
-        });
-
-        // ── 6. Synthesise SAMPLES_PER_FRAME stereo pairs (interleaved L, R) ──
+        // ── 3. Synthesise SAMPLES_PER_FRAME stereo pairs ──────────────────
+        // noise_rng is local so we can borrow dir_voices mutably in the inner loop
+        let mut noise_rng = xoru64(&mut self.rng);
         for _ in 0..SAMPLES_PER_FRAME {
-            let mut sum_l = 0.0_f32;
-            let mut sum_r = 0.0_f32;
-            for v in self.voice_pool.values_mut() {
-                // Temporal spread: stagger event voices across the frame by their X position
-                if v.init_delay > 0 { v.init_delay -= 1; continue; }
+            let mut sum_l     = 0.0f32;
+            let mut sum_r     = 0.0f32;
+            let mut reverb_in = 0.0f32;
 
-                // Slew (sustain only — events are one-shot)
-                if v.kind == VoiceKind::Sustain {
-                    v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
-                    v.current_cutoff += (v.target_cutoff - v.current_cutoff) * AUDIO_SLEW;
-                    v.current_amp    += (v.target_amp    - v.current_amp)    * 0.01;
-                    v.current_pan    += (v.target_pan    - v.current_pan)    * 0.02;
-                }
-                // Death glide
-                v.current_freq *= v.pitch_drop;
+            for v in self.dir_voices.iter_mut() {
+                // Pitch (with bend)
+                let freq = v.base_freq * 2.0f32.powf(v.pitch_cents / 1200.0);
+                v.phase = (v.phase + freq / SAMPLE_RATE as f32).rem_euclid(1.0);
 
-                // Phase advance
-                v.phase = (v.phase + v.current_freq / SAMPLE_RATE as f32).rem_euclid(1.0);
-
-                // Waveform: sin_angle=-1 → pure sine, +1 → triangle
-                let blend  = (v.sin_angle + 1.0) * 0.5;
-                let sine_s = (v.phase * 2.0 * PI).sin();
-                let tri_s  = 1.0 - 4.0 * (v.phase - 0.5).abs();
-                let raw    = blend * tri_s + (1.0 - blend) * sine_s;
+                // Waveform + noise
+                let raw   = (v.phase * 2.0 * PI).sin();
+                let noise = (xorf32(&mut noise_rng) * 2.0 - 1.0) * v.noise_level;
+                let noisy = raw + noise;
 
                 // One-pole LP filter
-                v.filter_state += v.current_cutoff * (raw - v.filter_state);
+                v.filter_state += FIXED_CUTOFF * (noisy - v.filter_state);
 
-                // Envelope
-                let env = if v.releasing {
-                    let t = (v.release_samples as f32 / v.release_total as f32).min(1.0);
-                    v.release_samples += 1;
-                    let d = 1.0 - t;
-                    d * d
-                } else if v.attack_samples < AUDIO_ATTACK {
-                    let t = v.attack_samples as f32 / AUDIO_ATTACK as f32;
-                    v.attack_samples += 1;
-                    t
-                } else { 1.0 };
+                // Tremolo LFO
+                v.tremolo_phase =
+                    (v.tremolo_phase + TREM_RATE / SAMPLE_RATE as f32).rem_euclid(1.0);
+                let trem = 1.0
+                    - v.tremolo_depth * (1.0 + (v.tremolo_phase * 2.0 * PI).sin()) * 0.5;
 
-                // Equal-power panning: cos(θ)=right moves image right, left moves left
-                let angle = (v.current_pan + 1.0) * 0.5 * PI * 0.5;  // -1..+1 → 0..π/2
-                let gain_l = angle.cos();
-                let gain_r = angle.sin();
-                let s = v.filter_state * env * v.current_amp;
-                sum_l += s * gain_l;
-                sum_r += s * gain_r;
+                let s = v.filter_state * trem * v.amplitude * AUDIO_AMP_SCALE;
 
-                // Event voices: start releasing once attack ramp finishes
-                if v.kind != VoiceKind::Sustain && !v.releasing && v.attack_samples >= AUDIO_ATTACK {
-                    v.releasing = true;
-                }
+                // Equal-power pan: -1=left … +1=right → 0…π/2
+                let pan_angle = (v.pan + 1.0) * 0.5 * PI * 0.5;
+                sum_l     += s * pan_angle.cos();
+                sum_r     += s * pan_angle.sin();
+                reverb_in += s * v.reverb_send;
             }
 
-            // Mid-side reverb: wet reverb on mono mid, dry stereo width preserved
+            // Mid-side reverb (same topology as before)
+            let wet  = self.reverb.process(reverb_in.tanh() * 0.7);
             let mid  = (sum_l + sum_r) * 0.5;
             let side = (sum_l - sum_r) * 0.5;
-            let wet  = self.reverb.process(mid.tanh() * 0.7);
-            // Final soft clip on output: tanh keeps us out of hard clipping
-            // even when many fast cells sum to large amplitudes
-            chunk_audio.push((wet + side).tanh());  // L
-            chunk_audio.push((wet - side).tanh());  // R
+            chunk_audio.push((wet + side).tanh()); // L
+            chunk_audio.push((wet - side).tanh()); // R
         }
+        self.rng = noise_rng; // propagate RNG state forward
+
+        // ── 4. Clear stats for next frame ──────────────────────────────────
+        self.bucket_stats = [BucketStats::default(); 8];
     }
 
     fn paint_frame(&mut self, canvas: &mut Vec<f32>) {
