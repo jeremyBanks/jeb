@@ -1428,23 +1428,47 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize) {
+fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize, tile_2x2: bool) {
     // ffmpeg glob requires sorted files — they're zero-padded so glob order = numeric order
-    let scale = format!("scale={}:{}:flags=neighbor", OUT_W * 2, OUT_H * 2); // 2× NN upscale in segments
-    let status = Command::new("ffmpeg")
-        .args([
-            "-y",
-            "-framerate", &FPS.to_string(),
-            "-pattern_type", "glob",
-            "-i", &format!("{frames_dir}/*.png"),
-            "-vf", &scale,
-            "-c:v", "libx264",
-            "-crf", &CRF.to_string(),
-            "-pix_fmt", "yuv420p",
-            seg_path,
-        ])
-        .status()
-        .expect("ffmpeg failed");
+    let ow = OUT_W * 2;
+    let oh = OUT_H * 2;
+    let status = if tile_2x2 {
+        // Tile the frame 2×2 then scale back to normal output size (each copy is half-size).
+        let fc = format!(
+            "[0:v]split=4[a][b][c][d];[a][b]hstack[top];[c][d]hstack[bot];[top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        );
+        Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate", &FPS.to_string(),
+                "-pattern_type", "glob",
+                "-i", &format!("{frames_dir}/*.png"),
+                "-filter_complex", &fc,
+                "-map", "[out]",
+                "-c:v", "libx264",
+                "-crf", &CRF.to_string(),
+                "-pix_fmt", "yuv420p",
+                seg_path,
+            ])
+            .status()
+            .expect("ffmpeg failed")
+    } else {
+        let scale = format!("scale={ow}:{oh}:flags=neighbor");
+        Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate", &FPS.to_string(),
+                "-pattern_type", "glob",
+                "-i", &format!("{frames_dir}/*.png"),
+                "-vf", &scale,
+                "-c:v", "libx264",
+                "-crf", &CRF.to_string(),
+                "-pix_fmt", "yuv420p",
+                seg_path,
+            ])
+            .status()
+            .expect("ffmpeg failed")
+    };
     assert!(status.success(), "ffmpeg exited non-zero for {seg_path}");
     println!("  encoded {n_frames} frames → {seg_path}");
 }
