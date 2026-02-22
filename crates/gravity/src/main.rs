@@ -2715,11 +2715,11 @@ struct DirectionalPalette {
 impl DirectionalPalette {
     fn build(pos_rotation_enabled: bool) -> Self {
         DirectionalPalette {
-            dark:                rgb_to_oklab(0xF4, 0x4B, 0xCC),  // #F44BCC hot-pink (was dark navy)
-            c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),
-            c_left:              rgb_to_oklab(0x53, 0x3A, 0xFD),
-            c_down:              rgb_to_oklab(0xF4, 0x4B, 0xCC),
-            c_up:                rgb_to_oklab(0xFA, 0xF0, 0xF5),  // soft blush (was cool-white #F6F9FC)
+            dark:                rgb_to_oklab(0x06, 0x1B, 0x31),  // dark navy — distinct zero-speed anchor
+            c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue  — +x
+            c_left:              rgb_to_oklab(0xFF, 0x9B, 0x3B),  // orange-gold       — −x (opposite hue)
+            c_down:              rgb_to_oklab(0xF4, 0x4B, 0xCC),  // hot-pink          — +y
+            c_up:                rgb_to_oklab(0xFA, 0xF0, 0xF5),  // soft blush        — −y
             wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
             pos_rotation_enabled,
         }
