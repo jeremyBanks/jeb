@@ -73,7 +73,7 @@ while true; do
         exit 0
     fi
 
-    for seg in $(ls segments/seg_*.mp4 2>/dev/null | sort); do
+    for seg in $(ls "runs/${RUN_ID}/segments/seg_"*.mp4 2>/dev/null | sort); do
         grep -qF "$seg" "$SEEN_FILE" && continue
 
         sleep 2
