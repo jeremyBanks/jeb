@@ -3345,8 +3345,10 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
         if !headless {
             let enc_t0 = std::time::Instant::now();
             let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
-            encode_chunk(&frames_dir, &seg_path, local_frame, tile_2x2);
-            mux_audio_into_segment(&seg_path, &chunk_audio);
+            let seg_tmp  = format!("{seg_path}.tmp");
+            encode_chunk(&frames_dir, &seg_tmp, local_frame, tile_2x2);
+            mux_audio_into_segment(&seg_tmp, &chunk_audio);
+            fs::rename(&seg_tmp, &seg_path).expect("rename segment");
             enc_ms = enc_t0.elapsed().as_millis();
             writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
             seg_list.flush().unwrap();
