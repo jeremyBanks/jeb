@@ -1675,7 +1675,7 @@ fn main() {
             velocities: sim.cells.iter().map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy))).collect(),
             count: sim.cells.len(),
         };
-        Sim::save_orig_state(&o, orig_state_path);
+        Sim::save_orig_state(&o, &orig_state_path);
         println!("Saved original state ({} cells) for epilogue target.", o.count);
         o
     } else {
