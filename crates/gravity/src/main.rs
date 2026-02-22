@@ -1384,8 +1384,8 @@ impl Sim {
         for c in &self.cells {
             let xi = c.gx();
             let yi = c.gy();
-            // Cells that didn't cross a grid square last tick appear dimmer/less directional.
-            let (cvx, cvy) = if c.moved { (c.vx, c.vy) } else { (c.vx * 0.125, c.vy * 0.125) };
+            // Non-stuck (moved) cells dimmed to 1/32 velocity; stuck cells rendered at full.
+            let (cvx, cvy) = if c.moved { (c.vx * (1.0/32.0), c.vy * (1.0/32.0)) } else { (c.vx, c.vy) };
             let (l, a, b) = velocity_color_oklab(cvx, cvy, c.px, c.py, self.speed_cap, palette);
             let i = (yi * W + xi) * 3;
             canvas[i]     = l;
