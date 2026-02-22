@@ -405,7 +405,9 @@ impl Sim {
             // Circle centres are chosen greedily to maximise minimum distance
             // from canvas walls and from each other (tie-break: closer to centre).
             let cells_per_circle = (target_pop / circles).max(1);
-            let radius = ((cells_per_circle as f32 / PI).sqrt()).max(4.0)
+            // Checkerboard: only (xi+yi)%2==0 cells are filled → 50% density.
+            // Area must be 2× larger to contain the same cell count, so radius × √2.
+            let radius = ((2.0 * cells_per_circle as f32 / PI).sqrt()).max(4.0)
                           .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
             let margin = radius + 1.0;
 
