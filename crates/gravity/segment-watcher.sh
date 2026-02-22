@@ -111,6 +111,14 @@ while true; do
         seg_name=$(basename "$seg" .mp4)
         frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
         frame_offset=${frame_offset:-0}
+
+        # Skip epilogue segments (frame_offset >= total frames = past the end of main render)
+        if [ "$TOTAL_FRAMES" -gt 0 ] && [ "$frame_offset" -ge "$TOTAL_FRAMES" ]; then
+            echo "[watcher] skipping epilogue segment $seg_name (frame $frame_offset >= $TOTAL_FRAMES)"
+            echo "$seg" >> "$SEEN_FILE"
+            continue
+        fi
+
         (( chunk_count++ )) || true
         chunk_num=$chunk_count
         # Percentage based on actual frame offset (accurate regardless of chunk size)
@@ -141,11 +149,23 @@ while true; do
                 INITV=$(   grep "^init_vel:"   state/run_info.txt | awk '{print $2}')
                 VELSC=$(   grep "^vel_scale:"  state/run_info.txt | awk '{print $2}')
                 CMT=$(     grep "^commit:"     state/run_info.txt | awk '{print $2}')
-                DAMP_X=$(  grep "^dampen_x:"   state/run_info.txt | awk '{print $2}')
-                DAMP_Y=$(  grep "^dampen_y:"   state/run_info.txt | awk '{print $2}')
-                INITPOP=$( grep "^init_pop:"   state/run_info.txt | awk '{print $2}')
-                RES=$(   grep "^resolution:"  state/run_info.txt | awk '{print $2}')
-                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} wx=${WRAP_X} wy=${WRAP_Y} dx=${DAMP_X} dy=${DAMP_Y} vel=${INITV}×${VELSC} grid=${RES}"
+                DAMP_X=$(    grep "^dampen_x:"     state/run_info.txt | awk '{print $2}')
+                DAMP_Y=$(    grep "^dampen_y:"     state/run_info.txt | awk '{print $2}')
+                INITPOP=$(   grep "^init_pop:"     state/run_info.txt | awk '{print $2}')
+                RES=$(       grep "^resolution:"   state/run_info.txt | awk '{print $2}')
+                CIRCLES=$(   grep "^circles:"      state/run_info.txt | awk '{print $2}')
+                BOUNCE_X=$(  grep "^bounce_x:"     state/run_info.txt | awk '{print $2}')
+                BOUNCE_Y=$(  grep "^bounce_y:"     state/run_info.txt | awk '{print $2}')
+                VEL_DECAY=$( grep "^vel_decay:"    state/run_info.txt | awk '{print $2}')
+                VEL_NUDGE=$( grep "^vel_nudge:"    state/run_info.txt | awk '{print $2}')
+                VNR=$(       grep "^vel_nudge_rate:" state/run_info.txt | awk '{print $2}')
+                SECS=$(      grep "^seconds:"      state/run_info.txt | awk '{print $2}')
+                # Optional extras — only show non-zero/non-false values to keep message concise
+                OPT=""
+                [ "$BOUNCE_X" = "true" ] || [ "$BOUNCE_Y" = "true" ] && OPT="${OPT} bounce=${BOUNCE_X}/${BOUNCE_Y}"
+                [ -n "$VEL_DECAY" ] && [ "$VEL_DECAY" != "0" ] && OPT="${OPT} decay=${VEL_DECAY}"
+                [ -n "$VEL_NUDGE" ] && [ "$VEL_NUDGE" != "0" ] && OPT="${OPT} nudge=${VEL_NUDGE}@${VNR}"
+                EXTRA=" | \`${RUN_ID}\` ${CMT} ${SECS}s G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} circles=${CIRCLES} vel=${INITV}×${VELSC} wx=${WRAP_X} wy=${WRAP_Y} dx=${DAMP_X} dy=${DAMP_Y} grid=${RES}${OPT}"
             fi
 
             # Current state from render log (last stats line before chunk boundary)
