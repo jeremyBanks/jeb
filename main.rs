@@ -1610,14 +1610,20 @@ fn main() {
     let run_id: String = parse_arg("--run-id")
         .unwrap_or_else(|| format!("seed{}", rng_seed));
 
-    let checkpoint_path = "state/checkpoint.bin";
-    let segments_dir    = "segments";
-    let frames_dir      = "frames/chunk";
-    let segments_file   = "segments.txt";
+    // Per-run directory: all data for this run lives under runs/{run_id}/
+    let run_dir         = format!("runs/{}", run_id);
+    let checkpoint_path = format!("{}/checkpoint.bin", run_dir);
+    let segments_dir    = format!("{}/segments", run_dir);
+    let frames_dir      = format!("{}/frames", run_dir);
+    let segments_file   = format!("{}/segments.txt", run_dir);
     let shared_dir = std::env::var("GRAVITY_SHARED_DIR")
         .unwrap_or_else(|_| String::from("/Users/matte/.openclaw/workspace/shared/gravity"));
     fs::create_dir_all(&shared_dir).ok();
-    let output_file = format!("{}/gravity_{}.mp4", shared_dir, run_id);
+    // Final video alongside the run dir (runs/{run_id}.mp4) + copy to shared
+    let output_file_local  = format!("runs/{}.mp4", run_id);
+    let output_file_shared = format!("{}/{}.mp4", shared_dir, run_id);
+    // Use local as primary; copy to shared after concat
+    let output_file = output_file_local.clone();
 
     // Write settings file alongside video and run_info for the watcher
     let init_pop = if circles > 0 {
