@@ -2825,6 +2825,24 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (lab_l, lab_a, lab_b)
 }
 
+/// Oklab → Oklch: (L, C, H) where H is in radians −π..π.
+#[inline] fn to_lch(l: f32, a: f32, b: f32) -> (f32, f32, f32) {
+    (l, (a*a + b*b).sqrt(), b.atan2(a))
+}
+
+/// Polar Oklch lerp: blend two Oklab colors via Oklch (arc hue, linear L+C).
+/// Returns result as Oklab (L, a, b).
+#[inline] fn oklch_lerp(lab0: (f32,f32,f32), lab1: (f32,f32,f32), t: f32) -> (f32, f32, f32) {
+    let (l0, c0, h0) = to_lch(lab0.0, lab0.1, lab0.2);
+    let (l1, c1, h1) = to_lch(lab1.0, lab1.1, lab1.2);
+    let l = l0 + (l1 - l0) * t;
+    let c = c0 + (c1 - c0) * t;
+    let hx = (1.0 - t) * h0.cos() + t * h1.cos();
+    let hy = (1.0 - t) * h0.sin() + t * h1.sin();
+    let h  = hy.atan2(hx);
+    (l, c * h.cos(), c * h.sin())
+}
+
 /// Directional colour anchors blended in Oklch (polar Oklab).
 /// Velocity direction selects four basis colours via squared-clamp weights:
 ///   w_right = max(rx, 0)²   w_left = max(−rx, 0)²
