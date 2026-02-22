@@ -1566,7 +1566,7 @@ fn main() {
     //   swirl     (default) — asymmetric quadrant bias, net angular momentum
     //   random    — isotropic random ±0.25, no directional bias
     //   spin      — clockwise tangential field proportional to distance from centre; vx scaled by aspect ratio
-    //   spin-flat — spin + vx*aspect + vy*0.75 (flatter elliptical orbits)
+    //   spin-flat — spin + vx*aspect + vy*0.09375 (very flat elliptical orbits, 8× flatter than original)
     //   spin-ccw  — counter-clockwise spin
     //   zero      — all seeded cells start stationary (pure gravity collapse from rest)
     let init_vel: String = parse_arg("--init-vel")
