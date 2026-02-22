@@ -2919,12 +2919,6 @@ impl DirectionalPalette {
     }
 }
 
-/// Default fallback colors used when palettes/active.txt is missing or unparseable.
-const DEFAULT_ZERO:  (u8,u8,u8) = (0x08, 0x22, 0x3D);
-const DEFAULT_RIGHT: (u8,u8,u8) = (0x53, 0x3A, 0xFD);
-const DEFAULT_LEFT:  (u8,u8,u8) = (0x63, 0x5B, 0xFF);
-const DEFAULT_DOWN:  (u8,u8,u8) = (0xFF, 0xC0, 0x1F);
-const DEFAULT_UP:    (u8,u8,u8) = (0xEA, 0x22, 0x61);
 
 fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> DirectionalPalette {
     let raw = std::fs::read_to_string("palettes/active.txt")
