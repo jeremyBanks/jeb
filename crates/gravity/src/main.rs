@@ -2025,32 +2025,67 @@ use std::io::{BufWriter, Write};
             self.order.swap(i, j);
         }
         for &idx in &self.order {
-            let c = &self.cells[idx];
+            // Capture pre-move state for audio stats (avoid borrow conflict later)
+            let (cvx, cvy, cpx, cpy) = {
+                let c = &self.cells[idx]; (c.vx, c.vy, c.px, c.py)
+            };
+            let old_gx = ((cpx.floor() as i32).rem_euclid(W as i32)) as usize;
+            let old_gy = ((cpy.floor() as i32).rem_euclid(H as i32)) as usize;
             let new_px; let new_py;
             if self.wrap {
-                new_px = (c.px + c.vx).rem_euclid(W as f32);
-                new_py = (c.py + c.vy).rem_euclid(H as f32);
+                new_px = (cpx + cvx).rem_euclid(W as f32);
+                new_py = (cpy + cvy).rem_euclid(H as f32);
             } else {
-                let rx = c.px + c.vx; let ry = c.py + c.vy;
+                let rx = cpx + cvx; let ry = cpy + cvy;
                 if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 { continue; }
                 new_px = rx; new_py = ry;
             }
             let tgx = (new_px.floor() as i32).rem_euclid(W as i32) as usize;
             let tgy = (new_py.floor() as i32).rem_euclid(H as i32) as usize;
-            let old_gx = c.gx(); let old_gy = c.gy();
-            if tgx == old_gx && tgy == old_gy {
+            let crossing = tgx != old_gx || tgy != old_gy;
+            let moved_cross;
+            if !crossing {
                 // Same grid square — update float position freely
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
+                moved_cross = false;
             } else if grid[tgy * W + tgx] == usize::MAX {
-                // Target square free — move; mark for audio
+                // Target square free — move
                 grid[old_gy * W + old_gx] = usize::MAX;
                 grid[tgy * W + tgx] = idx;
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
                 self.cells[idx].moved = true;
+                moved_cross = true;
+            } else {
+                // Target occupied — stay put
+                moved_cross = false;
             }
-            // else: target occupied — stay put (no audio this tick)
+            // ── Audio bucket stats (only for cells attempting a grid crossing) ──
+            if crossing {
+                use std::f32::consts::PI;
+                let speed = (cvx*cvx + cvy*cvy).sqrt();
+                if speed > 1e-6 {
+                    let angle_norm = (cvy.atan2(cvx) + PI).rem_euclid(2.0 * PI); // 0..2π
+                    let bi = ((angle_norm / (PI / 4.0)) as usize).min(7);
+                    let bucket_centre = bi as f32 * (PI / 4.0);
+                    let dev = angle_norm - bucket_centre; // deviation within bucket
+                    let bs = &mut self.bucket_stats[bi];
+                    if moved_cross {
+                        bs.move_mag_sum  += speed;
+                        bs.angle_dev_sum += dev;
+                        bs.angle_dev_n   += 1.0;
+                        bs.wx_sum        += cpx;
+                        bs.wy_sum        += cpy;
+                        bs.w_total       += 1.0;
+                    } else {
+                        bs.stuck_mag_sum += speed;
+                        bs.wx_sum        += cpx / 64.0;
+                        bs.wy_sum        += cpy / 64.0;
+                        bs.w_total       += 1.0 / 64.0;
+                    }
+                }
+            }
         }
     }
 
