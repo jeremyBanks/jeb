@@ -1,0 +1,12 @@
+# Gravity palette — default (current)
+# zero  = zero-speed anchor (still cells)
+# right = +x velocity
+# left  = -x velocity
+# down  = +y velocity (screen-down)
+# up    = -y velocity (screen-up)
+
+zero=#08223D
+right=#533AFD
+left=#635BFF
+down=#FFC01F
+up=#EA2261
