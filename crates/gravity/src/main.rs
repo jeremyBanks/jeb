@@ -3481,3 +3481,6 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, dp: 
         (l, a, b)
     }
 }
+
+// [recovery] edit target not found, appending:
+
