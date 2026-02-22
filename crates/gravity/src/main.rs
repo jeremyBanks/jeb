@@ -3368,3 +3368,17 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
 
         chunk_start_frame = chunk_end_frame;
     }
+
+// [recovery] edit target not found, appending:
+                if !ep_chunk_frames.is_empty() {
+                    let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
+                        ep_seg_start + ep_frame - ep_chunk_frames.len());
+                    let seg_tmp = format!("{seg_path}.tmp");
+                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2);
+                    fs::rename(&seg_tmp, &seg_path).expect("rename epilogue segment");
+                    writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
+                    seg_list.flush().unwrap();
+                    delete_frames(&frames_dir);
+                    ep_chunk_frames.clear();
+                }
+                println!("[signal] Stopping epilogue — concatenating completed segments.");
