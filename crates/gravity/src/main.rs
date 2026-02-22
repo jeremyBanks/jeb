@@ -3112,3 +3112,58 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
                         if !wrap_y && (yi_i < 0 || yi_i >= H() as isize) { continue; }
                         let xi = xi_i.rem_euclid(W() as isize) as usize;
                         let yi = yi_i.rem_euclid(H() as isize) as usize;
+
+// [recovery] edit target not found, appending:
+                let mut placed = 0usize;
+
+                // For spin modes, compute velocity relative to THIS circle's centre
+                // (disk_cx/disk_cy), not the global canvas centre.  Calling make_vel
+                // for spin would use cx_global and give wrong tangential directions for
+                // off-centre circles.
+                let disk_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
+                    match init_vel {
+                        "spin" | "spin-ccw" | "spin-flat" => {
+                            let dx = xi as f32 + 0.5 - disk_cx;
+                            let dy = yi as f32 + 0.5 - disk_cy;
+                            let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                            let scale = (r / radius).min(1.0) * 0.5;
+                            let nx = (xorf32(rng)-0.5)*0.1;
+                            let ny = (xorf32(rng)-0.5)*0.1;
+                            match init_vel {
+                                "spin"      => (-dy/r * scale + nx,  dx/r * scale + ny),
+                                "spin-ccw"  => ( dy/r * scale + nx, -dx/r * scale + ny),
+                                _/* flat */ => (-dy/r * scale + nx, (dx/r * scale + ny) * 0.09375),
+                            }
+                        }
+                        _ => make_vel(xi, yi, rng),
+                    }
+                };
+
+                // Primary pass: 50% coin flip at each point in distance order.
+                for &(xi, yi, _) in &pts {
+                    if placed >= cells_this_circle { break; }
+                    if occupied[yi * W() + xi] { continue; }
+                    if xoru64(&mut rng) & 1 == 0 { continue; } // 50% skip
+                    let (vx, vy) = disk_vel(xi, yi, &mut rng);
+                    let (vx, vy) = (vx * vel_scale, vy * vel_scale);
+                    cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                      prev_speed: 0.0, id: next_id, moved: false });
+                    next_id += 1;
+                    occupied[yi * W() + xi] = true;
+                    placed += 1;
+                }
+
+                // Fallback pass: fill remaining slots from inner points outward.
+                if placed < cells_this_circle {
+                    for &(xi, yi, _) in &pts {
+                        if placed >= cells_this_circle { break; }
+                        if occupied[yi * W() + xi] { continue; }
+                        let (vx, vy) = disk_vel(xi, yi, &mut rng);
+                        let (vx, vy) = (vx * vel_scale, vy * vel_scale);
+                        cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                          prev_speed: 0.0, id: next_id, moved: false });
+                        next_id += 1;
+                        occupied[yi * W() + xi] = true;
+                        placed += 1;
+                    }
+                }
