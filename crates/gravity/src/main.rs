@@ -2899,3 +2899,9 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
         }
         } // end else (random scatter)
         shuffle_vec(&mut cells, &mut rng);
+
+// [recovery] edit target not found, appending:
+              conway_births: 0, conway_deaths: 0, next_id,
+              bucket_stats: [BucketStats::default(); 8],
+              dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
+              reverb: Reverb::new() }
