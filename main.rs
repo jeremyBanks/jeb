@@ -1551,7 +1551,7 @@ fn main() {
     let g: f32 = parse_arg("--gravity")
         .or_else(|| parse_arg("-G"))
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.075_f32);
+        .unwrap_or(0.125_f32);
     let softening: f32 = parse_arg("--softening")
         .and_then(|s| s.parse().ok())
         .unwrap_or(3.0_f32);
