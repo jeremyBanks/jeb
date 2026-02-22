@@ -3265,3 +3265,81 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
 
         chunk_start_frame = chunk_end_frame;
     }
+
+// [recovery] edit target not found, appending:
+    let mut chunk_start_frame = start_frame;
+    let mut chunk_num = 0usize;
+
+    'chunks: loop {
+        if chunk_start_frame >= total_frames { break; }
+        if !keep_running.load(Ordering::Relaxed) { break; }
+        chunk_num += 1;
+
+        let pct_done = chunk_start_frame * 100 / total_frames;
+        println!("\n[chunk {chunk_num} | {pct_done}%] starting at frame {chunk_start_frame}");
+        let palette = load_palette(pos_rotation_enabled, pos_rotation_output);
+        if !headless { println!("  palette: {:?}", palette); }
+        let mut chunk_audio: Vec<f32> = Vec::new();
+
+        let chunk_wall_t0 = std::time::Instant::now();
+        let sim_t0 = std::time::Instant::now();
+        let mut local_frame = 0usize;
+
+        // Render frames in CHUNK_CHECK_FRAMES increments; flush when wall time is in [min, max].
+        'render: loop {
+            let global_frame = chunk_start_frame + local_frame;
+            if global_frame >= total_frames { break 'render; }
+
+            if !keep_running.load(Ordering::Relaxed) {
+                println!("[signal] Discarding partial chunk {chunk_num}, cleaning up {local_frame} frames...");
+                delete_frames(&frames_dir);
+                break 'chunks;
+            }
+
+            if !headless {
+                sim.paint_frame(&mut canvas, &palette);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
+            }
+            sim.tick();
+            if !no_audio { sim.generate_audio(&mut chunk_audio); }
+            local_frame += 1;
+
+            let log_every = if headless { FPS as usize } else { 480 };
+            if local_frame % log_every == 0 {
+                println!("  frame {}/{total_frames}  {}", global_frame, sim.stats());
+            }
+
+            // Every CHUNK_MIN_FRAMES frames, check if we've been running long enough to flush.
+            if local_frame % CHUNK_MIN_FRAMES == 0 {
+                let elapsed = chunk_wall_t0.elapsed().as_secs_f64();
+                if elapsed >= CHUNK_MIN_SECS || elapsed >= CHUNK_MAX_SECS { break 'render; }
+            }
+        }
+        let sim_ms = sim_t0.elapsed().as_millis();
+        let chunk_end_frame = chunk_start_frame + local_frame;
+
+        let enc_ms;
+        if !headless {
+            let enc_t0 = std::time::Instant::now();
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
+            encode_chunk(&frames_dir, &seg_path, local_frame, tile_2x2);
+            mux_audio_into_segment(&seg_path, &chunk_audio);
+            enc_ms = enc_t0.elapsed().as_millis();
+            writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
+            seg_list.flush().unwrap();
+            delete_frames(&frames_dir);
+        } else {
+            enc_ms = 0;
+        }
+
+        // Save checkpoint (resume frame = next chunk start)
+        sim.save_checkpoint(&canvas, chunk_end_frame, &checkpoint_path);
+
+        let wall_secs = chunk_wall_t0.elapsed().as_secs_f64();
+        let pop = sim.cells.len();
+        println!("  chunk {chunk_num} done ({pct_done}%)  pop={pop}  wall={wall_secs:.1}s  sim={sim_ms}ms enc={enc_ms}ms  frames={local_frame}");
+        let _ = fs::write("state/last_stats.txt",
+            format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
+
+        chunk_start_frame = chunk_end_frame;
+    }
