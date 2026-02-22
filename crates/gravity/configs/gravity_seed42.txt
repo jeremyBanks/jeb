@@ -1,0 +1,12 @@
+run_id:      seed42
+seed:        42
+seconds:     30
+gravity:     0.03125
+softening:   6
+speed_cap:   6
+pop_target:  5120
+pop_band:    1280
+rate_limit:  32
+wrap:        true
+dampen:      false
+resolution:  512x320 → 2048x1280

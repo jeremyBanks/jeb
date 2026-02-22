@@ -1,0 +1,17 @@
+run_id:        20260221_184839
+seed:          1842629968
+seconds:       4369
+commit:        232d207a2fdf
+gravity:       0.075
+softening:     3
+speed_cap:     2
+pop_target:    1024
+pop_band:      128
+rate_limit:    16
+seed_density:  1/128
+init_pop:      320
+init_vel:      swirl
+wrap:          true
+dampen:        true
+steer:         false
+resolution:    512x320 → 2048x1280

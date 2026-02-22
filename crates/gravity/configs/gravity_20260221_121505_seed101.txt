@@ -1,0 +1,12 @@
+run_id:      20260221_121505_seed101
+seed:        101
+seconds:     4369
+gravity:     0.125
+softening:   4
+speed_cap:   6
+pop_target:  5120
+pop_band:    1280
+rate_limit:  32
+wrap:        true
+dampen:      false
+resolution:  512x320 → 2048x1280

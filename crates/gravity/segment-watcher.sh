@@ -9,7 +9,9 @@ DISCORD_CHANNEL="1467063568712339561"
 PREVIEW_DIR="/Users/matte/.openclaw/workspace/shared/gravity"
 PREVIEW_W=512
 PREVIEW_H=320
-CLIP_DUR=4
+CLIP_FULL=2      # seconds at full speed per clip section
+CLIP_SLOW_SRC=1  # seconds of source for slow section (→ 3s output at 1/3 speed)
+SLOW_FPS=20
 GAP_DUR="0.125"
 
 # ── read current run_id ─────────────────────────────────────────────────────
@@ -37,22 +39,32 @@ make_preview() {
 
     local scale="scale=${PREVIEW_W}:${PREVIEW_H}:flags=neighbor"
 
-    if (( $(echo "$dur < $((CLIP_DUR * 2 + 1))" | bc -l) )); then
-        ffmpeg -y -i "$seg" -vf "$scale" -c:v libx264 -crf 22 -preset fast "$out" 2>/dev/null
+    local clip_total; clip_total=$(echo "scale=3; $CLIP_FULL + $CLIP_SLOW_SRC" | bc)
+    if (( $(echo "$dur < $(echo "scale=3; $clip_total * 2 + 1" | bc)" | bc -l) )); then
+        ffmpeg -y -i "$seg" -vf "$scale" -r $SLOW_FPS -c:v libx264 -crf 22 -preset fast "$out" 2>/dev/null
         return
     fi
 
+    # Each clip: 2s full-speed then 1s source → 3s slow (at 20fps)
     local mid_start last_start
-    mid_start=$(echo  "scale=3; $dur / 2 - $CLIP_DUR / 2" | bc)
-    last_start=$(echo "scale=3; $dur - $CLIP_DUR"          | bc)
+    mid_start=$(echo  "scale=3; $dur / 2 - $clip_total / 2" | bc)
+    last_start=$(echo "scale=3; $dur - $clip_total"          | bc)
 
     local tmp; tmp=$(mktemp -d)
-    ffmpeg -y -i "$seg" -t          $CLIP_DUR -vf "$scale" \
-        -c:v libx264 -crf 22 -preset fast "$tmp/a.mp4" 2>/dev/null
-    ffmpeg -y -i "$seg" -ss "$mid_start"  -t $CLIP_DUR -vf "$scale" \
-        -c:v libx264 -crf 22 -preset fast "$tmp/b.mp4" 2>/dev/null
-    ffmpeg -y -i "$seg" -ss "$last_start" -t $CLIP_DUR -vf "$scale" \
-        -c:v libx264 -crf 22 -preset fast "$tmp/c.mp4" 2>/dev/null
+    make_clip() {
+        local ss="$1" name="$2"
+        local slow_ss; slow_ss=$(echo "scale=3; $ss + $CLIP_FULL" | bc)
+        ffmpeg -y -ss "$ss"      -i "$seg" -t $CLIP_FULL     -vf "$scale" \
+            -r 60 -c:v libx264 -crf 22 -preset fast "$tmp/${name}_fast.mp4" 2>/dev/null
+        ffmpeg -y -ss "$slow_ss" -i "$seg" -t $CLIP_SLOW_SRC -vf "${scale},setpts=3*PTS" \
+            -r $SLOW_FPS -c:v libx264 -crf 22 -preset fast "$tmp/${name}_slow.mp4" 2>/dev/null
+        printf "file '%s'\nfile '%s'\n" "$tmp/${name}_fast.mp4" "$tmp/${name}_slow.mp4" > "$tmp/${name}_list.txt"
+        ffmpeg -y -f concat -safe 0 -i "$tmp/${name}_list.txt" -c copy "$tmp/${name}.mp4" 2>/dev/null
+    }
+    make_clip 0            "a"
+    make_clip "$mid_start" "b"
+    make_clip "$last_start" "c"
+
     ffmpeg -y -f lavfi -i "color=black:s=${PREVIEW_W}x${PREVIEW_H}:r=60" \
         -t $GAP_DUR -c:v libx264 -crf 22 -preset fast "$tmp/gap.mp4" 2>/dev/null
 
