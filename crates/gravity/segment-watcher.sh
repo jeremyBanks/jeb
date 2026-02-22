@@ -24,8 +24,12 @@ if [ -z "$RUN_ID" ]; then echo "[watcher] no run_id, exiting"; exit 1; fi
 
 SEEN_FILE="/tmp/gravity_seen_${RUN_ID}.txt"
 touch "$SEEN_FILE"
-TOTAL=137
 LAST_TIME=$(date +%s)
+chunk_count=0  # incremented per segment; no hardcoded total
+
+# Estimate total frames from run_info (seconds * 60fps)
+RUN_SECONDS=$(grep "^seconds:" state/run_info.txt 2>/dev/null | awk '{print $2}')
+TOTAL_FRAMES=$(( ${RUN_SECONDS:-0} * 60 ))
 
 echo "[watcher] started for run $RUN_ID"
 
