@@ -2757,16 +2757,16 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 /// (ux²+uy²=1 guarantees Σwᵢ=1.)
 ///
 /// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
-/// down  / up    → warm family (#FF6118 orange      / #EA2261 crimson)
-/// diagonal blends give intermediate colours (hot-pink, gold, etc.).
+/// down  / up    → warm family (#F44BCC hot-pink    / #F6F9FC near-white)
+/// diagonal blends give intermediate colours.
 /// zero-speed anchor: #061B31 dark navy.
 #[derive(Clone, Debug)]
 struct DirectionalPalette {
     dark:    (f32, f32, f32),  // #061B31
     c_right: (f32, f32, f32),  // #635BFF  periwinkle — +x
     c_left:  (f32, f32, f32),  // #533AFD  violet     — −x
-    c_down:  (f32, f32, f32),  // #FF6118  orange     — +y (screen-down)
-    c_up:    (f32, f32, f32),  // #EA2261  crimson    — −y (screen-up)
+    c_down:  (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
+    c_up:    (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
 }
 
 impl DirectionalPalette {
@@ -2775,8 +2775,8 @@ impl DirectionalPalette {
             dark:    rgb_to_oklab(0x06, 0x1B, 0x31),
             c_right: rgb_to_oklab(0x63, 0x5B, 0xFF),
             c_left:  rgb_to_oklab(0x53, 0x3A, 0xFD),
-            c_down:  rgb_to_oklab(0xFF, 0x61, 0x18),
-            c_up:    rgb_to_oklab(0xEA, 0x22, 0x61),
+            c_down:  rgb_to_oklab(0xF4, 0x4B, 0xCC),
+            c_up:    rgb_to_oklab(0xF6, 0xF9, 0xFC),
         }
     }
 
