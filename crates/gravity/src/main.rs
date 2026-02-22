@@ -2705,7 +2705,7 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 struct DirectionalPalette {
     dark:           (f32, f32, f32),  // slow/still anchor colour
     c_right:        (f32, f32, f32),  // #635BFF  periwinkle — +x
-    c_left:         (f32, f32, f32),  // #533AFD  violet     — −x
+    c_left:         (f32, f32, f32),  // #FF9B3B  orange-gold — −x
     c_down:         (f32, f32, f32),  // #F44BCC  hot-pink   — +y (screen-down)
     c_up:           (f32, f32, f32),  // #F6F9FC  near-white — −y (screen-up)
     wheel_rotation:      f32,   // turns; negative = CCW in screen space
