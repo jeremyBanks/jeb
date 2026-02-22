@@ -1905,17 +1905,18 @@ use std::io::{BufWriter, Write};
         let neighbour_offsets: [(i32, i32); 8] = [
             (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
         ];
-        let wrap = self.wrap;
-        // Resolve a neighbour offset to a grid index, respecting wrap/no-wrap.
+        let (wrap_x, wrap_y) = (self.wrap_x, self.wrap_y);
+        // Resolve a neighbour offset to a grid index, respecting per-axis wrap.
         let resolve_nbr = |gy: usize, gx: usize, dy: i32, dx: i32| -> Option<(usize, usize)> {
             let ry = gy as i32 + dy;
             let rx = gx as i32 + dx;
-            if wrap {
-                Some((ry.rem_euclid(H as i32) as usize, rx.rem_euclid(W as i32) as usize))
-            } else {
-                if ry < 0 || ry >= H as i32 || rx < 0 || rx >= W as i32 { None }
-                else { Some((ry as usize, rx as usize)) }
-            }
+            let ry = if wrap_y { Some(ry.rem_euclid(H as i32) as usize) }
+                     else if ry >= 0 && ry < H as i32 { Some(ry as usize) }
+                     else { None };
+            let rx = if wrap_x { Some(rx.rem_euclid(W as i32) as usize) }
+                     else if rx >= 0 && rx < W as i32 { Some(rx as usize) }
+                     else { None };
+            match (ry, rx) { (Some(ry), Some(rx)) => Some((ry, rx)), _ => None }
         };
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
