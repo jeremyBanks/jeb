@@ -2940,3 +2940,8 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
                   REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
               reverb: Reverb::new() }
     }
+
+// [recovery] edit target not found, appending:
+/// right / left  → blue vs orange (#635BFF periwinkle / #FF9B3B orange-gold — opposite hues)
+/// down  / up    → pink family  (#F44BCC hot-pink    / #FAF0F5 soft blush)
+/// zero-speed anchor: #061B31 dark navy.
