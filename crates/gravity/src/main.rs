@@ -16,61 +16,65 @@ const CHUNK_FRAMES: usize = 4096; // 68.3s at 60fps → 64 segments for a 64³-f
 // ── Audio constants ────────────────────────────────────────────────────────
 const SAMPLE_RATE: u32         = 44100;
 const SAMPLES_PER_FRAME: usize = 735;    // 44100 / 60, truncated (acceptable drift)
-const AUDIO_AMP_SCALE: f32     = 0.0015; // per-voice scale; tanh handles headroom
+const AUDIO_AMP_SCALE: f32     = 0.0008; // per-voice scale (9 voices; tanh handles headroom)
 
-// 8 direction buckets (clockwise from East): C major pentatonic over 2 octaves
-// E=C4  SE=D4  S=E4  SW=G4  W=A4  NW=C5  N=E5  NE=G5
-const BUCKET_FREQS: [f32; 8] = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 659.25, 783.99];
+// 3×3 spatial grid — 9 voices, one per screen region.
+// Pitch: C major pentatonic across 2 octaves, A3–E5, warm-bright range (~220–660 Hz).
+// Layout: top row = highest pitch, bottom row = lowest. Left-to-right within row = ascending.
+//   row 0 (top):    C5(523) D5(587) E5(659)  — indices 0,1,2
+//   row 1 (mid):    E4(330) G4(392) A4(440)  — indices 3,4,5
+//   row 2 (bot):    A3(220) C4(262) D4(294)  — indices 6,7,8
+const REGION_FREQS: [f32; 9] = [
+    523.25, 587.33, 659.25,  // top row
+    329.63, 392.00, 440.00,  // mid row
+    220.00, 261.63, 293.66,  // bot row
+];
+// Pan per column: mild stereo (col 0=left, col 1=center, col 2=right)
+const REGION_PAN:  [f32; 3] = [-0.30, 0.0, 0.30];
+// Reverb send per row: top=airy, mid=neutral, bot=dry
+const REGION_REVERB: [f32; 3] = [0.67, 0.58, 0.48];
 
-const TREM_RATE:        f32 = 5.5;   // Hz
-const PITCH_BEND_MAX:   f32 = 30.0;  // cents ±
-const PAN_MAX:          f32 = 0.25;  // ± — signal stays strong in both channels at all times
-const BASE_REVERB_SEND: f32 = 0.55;
-const REVERB_Y_RANGE:   f32 = 0.12;  // top of screen → this much extra reverb vs bottom
-const MAX_TREMOLO:      f32 = 0.35;
-const MAX_NOISE:        f32 = 0.04;
-const FIXED_CUTOFF:     f32 = 0.1568; // one-pole LP ≈ 1200 Hz: 1-exp(-2π×1200/44100)
+const PITCH_BEND_MAX:  f32 = 50.0;   // cents ±   (CoG-x drives ±0.5 semitone)
+const FILTER_BRIGHT:   f32 = 0.248;  // one-pole LP coeff ≈ 2000 Hz (active/sparse)
+const FILTER_WARM:     f32 = 0.055;  // one-pole LP coeff ≈ 400 Hz  (dense/settled)
 
 // Slew rates per frame: val += (target - val) * α
-const SLEW_AMP:    f32 = 0.15; // half-life ~4 frames / 72 ms
-const SLEW_PITCH:  f32 = 0.12;
-const SLEW_TREM:   f32 = 0.10;
-const SLEW_NOISE:  f32 = 0.10;
-const SLEW_PAN:    f32 = 0.08; // half-life ~8 frames / 133 ms
-const SLEW_REVERB: f32 = 0.05; // half-life ~14 frames / 230 ms — most stable
+const SLEW_AMP:    f32 = 0.20;  // amplitude — lighter than CoG so rhythm comes through
+const SLEW_COG:    f32 = 0.25;  // CoG x/y  — ~4 ticks ≈ 1/15 s
+const SLEW_BEND:   f32 = 0.15;  // pitch bend from CoG-x
+const SLEW_FILTER: f32 = 0.20;  // filter cutoff from CoG-y
 
-/// Per-frame statistics accumulated for one 45° direction bucket.
+/// Per-frame raw stats accumulated for one 3×3 spatial region (cleared each frame).
 #[derive(Default, Clone, Copy)]
-struct BucketStats {
-    move_mag_sum:  f32, // Σ speed of cells that actually crossed a grid square in this dir
-    stuck_mag_sum: f32, // Σ speed of cells blocked from crossing in this dir
-    angle_dev_sum: f32, // Σ (vel_angle − bucket_centre_angle) for movers
-    angle_dev_n:   f32, // count of movers contributing to angle_dev
-    wx_sum:        f32, // weighted Σ x-position (movers weight=1, stuck weight=1/64)
-    wy_sum:        f32, // weighted Σ y-position
-    w_total:       f32, // Σ weight
+struct RegionStats {
+    speed_sum:  f32,  // Σ speed of all cells in region
+    cell_count: f32,  // number of cells in region
+    cog_x_sum:  f32,  // Σ px (for CoG)
+    cog_y_sum:  f32,  // Σ py (for CoG)
 }
 
-/// One persistent directional voice — always active, amplitude→0 when idle.
-struct DirVoice {
-    base_freq:     f32,
-    phase:         f32,
-    tremolo_phase: f32,
-    filter_state:  f32,
-    // smoothed parameters (slewed each frame)
-    amplitude:     f32,
-    pitch_cents:   f32,
-    tremolo_depth: f32,
-    noise_level:   f32,
-    pan:           f32,
-    reverb_send:   f32,
+/// One persistent spatial voice — always active, amplitude→0 when idle.
+struct RegionVoice {
+    base_freq:    f32,  // fixed pitch for this region
+    pan:          f32,  // fixed pan from column (-0.3 / 0 / +0.3)
+    reverb_send:  f32,  // fixed reverb from row
+    phase:        f32,  // oscillator phase
+    filter_state: f32,  // one-pole LP state
+    // EMA-smoothed values
+    amplitude:    f32,  // pop × avg_speed, normalised
+    cog_x:        f32,  // smoothed CoG x within region (0..1)
+    cog_y:        f32,  // smoothed CoG y within region (0..1)
+    // derived, slewed
+    pitch_bend:   f32,  // cents, from cog_x
+    filter_coeff: f32,  // LP cutoff coeff, from cog_y
 }
-impl DirVoice {
-    fn new(base_freq: f32) -> Self {
-        DirVoice {
-            base_freq, phase: 0.0, tremolo_phase: 0.0, filter_state: 0.0,
-            amplitude: 0.0, pitch_cents: 0.0, tremolo_depth: 0.0,
-            noise_level: 0.0, pan: 0.0, reverb_send: BASE_REVERB_SEND,
+impl RegionVoice {
+    fn new(base_freq: f32, pan: f32, reverb_send: f32) -> Self {
+        RegionVoice {
+            base_freq, pan, reverb_send,
+            phase: 0.0, filter_state: 0.0,
+            amplitude: 0.0, cog_x: 0.5, cog_y: 0.5,
+            pitch_bend: 0.0, filter_coeff: FILTER_WARM,
         }
     }
 }
@@ -182,8 +186,8 @@ struct Sim {
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
-    bucket_stats: [BucketStats; 8], // accumulated per-frame, cleared after generate_audio
-    dir_voices:   [DirVoice; 8],    // persistent directional voices
+    region_stats:  [RegionStats; 9],  // accumulated per-frame, cleared after generate_audio
+    region_voices: [RegionVoice; 9], // persistent spatial voices (3×3 grid)
     reverb: Reverb,
 }
 
@@ -538,8 +542,9 @@ impl Sim {
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
               conway_births: 0, conway_deaths: 0, next_id,
-              bucket_stats: [BucketStats::default(); 8],
-              dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
+              region_stats: [RegionStats::default(); 9],
+              region_voices: std::array::from_fn(|i| RegionVoice::new(
+                  REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
               reverb: Reverb::new() }
     }
 
@@ -627,8 +632,9 @@ impl Sim {
                         tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
                         conway_births: 0, conway_deaths: 0,
                         next_id,
-                        bucket_stats: [BucketStats::default(); 8],
-                        dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
+                        region_stats: [RegionStats::default(); 9],
+                        region_voices: std::array::from_fn(|i| RegionVoice::new(
+                            REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
                         reverb: Reverb::new() };
         Some((sim, canvas, chunk_index))
     }
@@ -954,31 +960,21 @@ impl Sim {
                 // Target occupied — stay put
                 moved_cross = false;
             }
-            // ── Audio bucket stats (only for cells attempting a grid crossing) ──
-            if crossing {
-                use std::f32::consts::PI;
-                let speed = (cvx*cvx + cvy*cvy).sqrt();
-                if speed > 1e-6 {
-                    let angle_norm = (cvy.atan2(cvx) + PI).rem_euclid(2.0 * PI); // 0..2π
-                    let bi = ((angle_norm / (PI / 4.0)) as usize).min(7);
-                    let bucket_centre = bi as f32 * (PI / 4.0);
-                    let dev = angle_norm - bucket_centre; // deviation within bucket
-                    let bs = &mut self.bucket_stats[bi];
-                    if moved_cross {
-                        bs.move_mag_sum  += speed;
-                        bs.angle_dev_sum += dev;
-                        bs.angle_dev_n   += 1.0;
-                        bs.wx_sum        += cpx;
-                        bs.wy_sum        += cpy;
-                        bs.w_total       += 1.0;
-                    } else {
-                        bs.stuck_mag_sum += speed;
-                        bs.wx_sum        += cpx / 64.0;
-                        bs.wy_sum        += cpy / 64.0;
-                        bs.w_total       += 1.0 / 64.0;
-                    }
-                }
-            }
+        }
+
+        // ── Audio: accumulate spatial region stats (all cells, post-move) ──────
+        // Divide canvas into 3×3 regions. Each cell contributes to its region's
+        // population count, total speed, and CoG sum.
+        for c in &self.cells {
+            let col = ((c.px / W as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
+            let row = ((c.py / H as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
+            let ri = row * 3 + col;
+            let speed = (c.vx * c.vx + c.vy * c.vy).sqrt();
+            let rs = &mut self.region_stats[ri];
+            rs.cell_count += 1.0;
+            rs.speed_sum  += speed;
+            rs.cog_x_sum  += c.px;
+            rs.cog_y_sum  += c.py;
         }
     }
 
@@ -1277,101 +1273,85 @@ impl Sim {
     // Called once per video frame. Appends SAMPLES_PER_FRAME f32 samples to chunk_audio.
     // Only cells that moved (changed grid square) this tick sustain a voice.
     // Stationary/blocked cells let their voice release.
-    // ── Gravity-well pentatonic quantization ──────────────────────────────
-    // Pitch is attracted toward the nearest C major pentatonic degree but not
-    // fully snapped — like a gravity well. Close to a note = nearly there.
-    // Between two notes = pulled toward the nearer one, but still audibly between.
     fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
         use std::f32::consts::PI;
 
-        // ── 1. Compute raw targets from accumulated bucket stats ───────────
-        let mut amp_targets    = [0.0f32; 8];
-        let mut pitch_targets  = [0.0f32; 8];
-        let mut trem_targets   = [0.0f32; 8];
-        let mut noise_targets  = [0.0f32; 8];
-        let mut pan_targets    = [0.0f32; 8];
-        let mut reverb_targets = [BASE_REVERB_SEND; 8];
+        // ── 1. Derive targets from accumulated region stats ────────────────
+        // Region dimensions in world units
+        let rw = W as f32 / 3.0; // width of one region column
+        let rh = H as f32 / 3.0; // height of one region row
 
-        for (bi, bs) in self.bucket_stats.iter().enumerate() {
-            amp_targets[bi] = bs.move_mag_sum + bs.stuck_mag_sum / 64.0;
+        for (ri, v) in self.region_voices.iter_mut().enumerate() {
+            let rs = &self.region_stats[ri];
+            let col = (ri % 3) as f32;
+            let row = (ri / 3) as f32;
 
-            if bs.angle_dev_n > 0.0 {
-                let dev_norm = (bs.angle_dev_sum / bs.angle_dev_n) / (PI / 8.0);
-                pitch_targets[bi] = dev_norm.clamp(-1.0, 1.0) * PITCH_BEND_MAX;
-            }
+            // Amplitude target: population × avg_speed, normalised
+            let amp_target = if rs.cell_count > 0.0 {
+                let avg_speed = rs.speed_sum / rs.cell_count;
+                // Scale: ~100 cells × speed 2.0 → amplitude 1.0
+                (rs.cell_count * avg_speed / 200.0).min(2.0)
+            } else {
+                0.0
+            };
+            v.amplitude += (amp_target - v.amplitude) * SLEW_AMP;
 
-            let total_mag = bs.move_mag_sum + bs.stuck_mag_sum;
-            if total_mag > 1e-6 {
-                let stuck_ratio = bs.stuck_mag_sum / total_mag;
-                trem_targets[bi]  = stuck_ratio * MAX_TREMOLO;
-                noise_targets[bi] = stuck_ratio * MAX_NOISE;
-            }
+            // CoG — normalised within the region [0..1], defaulting to centre when empty
+            let (cog_x_target, cog_y_target) = if rs.cell_count > 0.0 {
+                let cx = (rs.cog_x_sum / rs.cell_count - col * rw) / rw;
+                let cy = (rs.cog_y_sum / rs.cell_count - row * rh) / rh;
+                (cx.clamp(0.0, 1.0), cy.clamp(0.0, 1.0))
+            } else {
+                (0.5, 0.5) // drift toward centre when idle
+            };
+            v.cog_x += (cog_x_target - v.cog_x) * SLEW_COG;
+            v.cog_y += (cog_y_target - v.cog_y) * SLEW_COG;
 
-            if bs.w_total > 1e-6 {
-                let avg_x = bs.wx_sum / bs.w_total;
-                let avg_y = bs.wy_sum / bs.w_total;
-                pan_targets[bi]    = (avg_x / W as f32 - 0.5) * 2.0 * PAN_MAX;
-                reverb_targets[bi] = BASE_REVERB_SEND
-                    + (1.0 - avg_y / H as f32) * REVERB_Y_RANGE;
-            }
+            // Pitch bend: CoG-x drives ±PITCH_BEND_MAX cents
+            let bend_target = (v.cog_x - 0.5) * 2.0 * PITCH_BEND_MAX;
+            v.pitch_bend += (bend_target - v.pitch_bend) * SLEW_BEND;
+
+            // Filter: CoG-y drives warmth — top of region (cog_y→0) = bright, bottom = warm
+            let filter_target = FILTER_BRIGHT + (FILTER_WARM - FILTER_BRIGHT) * v.cog_y;
+            v.filter_coeff += (filter_target - v.filter_coeff) * SLEW_FILTER;
         }
 
-        // ── 2. Slew voice parameters toward targets (once per frame) ───────
-        for (bi, v) in self.dir_voices.iter_mut().enumerate() {
-            v.amplitude     += (amp_targets[bi]    - v.amplitude)     * SLEW_AMP;
-            v.pitch_cents   += (pitch_targets[bi]  - v.pitch_cents)   * SLEW_PITCH;
-            v.tremolo_depth += (trem_targets[bi]   - v.tremolo_depth) * SLEW_TREM;
-            v.noise_level   += (noise_targets[bi]  - v.noise_level)   * SLEW_NOISE;
-            v.pan           += (pan_targets[bi]    - v.pan)           * SLEW_PAN;
-            v.reverb_send   += (reverb_targets[bi] - v.reverb_send)   * SLEW_REVERB;
-        }
-
-        // ── 3. Synthesise SAMPLES_PER_FRAME stereo pairs ──────────────────
-        // noise_rng is local so we can borrow dir_voices mutably in the inner loop
-        let mut noise_rng = xoru64(&mut self.rng);
+        // ── 2. Synthesise SAMPLES_PER_FRAME stereo pairs ──────────────────
         for _ in 0..SAMPLES_PER_FRAME {
             let mut sum_l     = 0.0f32;
             let mut sum_r     = 0.0f32;
             let mut reverb_in = 0.0f32;
 
-            for v in self.dir_voices.iter_mut() {
-                // Pitch (with bend)
-                let freq = v.base_freq * 2.0f32.powf(v.pitch_cents / 1200.0);
+            for v in self.region_voices.iter_mut() {
+                // Hard gate: silence very quiet voices to prevent droning
+                if v.amplitude < 1e-4 { continue; }
+
+                // Pitch with CoG-x bend
+                let freq = v.base_freq * 2.0f32.powf(v.pitch_bend / 1200.0);
                 v.phase = (v.phase + freq / SAMPLE_RATE as f32).rem_euclid(1.0);
 
-                // Waveform + noise
-                let raw   = (v.phase * 2.0 * PI).sin();
-                let noise = (xorf32(&mut noise_rng) * 2.0 - 1.0) * v.noise_level;
-                let noisy = raw + noise;
+                // Sine wave through dynamic LP filter (CoG-y driven warmth)
+                let raw = (v.phase * 2.0 * PI).sin();
+                v.filter_state += v.filter_coeff * (raw - v.filter_state);
 
-                // One-pole LP filter
-                v.filter_state += FIXED_CUTOFF * (noisy - v.filter_state);
+                let s = v.filter_state * v.amplitude * AUDIO_AMP_SCALE;
 
-                // Tremolo LFO
-                v.tremolo_phase =
-                    (v.tremolo_phase + TREM_RATE / SAMPLE_RATE as f32).rem_euclid(1.0);
-                let trem = 1.0
-                    - v.tremolo_depth * (1.0 + (v.tremolo_phase * 2.0 * PI).sin()) * 0.5;
-
-                let s = v.filter_state * trem * v.amplitude * AUDIO_AMP_SCALE;
-
-                // Equal-power pan: -1=left … +1=right → 0…π/2
+                // Equal-power pan (fixed per column)
                 let pan_angle = (v.pan + 1.0) * 0.5 * PI * 0.5;
                 sum_l     += s * pan_angle.cos();
                 sum_r     += s * pan_angle.sin();
                 reverb_in += s * v.reverb_send;
             }
 
-            // Mid-side reverb (same topology as before)
+            // Mid-side reverb
             let wet  = self.reverb.process(reverb_in.tanh() * 0.7);
             let side = (sum_l - sum_r) * 0.5;
             chunk_audio.push((wet + side).tanh()); // L
             chunk_audio.push((wet - side).tanh()); // R
         }
-        self.rng = noise_rng; // propagate RNG state forward
 
-        // ── 4. Clear stats for next frame ──────────────────────────────────
-        self.bucket_stats = [BucketStats::default(); 8];
+        // ── 3. Clear stats for next frame ──────────────────────────────────
+        self.region_stats = [RegionStats::default(); 9];
     }
 
     fn paint_frame(&mut self, canvas: &mut Vec<f32>, palette: &PaletteMode) {
