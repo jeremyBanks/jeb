@@ -346,7 +346,7 @@ impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, conway_every: usize, seed_density_inv: usize, target_pop: usize,
            wrap_x: bool, wrap_y: bool, bounce_x: bool, bounce_y: bool, steer: bool,
-           dampen_x: f32, dampen_y: f32, vel_decay: f32, init_vel: &str, circles: usize, vel_scale: f32) -> Self {
+           dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, init_vel: &str, circles: usize, vel_scale: f32) -> Self {
         use std::f32::consts::PI;
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
