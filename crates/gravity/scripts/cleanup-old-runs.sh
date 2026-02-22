@@ -23,6 +23,10 @@ RUNS_DIR="runs"
 # Extract the timestamp prefix (first 15 chars: YYYYMMDD_HHMMSS)
 CURRENT_TS="${CURRENT_RUN_ID:0:15}"
 
+# Safety: this script ONLY deletes intermediate files inside runs/*/
+# It NEVER touches the shared output directory (GRAVITY_SHARED_DIR).
+# Final archived videos are sacred — they live in shared/ and are never deleted here.
+
 echo "[cleanup] starting post-run cleanup (current=$CURRENT_RUN_ID, ts=$CURRENT_TS)"
 
 cleaned_runs=0
