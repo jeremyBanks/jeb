@@ -1687,7 +1687,7 @@ fn main() {
         o
     } else {
         // Checkpoint resume — load the tick=0 state saved on fresh start
-        match Sim::load_orig_state(orig_state_path) {
+        match Sim::load_orig_state(&orig_state_path) {
             Some(o) => { println!("Loaded original state ({} cells) for epilogue target.", o.count); o }
             None => {
                 println!("WARNING: orig_state.bin not found — epilogue will target checkpoint state, not tick=0.");
