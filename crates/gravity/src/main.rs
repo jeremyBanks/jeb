@@ -2089,31 +2089,21 @@ use std::io::{BufWriter, Write};
                 // Target occupied — stay put
                 moved_cross = false;
             }
-            // ── Audio bucket stats (only for cells attempting a grid crossing) ──
-            if crossing {
-                use std::f32::consts::PI;
-                let speed = (cvx*cvx + cvy*cvy).sqrt();
-                if speed > 1e-6 {
-                    let angle_norm = (cvy.atan2(cvx) + PI).rem_euclid(2.0 * PI); // 0..2π
-                    let bi = ((angle_norm / (PI / 4.0)) as usize).min(7);
-                    let bucket_centre = bi as f32 * (PI / 4.0);
-                    let dev = angle_norm - bucket_centre; // deviation within bucket
-                    let bs = &mut self.bucket_stats[bi];
-                    if moved_cross {
-                        bs.move_mag_sum  += speed;
-                        bs.angle_dev_sum += dev;
-                        bs.angle_dev_n   += 1.0;
-                        bs.wx_sum        += cpx;
-                        bs.wy_sum        += cpy;
-                        bs.w_total       += 1.0;
-                    } else {
-                        bs.stuck_mag_sum += speed;
-                        bs.wx_sum        += cpx / 64.0;
-                        bs.wy_sum        += cpy / 64.0;
-                        bs.w_total       += 1.0 / 64.0;
-                    }
-                }
-            }
+        }
+
+        // ── Audio: accumulate spatial region stats (all cells, post-move) ──────
+        // Divide canvas into 3×3 regions. Each cell contributes to its region's
+        // population count, total speed, and CoG sum.
+        for c in &self.cells {
+            let col = ((c.px / W as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
+            let row = ((c.py / H as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
+            let ri = row * 3 + col;
+            let speed = (c.vx * c.vx + c.vy * c.vy).sqrt();
+            let rs = &mut self.region_stats[ri];
+            rs.cell_count += 1.0;
+            rs.speed_sum  += speed;
+            rs.cog_x_sum  += c.px;
+            rs.cog_y_sum  += c.py;
         }
     }
 
