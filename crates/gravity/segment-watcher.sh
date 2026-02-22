@@ -156,7 +156,7 @@ while true; do
             STATE_MSG=""
             [ -n "$CUR_POP" ] && STATE_MSG="pop=${CUR_POP} avg_spd=${CUR_SPD} p10=${CUR_P10}"
 
-            MSG="chunk ${chunk_num}/${TOTAL} | ${META}${EXTRA}"
+            MSG="chunk ${chunk_num} (${PCT}%) | ${META}${EXTRA}"
             [ -n "$STATE_MSG" ] && MSG="${MSG}
 ${STATE_MSG}"
 
