@@ -174,6 +174,8 @@ struct Sim {
     prev_live: Vec<bool>,
     wrap_x: bool,  // toroidal wrapping on x-axis (horizontal)
     wrap_y: bool,  // toroidal wrapping on y-axis (vertical)
+    bounce_x: bool, // reflect velocity at x boundaries (gravity: no-wrap force)
+    bounce_y: bool, // reflect velocity at y boundaries (gravity: no-wrap force)
     steer: bool,   // counter-rotate velocity to compensate discrete-move angular error
     dampen_x: f32, // fraction of COM horizontal velocity removed per tick (0=off, 0.125=fast)
     dampen_y: f32, // fraction of COM vertical   velocity removed per tick (0=off, 0.125=fast)
