@@ -2259,11 +2259,9 @@ use std::io::{BufWriter, Write};
             let n = self.cells.len() as f32;
             let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
             let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
-            let fx = self.dampen_x / 512.0;
-            let fy = self.dampen_y / 512.0;
             for c in &mut self.cells {
-                c.vx -= avg_vx * fx;
-                c.vy -= avg_vy * fy;
+                c.vx -= avg_vx * self.dampen_x;
+                c.vy -= avg_vy * self.dampen_y;
             }
         }
 
