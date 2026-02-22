@@ -2775,6 +2775,12 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
             // t = 0 → still (dark navy), t = 1 → speed_cap, up to ~2.0 beyond.
             let t = spd / speed_cap;
 
+            // Position-based rotation (same formula as directional_color input rotation).
+            // Applied twice: once to input (inside directional_color), once to output ab.
+            let pos_rot = if dp.pos_rotation_enabled {
+                (1.0 - px / W as f32) * 3.0 + (py / H as f32) * 2.0
+            } else { 0.0 };
+
             // Directional blend: unit velocity selects among four palette colours.
             let (dl, da, db) = dp.dark;
             let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
@@ -2783,7 +2789,7 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
                 (dl, da, db)
             };
 
-            if t <= 1.0 {
+            let (l, a, b) = if t <= 1.0 {
                 // Linear blend in OKLab: dark navy → directional palette colour.
                 let l = dl + (tgt_l - dl) * t;
                 let a = da + (tgt_a - da) * t;
@@ -2791,12 +2797,17 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
                 (l, a, b)
             } else {
                 // Beyond speed_cap: push L brighter and C more saturated.
-                // √-taper gives fast initial gain, diminishing returns toward 2×.
                 let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
                 let l = (tgt_l + (0.92 - tgt_l) * extra * 0.45).min(0.93);
                 let c_scale = 1.0 + extra * 0.40;
                 (l, tgt_a * c_scale, tgt_b * c_scale)
-            }
+            };
+
+            // Output hue rotation: rotate (a, b) by pos_rot turns in OKLab.
+            // Same angle as the input rotation → compounds the positional colour effect.
+            let out_angle = pos_rot * 2.0 * std::f32::consts::PI;
+            let (oca, osa) = (out_angle.cos(), out_angle.sin());
+            (l, a * oca - b * osa, a * osa + b * oca)
         }
     }
 }
