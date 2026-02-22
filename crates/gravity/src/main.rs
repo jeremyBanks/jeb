@@ -12,7 +12,12 @@ static H_CELL: OnceLock<usize> = OnceLock::new();
 #[inline] fn OUT_H() -> u32 { H() as u32 }
 const FPS: u32 = 60;
 const CRF: u32 = 12;
-const CHUNK_FRAMES: usize = 4096; // 68.3s at 60fps → 64 segments for a 64³-frame run
+const CHUNK_FRAMES: usize = 4096; // initial chunk size; adjusted dynamically at runtime
+// Dynamic chunk target: each segment should take ~12s to render (range 12..64s).
+const CHUNK_TARGET_SECS: f64 = 12.0;
+const CHUNK_MAX_SECS:    f64 = 64.0;
+const CHUNK_MIN_FRAMES:  usize = 64;
+const CHUNK_MAX_FRAMES:  usize = 1 << 20; // 1M frames hard cap
 
 // ── Audio constants ────────────────────────────────────────────────────────
 const SAMPLE_RATE: u32         = 44100;
@@ -596,13 +601,14 @@ impl Sim {
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
-    fn save_checkpoint(&self, canvas: &[f32], chunk_index: usize, path: &str) {
+    /// `resume_frame` = the absolute frame offset at which to resume (= chunk_end_frame of last chunk).
+    fn save_checkpoint(&self, canvas: &[f32], resume_frame: usize, path: &str) {
         let mut buf: Vec<u8> = Vec::new();
         // header
         buf.extend_from_slice(&(self.cells.len() as u64).to_le_bytes());
         buf.extend_from_slice(&self.rng.to_le_bytes());
         buf.extend_from_slice(&(self.tick_count as u64).to_le_bytes());
-        buf.extend_from_slice(&(chunk_index as u64).to_le_bytes());
+        buf.extend_from_slice(&(resume_frame as u64).to_le_bytes()); // was chunk_index, now frame offset
         buf.extend_from_slice(&self.next_id.to_le_bytes());
         // cells
         for c in &self.cells {
@@ -644,7 +650,7 @@ impl Sim {
         let n_cells = read_u64!() as usize;
         let rng     = read_u64!();
         let tick_count = read_u64!() as usize;
-        let chunk_index = read_u64!() as usize;
+        let resume_frame = read_u64!() as usize; // absolute frame offset to resume from
         let next_id = read_u64!();
 
         let mut cells = Vec::with_capacity(n_cells);
@@ -684,7 +690,7 @@ impl Sim {
                         region_voices: std::array::from_fn(|i| RegionVoice::new(
                             REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
                         reverb: Reverb::new() };
-        Some((sim, canvas, chunk_index))
+        Some((sim, canvas, resume_frame))
     }
 
     // ── Original-state save/load (for correct epilogue target) ───────────
@@ -1981,10 +1987,10 @@ fn main() {
         .unwrap_or(128);
 
     let total_frames = seconds * FPS as usize;
-    let n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES;
+    let est_n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES; // estimate only; actual varies
 
-    println!("gravity: {}s × {}fps = {} frames, {} chunks of {} frames",
-        seconds, FPS, total_frames, n_chunks, CHUNK_FRAMES);
+    println!("gravity: {}s × {}fps = {} frames, ~{} chunks (dynamic sizing {}..{}s per chunk)",
+        seconds, FPS, total_frames, est_n_chunks, CHUNK_TARGET_SECS as usize, CHUNK_MAX_SECS as usize);
 
     // ── GOOD SETTINGS (local optimum, Feb 21 2026) ───────────────────────────
     // These defaults produce genuinely interesting dynamics: Conway-active clusters
@@ -2093,11 +2099,11 @@ fn main() {
     let _ = fs::write(format!("{}/{}.txt", shared_dir, run_id), &settings);
 
     // Load checkpoint or init fresh
-    let (mut sim, mut canvas, start_chunk) =
+    let (mut sim, mut canvas, start_frame) =
         Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate)
-        .map(|(s, c, ci)| {
-            println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
-            (s, c, ci)
+        .map(|(s, c, sf)| {
+            println!("Resuming from checkpoint: frame {} / {}", sf, total_frames);
+            (s, c, sf)
         })
         .unwrap_or_else(|| {
             if circles > 0 {
@@ -2114,7 +2120,7 @@ fn main() {
 
     // OriginalState = tick=0 layout. On fresh start: capture now and persist.
     // On checkpoint resume: load from disk so epilogue targets the actual first frame.
-    let orig = if start_chunk == 0 {
+    let orig = if start_frame == 0 {
         // Fresh start — this IS tick=0
         let o = OriginalState {
             positions:  sim.cells.iter().map(|c| (c.gx(), c.gy())).collect(),
@@ -2155,24 +2161,31 @@ fn main() {
         .create(true).append(true)
         .open(&segments_file).unwrap();
 
-    'chunks: for chunk in start_chunk..n_chunks {
-        let chunk_start_frame = chunk * CHUNK_FRAMES;
-        let chunk_end_frame = ((chunk + 1) * CHUNK_FRAMES).min(total_frames);
-        let this_chunk_frames = chunk_end_frame - chunk_start_frame;
+    let mut chunk_frames = CHUNK_FRAMES; // dynamic; adjusted each chunk based on render time
+    let mut chunk_start_frame = start_frame;
+    let mut chunk_num = 0usize;
 
-        println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
-        // Hot-reload palette at chunk boundary — drop a file to change mid-run.
+    'chunks: loop {
+        if chunk_start_frame >= total_frames { break; }
+        if !keep_running.load(Ordering::Relaxed) { break; }
+        chunk_num += 1;
+
+        let chunk_end_frame = (chunk_start_frame + chunk_frames).min(total_frames);
+        let this_chunk_frames = chunk_end_frame - chunk_start_frame;
+        let pct_done = chunk_start_frame * 100 / total_frames;
+        let frames_left = total_frames - chunk_start_frame;
+        let est_chunks_left = (frames_left + chunk_frames - 1) / chunk_frames;
+
+        println!("\n[chunk {chunk_num} | {pct_done}% | ~{est_chunks_left} left] frames {chunk_start_frame}..{chunk_end_frame} ({chunk_frames} frames)");
         let palette = load_palette(pos_rotation_enabled, pos_rotation_output);
         if !headless { println!("  palette: {:?}", palette); }
-        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2); // stereo interleaved
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2);
 
-        // Render frames for this chunk — check signal each frame
+        let chunk_wall_t0 = std::time::Instant::now();
         let sim_t0 = std::time::Instant::now();
         for local_frame in 0..this_chunk_frames {
             if !keep_running.load(Ordering::Relaxed) {
-                // Discard partial chunk and stop immediately
-                println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
-                    chunk + 1, local_frame);
+                println!("[signal] Discarding partial chunk {chunk_num}, cleaning up {local_frame} frames...");
                 delete_frames(&frames_dir);
                 break 'chunks;
             }
@@ -2193,32 +2206,39 @@ fn main() {
 
         let enc_ms;
         if !headless {
-            // Encode chunk
             let enc_t0 = std::time::Instant::now();
             let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
             encode_chunk(&frames_dir, &seg_path, this_chunk_frames, tile_2x2);
             mux_audio_into_segment(&seg_path, &chunk_audio);
             enc_ms = enc_t0.elapsed().as_millis();
-
-            // Append to segments list
             writeln!(seg_list, "file '{seg_path}'").unwrap();
             seg_list.flush().unwrap();
-
-            // Delete PNGs
             delete_frames(&frames_dir);
         } else {
             enc_ms = 0;
         }
 
-        // Save checkpoint (next chunk index)
-        sim.save_checkpoint(&canvas, chunk + 1, &checkpoint_path);
+        // Save checkpoint (resume frame = next chunk start)
+        sim.save_checkpoint(&canvas, chunk_end_frame, &checkpoint_path);
 
-        let pct = (chunk + 1) * 100 / n_chunks;
+        let wall_secs = chunk_wall_t0.elapsed().as_secs_f64();
         let pop = sim.cells.len();
-        println!("  chunk {}/{n_chunks} done ({pct}%)  pop={pop}  sim={sim_ms}ms enc={enc_ms}ms", chunk+1);
-        // Write stats for segment-watcher.sh to include in Discord messages
+        println!("  chunk {chunk_num} done ({pct_done}%)  pop={pop}  wall={wall_secs:.1}s  sim={sim_ms}ms enc={enc_ms}ms  chunk_frames={chunk_frames}");
         let _ = fs::write("state/last_stats.txt",
             format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
+
+        // Adjust chunk_frames for next chunk: target CHUNK_TARGET_SECS wall time.
+        if wall_secs > 0.5 {
+            let scale = CHUNK_TARGET_SECS / wall_secs;
+            let next = (chunk_frames as f64 * scale).round() as usize;
+            // Also enforce max wall time
+            let fps_render = this_chunk_frames as f64 / wall_secs;
+            let max_by_time = (fps_render * CHUNK_MAX_SECS).round() as usize;
+            chunk_frames = next.clamp(CHUNK_MIN_FRAMES, CHUNK_MAX_FRAMES).min(max_by_time).max(CHUNK_MIN_FRAMES);
+            println!("  next chunk_frames={chunk_frames} (wall={wall_secs:.1}s target={CHUNK_TARGET_SECS}s)");
+        }
+
+        chunk_start_frame = chunk_end_frame;
     }
 
     // ── Epilogue phase ────────────────────────────────────────────────────
@@ -2282,8 +2302,8 @@ fn main() {
             ep_frame += 1;
             ep_tick += 1;
 
-            // Encode + flush every CHUNK_FRAMES frames
-            if ep_chunk_frames.len() == CHUNK_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
+            // Encode + flush at same chunk size as last main chunk
+            if ep_chunk_frames.len() == chunk_frames || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
                     encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len(), tile_2x2);
