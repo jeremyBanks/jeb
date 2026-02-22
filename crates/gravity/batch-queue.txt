@@ -60,3 +60,40 @@ phone_portrait:--width 72 --height 288 --gravity 0.3 --softening 5 --speed-cap 5
 
 # Large square, massive population — dense field dynamics
 big_square_dense:--width 320 --height 320 --gravity 0.05 --softening 6 --speed-cap 4 --pop-target 5120 --pop-band 640 --rate-limit 32 --init-vel random --wrap --tile-2x2
+
+# ── MATTE'S PICKS ────────────────────────────────────────────────────────────
+# Two circles spinning fast — do they orbit, merge, or tear apart?
+two_circles_fast:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 2 --vel-scale 3 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge-rate 0.03125 --tile-2x2
+
+# Strong gravity + very mushy wells — cells deflect wildly instead of collapsing
+strong_g_mushy:--width 256 --height 160 --gravity 0.5 --softening 10 --speed-cap 6 --pop-target 768 --pop-band 96 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --tile-2x2
+
+# Random init, high velocity, then heavy damping — chaotic explosion that crystallizes
+random_crystallize:--width 256 --height 160 --gravity 0.1 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --init-vel random --vel-scale 3 --wrap --dampen-x 0.0625 --dampen-y 0.0625 --tile-2x2
+
+# Near-zero Conway — pop-band huge so Conway barely fires, pure n-body gravity
+pure_gravity:--width 256 --height 160 --gravity 0.25 --softening 5 --speed-cap 6 --pop-target 1024 --pop-band 8192 --rate-limit 1 --circles 1 --vel-scale 1 --init-vel spin --wrap --tile-2x2
+
+# Six circles, radial explosion — six simultaneous shockwaves
+six_explosion:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 5 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 6 --vel-scale 2 --init-vel radial-out --wrap --dampen-y 0.0625 --tile-2x2
+
+# Spin + vel-decay + high churn — vortex bleeds speed while Conway churns hard
+spin_decay_churn:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 128 --circles 1 --vel-scale 2 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9992 --tile-2x2
+
+# Dense colony — massive population seeded from 12 circles
+dense_colony:--width 256 --height 160 --gravity 0.1 --softening 4 --speed-cap 4 --pop-target 4096 --pop-band 512 --rate-limit 64 --circles 12 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --tile-2x2
+
+# Narrow ribbon — ultra-wide, spin-flat, horizontal band dynamics
+ribbon:--width 384 --height 64 --gravity 0.2 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin-flat --wrap --dampen-y 0.125 --tile-2x2
+
+# Conway fog — nearly no gravity, Conway rate=512, fog of cellular automata with faint drift
+conway_fog:--width 256 --height 160 --gravity 0.0078125 --softening 6 --speed-cap 2 --pop-target 2048 --pop-band 256 --rate-limit 512 --init-vel random --wrap --dampen-x 0.015625 --dampen-y 0.015625 --tile-2x2
+
+# Hard ricochet — strong gravity, bounce walls, spin into the walls
+ricochet:--width 256 --height 160 --gravity 0.3 --softening 3 --speed-cap 6 --pop-target 768 --pop-band 96 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel spin --bounce-x --bounce-y --tile-2x2
+
+# Four vortex — 4 circles each spinning relative to their own centre
+four_vortex:--width 256 --height 160 --gravity 0.165 --softening 3 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 64 --circles 4 --vel-scale 1.5 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge-rate 0.03125 --tile-2x2
+
+# Nudge sideways — everything slowly steered rightward while spinning
+nudge_drift:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.0 --vel-nudge-rate 0.0625 --tile-2x2
