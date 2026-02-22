@@ -2826,10 +2826,33 @@ impl DirectionalPalette {
         let w_l = (-rx).max(0.0).powi(2);
         let w_d = ry.max(0.0).powi(2);
         let w_u = (-ry).max(0.0).powi(2);
-        // w_r + w_l + w_d + w_u = rx²+ ry² = |rotated unit vector|² = 1 — no normalisation needed
-        let l = w_r*self.c_right.0 + w_l*self.c_left.0 + w_d*self.c_down.0 + w_u*self.c_up.0;
-        let a = w_r*self.c_right.1 + w_l*self.c_left.1 + w_d*self.c_down.1 + w_u*self.c_up.1;
-        let b = w_r*self.c_right.2 + w_l*self.c_left.2 + w_d*self.c_down.2 + w_u*self.c_up.2;
+        // w_r + w_l + w_d + w_u = 1 on the unit circle — no normalisation needed.
+
+        // Blend in Oklch (polar Oklab) to stay on the hue arc, avoiding neutral desaturation
+        // when opposite hues mix in Cartesian (a,b) space.
+        // Convert each anchor: C = sqrt(a²+b²), H = atan2(b,a)
+        let to_lch = |(l, a, b): (f32, f32, f32)| -> (f32, f32, f32) {
+            let c = (a*a + b*b).sqrt();
+            let h = b.atan2(a);  // radians, −π..π
+            (l, c, h)
+        };
+        let (lr, cr, hr) = to_lch(self.c_right);
+        let (ll, cl, hl) = to_lch(self.c_left);
+        let (ld, cd, hd) = to_lch(self.c_down);
+        let (lu, cu, hu) = to_lch(self.c_up);
+
+        // L and C blend linearly.
+        let l = w_r*lr + w_l*ll + w_d*ld + w_u*lu;
+        let c = w_r*cr + w_l*cl + w_d*cd + w_u*cu;
+
+        // H blends via unit-vector mean — correct circular interpolation across 0/2π wrap.
+        let hx = w_r*hr.cos() + w_l*hl.cos() + w_d*hd.cos() + w_u*hu.cos();
+        let hy = w_r*hr.sin() + w_l*hl.sin() + w_d*hd.sin() + w_u*hu.sin();
+        let h  = hy.atan2(hx);
+
+        // Back to Oklab (a, b).
+        let a = c * h.cos();
+        let b = c * h.sin();
         (l, a, b)
     }
 }
