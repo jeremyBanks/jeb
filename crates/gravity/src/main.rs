@@ -1608,8 +1608,8 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 #[derive(Clone, Debug)]
 struct DirectionalPalette {
     dark:           (f32, f32, f32),  // #061B31  dark navy — slow/still anchor
-    c_right:        (f32, f32, f32),  // #635BFF  periwinkle — +x
-    c_left:         (f32, f32, f32),  // #533AFD  violet      — −x
+    c_right:        (f32, f32, f32),  // #533AFD  violet      — +x
+    c_left:         (f32, f32, f32),  // #635BFF  periwinkle  — −x
     c_down:         (f32, f32, f32),  // #FFC01F  golden yellow — +y (screen-down)
     c_up:           (f32, f32, f32),  // #EA2261  hot pink      — −y (screen-up)
     wheel_rotation:       f32,   // turns; negative = CCW in screen space
@@ -1621,8 +1621,8 @@ impl DirectionalPalette {
     fn build(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Self {
         DirectionalPalette {
             dark:                rgb_to_oklab(0x06, 0x1B, 0x31),  // dark navy — zero-speed anchor
-            c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — +x
-            c_left:              rgb_to_oklab(0x53, 0x3A, 0xFD),  // violet          — −x
+            c_right:             rgb_to_oklab(0x53, 0x3A, 0xFD),  // violet          — +x
+            c_left:              rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — −x
             c_down:              rgb_to_oklab(0xFF, 0xC0, 0x1F),  // golden yellow   — +y
             c_up:                rgb_to_oklab(0xEA, 0x22, 0x61),  // hot pink        — −y
             wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
