@@ -16,61 +16,65 @@ const CHUNK_FRAMES: usize = 4096; // 68.3s at 60fps → 64 segments for a 64³-f
 // ── Audio constants ────────────────────────────────────────────────────────
 const SAMPLE_RATE: u32         = 44100;
 const SAMPLES_PER_FRAME: usize = 735;    // 44100 / 60, truncated (acceptable drift)
-const AUDIO_AMP_SCALE: f32     = 0.0015; // per-voice scale; tanh handles headroom
+const AUDIO_AMP_SCALE: f32     = 0.0008; // per-voice scale (9 voices; tanh handles headroom)
 
-// 8 direction buckets (clockwise from East): C major pentatonic over 2 octaves
-// E=C4  SE=D4  S=E4  SW=G4  W=A4  NW=C5  N=E5  NE=G5
-const BUCKET_FREQS: [f32; 8] = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 659.25, 783.99];
+// 3×3 spatial grid — 9 voices, one per screen region.
+// Pitch: C major pentatonic across 2 octaves, A3–E5, warm-bright range (~220–660 Hz).
+// Layout: top row = highest pitch, bottom row = lowest. Left-to-right within row = ascending.
+//   row 0 (top):    C5(523) D5(587) E5(659)  — indices 0,1,2
+//   row 1 (mid):    E4(330) G4(392) A4(440)  — indices 3,4,5
+//   row 2 (bot):    A3(220) C4(262) D4(294)  — indices 6,7,8
+const REGION_FREQS: [f32; 9] = [
+    523.25, 587.33, 659.25,  // top row
+    329.63, 392.00, 440.00,  // mid row
+    220.00, 261.63, 293.66,  // bot row
+];
+// Pan per column: mild stereo (col 0=left, col 1=center, col 2=right)
+const REGION_PAN:  [f32; 3] = [-0.30, 0.0, 0.30];
+// Reverb send per row: top=airy, mid=neutral, bot=dry
+const REGION_REVERB: [f32; 3] = [0.67, 0.58, 0.48];
 
-const TREM_RATE:        f32 = 5.5;   // Hz
-const PITCH_BEND_MAX:   f32 = 30.0;  // cents ±
-const PAN_MAX:          f32 = 0.25;  // ± — signal stays strong in both channels at all times
-const BASE_REVERB_SEND: f32 = 0.55;
-const REVERB_Y_RANGE:   f32 = 0.12;  // top of screen → this much extra reverb vs bottom
-const MAX_TREMOLO:      f32 = 0.35;
-const MAX_NOISE:        f32 = 0.04;
-const FIXED_CUTOFF:     f32 = 0.1568; // one-pole LP ≈ 1200 Hz: 1-exp(-2π×1200/44100)
+const PITCH_BEND_MAX:  f32 = 50.0;   // cents ±   (CoG-x drives ±0.5 semitone)
+const FILTER_BRIGHT:   f32 = 0.248;  // one-pole LP coeff ≈ 2000 Hz (active/sparse)
+const FILTER_WARM:     f32 = 0.055;  // one-pole LP coeff ≈ 400 Hz  (dense/settled)
 
 // Slew rates per frame: val += (target - val) * α
-const SLEW_AMP:    f32 = 0.15; // half-life ~4 frames / 72 ms
-const SLEW_PITCH:  f32 = 0.12;
-const SLEW_TREM:   f32 = 0.10;
-const SLEW_NOISE:  f32 = 0.10;
-const SLEW_PAN:    f32 = 0.08; // half-life ~8 frames / 133 ms
-const SLEW_REVERB: f32 = 0.05; // half-life ~14 frames / 230 ms — most stable
+const SLEW_AMP:    f32 = 0.20;  // amplitude — lighter than CoG so rhythm comes through
+const SLEW_COG:    f32 = 0.25;  // CoG x/y  — ~4 ticks ≈ 1/15 s
+const SLEW_BEND:   f32 = 0.15;  // pitch bend from CoG-x
+const SLEW_FILTER: f32 = 0.20;  // filter cutoff from CoG-y
 
-/// Per-frame statistics accumulated for one 45° direction bucket.
+/// Per-frame raw stats accumulated for one 3×3 spatial region (cleared each frame).
 #[derive(Default, Clone, Copy)]
-struct BucketStats {
-    move_mag_sum:  f32, // Σ speed of cells that actually crossed a grid square in this dir
-    stuck_mag_sum: f32, // Σ speed of cells blocked from crossing in this dir
-    angle_dev_sum: f32, // Σ (vel_angle − bucket_centre_angle) for movers
-    angle_dev_n:   f32, // count of movers contributing to angle_dev
-    wx_sum:        f32, // weighted Σ x-position (movers weight=1, stuck weight=1/64)
-    wy_sum:        f32, // weighted Σ y-position
-    w_total:       f32, // Σ weight
+struct RegionStats {
+    speed_sum:  f32,  // Σ speed of all cells in region
+    cell_count: f32,  // number of cells in region
+    cog_x_sum:  f32,  // Σ px (for CoG)
+    cog_y_sum:  f32,  // Σ py (for CoG)
 }
 
-/// One persistent directional voice — always active, amplitude→0 when idle.
-struct DirVoice {
-    base_freq:     f32,
-    phase:         f32,
-    tremolo_phase: f32,
-    filter_state:  f32,
-    // smoothed parameters (slewed each frame)
-    amplitude:     f32,
-    pitch_cents:   f32,
-    tremolo_depth: f32,
-    noise_level:   f32,
-    pan:           f32,
-    reverb_send:   f32,
+/// One persistent spatial voice — always active, amplitude→0 when idle.
+struct RegionVoice {
+    base_freq:    f32,  // fixed pitch for this region
+    pan:          f32,  // fixed pan from column (-0.3 / 0 / +0.3)
+    reverb_send:  f32,  // fixed reverb from row
+    phase:        f32,  // oscillator phase
+    filter_state: f32,  // one-pole LP state
+    // EMA-smoothed values
+    amplitude:    f32,  // pop × avg_speed, normalised
+    cog_x:        f32,  // smoothed CoG x within region (0..1)
+    cog_y:        f32,  // smoothed CoG y within region (0..1)
+    // derived, slewed
+    pitch_bend:   f32,  // cents, from cog_x
+    filter_coeff: f32,  // LP cutoff coeff, from cog_y
 }
-impl DirVoice {
-    fn new(base_freq: f32) -> Self {
-        DirVoice {
-            base_freq, phase: 0.0, tremolo_phase: 0.0, filter_state: 0.0,
-            amplitude: 0.0, pitch_cents: 0.0, tremolo_depth: 0.0,
-            noise_level: 0.0, pan: 0.0, reverb_send: BASE_REVERB_SEND,
+impl RegionVoice {
+    fn new(base_freq: f32, pan: f32, reverb_send: f32) -> Self {
+        RegionVoice {
+            base_freq, pan, reverb_send,
+            phase: 0.0, filter_state: 0.0,
+            amplitude: 0.0, cog_x: 0.5, cog_y: 0.5,
+            pitch_bend: 0.0, filter_coeff: FILTER_WARM,
         }
     }
 }
