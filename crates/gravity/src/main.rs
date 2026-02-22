@@ -172,7 +172,8 @@ struct Sim {
     rate_limit: usize,
     tick_count: usize,
     prev_live: Vec<bool>,
-    wrap: bool,    // toroidal wrapping (false = hard walls)
+    wrap_x: bool,  // toroidal wrapping on x-axis (horizontal)
+    wrap_y: bool,  // toroidal wrapping on y-axis (vertical)
     steer: bool,   // counter-rotate velocity to compensate discrete-move angular error
     dampen_x: f32, // fraction of COM horizontal velocity removed per tick (0=off, 0.125=fast)
     dampen_y: f32, // fraction of COM vertical   velocity removed per tick (0=off, 0.125=fast)
