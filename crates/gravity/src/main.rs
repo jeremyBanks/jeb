@@ -2812,9 +2812,9 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
                 (l, tgt_a * c_scale, tgt_b * c_scale)
             };
 
-            // Output hue rotation: rotate (a, b) by pos_rot turns in OKLab.
-            // Same angle as the input rotation → compounds the positional colour effect.
-            let out_angle = pos_rot * 2.0 * std::f32::consts::PI;
+            // Output hue rotation: rotate (a, b) by the full combined angle in OKLab.
+            // Both wheel_rotation AND pos_rot applied to both input and output — symmetric.
+            let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
             let (oca, osa) = (out_angle.cos(), out_angle.sin());
             (l, a * oca - b * osa, a * osa + b * oca)
         }
