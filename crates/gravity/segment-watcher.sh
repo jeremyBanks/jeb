@@ -56,25 +56,18 @@ make_preview() {
 
     echo "[watcher] preview seeks: a=${a0}+${a1} b=${b0}+${b1} c=${c0}+${c1} (dur=${dur})"
 
-    # Single ffmpeg call: 6 inputs (3 positions × fast+slow), concat via filter_complex.
-    # Uniform fps throughout — no VFR, no intermediate files.
-    ffmpeg -y \
-        -ss "$a0" -i "$seg" -t $CLIP_FULL     \
-        -ss "$a1" -i "$seg" -t $CLIP_SLOW_SRC \
-        -ss "$b0" -i "$seg" -t $CLIP_FULL     \
-        -ss "$b1" -i "$seg" -t $CLIP_SLOW_SRC \
-        -ss "$c0" -i "$seg" -t $CLIP_FULL     \
-        -ss "$c1" -i "$seg" -t $CLIP_SLOW_SRC \
-        -filter_complex "
-            [0:v]${scale},fps=${SLOW_FPS}[af];
-            [1:v]${scale},setpts=3*PTS,fps=${SLOW_FPS}[as];
-            [2:v]${scale},fps=${SLOW_FPS}[bf];
-            [3:v]${scale},setpts=3*PTS,fps=${SLOW_FPS}[bs];
-            [4:v]${scale},fps=${SLOW_FPS}[cf];
-            [5:v]${scale},setpts=3*PTS,fps=${SLOW_FPS}[cs];
-            [af][as][bf][bs][cf][cs]concat=n=6:v=1:a=0[out]
-        " \
-        -map "[out]" -c:v libx264 -crf 22 -preset fast "$out" 2>/tmp/watcher_ffmpeg.log
+    # Single input decoded once, split 6 ways, trim to each section.
+    # trim+setpts ensures correct timestamps regardless of keyframe alignment.
+    ffmpeg -y -i "$seg" -filter_complex "
+        [0:v]split=6[v0][v1][v2][v3][v4][v5];
+        [v0]trim=start=${a0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[af];
+        [v1]trim=start=${a1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[as];
+        [v2]trim=start=${b0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[bf];
+        [v3]trim=start=${b1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[bs];
+        [v4]trim=start=${c0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[cf];
+        [v5]trim=start=${c1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[cs];
+        [af][as][bf][bs][cf][cs]concat=n=6:v=1:a=0[out]
+    " -map "[out]" -c:v libx264 -crf 22 -preset fast "$out" 2>/tmp/watcher_ffmpeg.log
 }
 
 # ── main loop ───────────────────────────────────────────────────────────────
