@@ -1556,6 +1556,7 @@ fn main() {
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
     let pos_rotation_enabled = !args.iter().any(|a| a == "--no-pos-color"); // default: on
     let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
+    let tile_2x2             =  args.iter().any(|a| a == "--tile-2x2");      // default: off
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
