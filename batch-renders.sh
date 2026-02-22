@@ -63,9 +63,11 @@ while true; do
         sleep 3
     fi
 
-    # ── Clean up leftover frames from any killed renders ───────────────────
-    # Frames inside runs/*/frames/ should never persist after a chunk encodes.
-    # If a render was SIGKILL'd mid-chunk they'll be stranded — delete them now.
+    # ── Clean up leftover frames/segments from any killed renders ─────────
+    # Frames and segments should never persist after a render finishes.
+    # If a render was SIGKILL'd mid-chunk they'll be stranded here.
+    # cleanup-old-runs.sh handles this properly after each render, but also
+    # do a quick sweep here before starting so we never start full.
     LEFTOVER_FRAMES=$(find runs/ -path "*/frames/*.png" -type f 2>/dev/null | wc -l | tr -d ' ')
     if [ "$LEFTOVER_FRAMES" -gt 0 ]; then
         echo "[batch] cleaning $LEFTOVER_FRAMES leftover frame PNGs from previous run(s)..."
