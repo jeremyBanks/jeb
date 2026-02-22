@@ -174,8 +174,8 @@ struct Sim {
     prev_live: Vec<bool>,
     wrap: bool,    // toroidal wrapping (false = hard walls)
     steer: bool,   // counter-rotate velocity to compensate discrete-move angular error
-    dampen_x: f32, // horizontal COM-drift removal per tick: fraction = dampen_x/512 (0=off)
-    dampen_y: f32, // vertical   COM-drift removal per tick: fraction = dampen_y/512 (0=off)
+    dampen_x: f32, // fraction of COM horizontal velocity removed per tick (0=off, 0.125=fast)
+    dampen_y: f32, // fraction of COM vertical   velocity removed per tick (0=off, 0.125=fast)
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
