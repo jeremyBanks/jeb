@@ -111,7 +111,14 @@ while true; do
         seg_name=$(basename "$seg" .mp4)
         frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
         frame_offset=${frame_offset:-0}
-        chunk_num=$(( frame_offset / 1920 + 1 ))
+        (( chunk_count++ )) || true
+        chunk_num=$chunk_count
+        # Percentage based on actual frame offset (accurate regardless of chunk size)
+        if [ "$TOTAL_FRAMES" -gt 0 ]; then
+            PCT=$(( frame_offset * 100 / TOTAL_FRAMES ))
+        else
+            PCT="?"
+        fi
 
         preview="${PREVIEW_DIR}/preview_${RUN_ID}_chunk${chunk_num}.mp4"
 
