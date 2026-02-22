@@ -2733,8 +2733,8 @@ impl DirectionalPalette {
 
     /// Blend the four directional anchors for a unit velocity (ux, uy).
     /// Rotation = scheme wheel_rotation + optional position-based rotation:
-    ///   full left  (px=0) adds 3 full turns; full right (px=W) adds 0.
-    ///   full bottom (py=H) adds 2 full turns; full top  (py=0) adds 0.
+    ///   full left  (px=0) adds 1 full turn;  full right (px=W) adds 0.
+    ///   full bottom (py=H) adds 1 full turn;  full top  (py=0) adds 0.
     fn directional_color(&self, ux: f32, uy: f32, px: f32, py: f32) -> (f32, f32, f32) {
         let pos_rot = if self.pos_rotation_enabled {
             (1.0 - px / W as f32) + (py / H as f32)
