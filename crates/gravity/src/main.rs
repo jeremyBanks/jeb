@@ -2844,6 +2844,7 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
             let idx = yi * W + xi;
             if !occupied[idx] {
                 let (vx, vy) = make_vel(xi, yi, &mut rng);
+                let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                 cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                   prev_speed: 0.0, id: next_id, moved: false });
                 next_id += 1;
