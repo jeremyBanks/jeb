@@ -457,8 +457,9 @@ impl Sim {
                         (dx*dx + dy*dy).sqrt()
                     })
                     .fold(f32::INFINITY, f32::min);
-                let centre_pen = if wrap_x && wrap_y { 0.0 }
-                    else { ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001 };
+                // Always prefer canvas centre as tiebreaker (even on wrapped grids)
+                // so circles land near the middle rather than a random corner.
+                let centre_pen = ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001;
                 wall.min(nbr) - centre_pen
             };
 
