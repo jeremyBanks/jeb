@@ -396,7 +396,8 @@ impl Sim {
                     (dx/r * 0.4 + (xorf32(rng)-0.5)*0.1, dy/r * 0.4 + (xorf32(rng)-0.5)*0.1)
                 }
                 "zero" | _ => (0.0, 0.0),
-            }
+            };
+            (vx * aspect, vy)
         };
 
         if circles > 0 {
