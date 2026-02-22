@@ -2814,9 +2814,9 @@ fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode)
                 (l, tgt_a * c_scale, tgt_b * c_scale)
             };
 
-            // Output hue rotation: only when pos_rotation enabled.
-            // wheel_rotation is input-only (velocity remapping); pos_rot drives output too.
-            if dp.pos_rotation_enabled {
+            // Output hue rotation: only when explicitly enabled (--pos-color-out).
+            // wheel_rotation is input-only by default; pos_rot also drives output when opted in.
+            if dp.pos_rotation_output {
                 let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
                 let (oca, osa) = (out_angle.cos(), out_angle.sin());
                 (l, a * oca - b * osa, a * osa + b * oca)
