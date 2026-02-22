@@ -186,8 +186,8 @@ struct Sim {
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
-    bucket_stats: [BucketStats; 8], // accumulated per-frame, cleared after generate_audio
-    dir_voices:   [DirVoice; 8],    // persistent directional voices
+    region_stats:  [RegionStats; 9],  // accumulated per-frame, cleared after generate_audio
+    region_voices: [RegionVoice; 9], // persistent spatial voices (3×3 grid)
     reverb: Reverb,
 }
 
