@@ -466,8 +466,12 @@ impl Sim {
                     .fold(f32::INFINITY, f32::min);
                 // Always prefer canvas centre as tiebreaker (even on wrapped grids)
                 // so circles land near the middle rather than a random corner.
-                let centre_pen = ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001;
-                wall.min(nbr) - centre_pen
+                // When both wall and nbr are infinite (fully wrapped, first circle),
+                // INFINITY - small = INFINITY so the penalty has no effect — use
+                // -centre_pen directly in that case.
+                let centre_pen = ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt();
+                let dist = wall.min(nbr);
+                if dist.is_finite() { dist - centre_pen * 0.001 } else { -centre_pen }
             };
 
             let mut centres: Vec<(f32, f32)> = Vec::with_capacity(circles);
