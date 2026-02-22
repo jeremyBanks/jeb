@@ -420,25 +420,41 @@ impl Sim {
                           .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
             let margin = radius + 1.0;
 
-            // Candidate grid (every 2 px inside the margin zone).
+            // Candidate grid: full axis range when wrapped, margin-inset when not.
+            let x_min = if wrap_x { 0.0 } else { margin };
+            let x_max = if wrap_x { W as f32 } else { W as f32 - margin };
+            let y_min = if wrap_y { 0.0 } else { margin };
+            let y_max = if wrap_y { H as f32 } else { H as f32 - margin };
             let mut candidates: Vec<(f32, f32)> = Vec::new();
-            let mut cx = margin;
-            while cx <= W as f32 - margin {
-                let mut cy = margin;
-                while cy <= H as f32 - margin {
+            let mut cx = x_min;
+            while cx <= x_max {
+                let mut cy = y_min;
+                while cy <= y_max {
                     candidates.push((cx, cy));
                     cy += 2.0;
                 }
                 cx += 2.0;
             }
 
-            // Score: min(wall-clearance, min-dist-to-chosen) — tie-break toward canvas centre.
+            // Score: maximise min-distance to nearest other circle (wrap-aware) and walls
+            // (walls only count for non-wrapped axes). Tie-break toward canvas centre.
             let score = |px: f32, py: f32, chosen: &[(f32, f32)]| -> f32 {
-                let wall = px.min(W as f32 - px).min(py.min(H as f32 - py));
-                let nbr  = chosen.iter()
-                    .map(|&(qx, qy)| ((px-qx).powi(2)+(py-qy).powi(2)).sqrt())
+                // Wall clearance only applies on non-wrapped axes.
+                let wall_x = if wrap_x { f32::INFINITY } else { px.min(W as f32 - px) };
+                let wall_y = if wrap_y { f32::INFINITY } else { py.min(H as f32 - py) };
+                let wall = wall_x.min(wall_y);
+                // Wrap-aware distance to nearest chosen circle.
+                let nbr = chosen.iter()
+                    .map(|&(qx, qy)| {
+                        let dx_r = (px - qx).abs();
+                        let dy_r = (py - qy).abs();
+                        let dx = if wrap_x { dx_r.min(W as f32 - dx_r) } else { dx_r };
+                        let dy = if wrap_y { dy_r.min(H as f32 - dy_r) } else { dy_r };
+                        (dx*dx + dy*dy).sqrt()
+                    })
                     .fold(f32::INFINITY, f32::min);
-                let centre_pen = ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001;
+                let centre_pen = if wrap_x && wrap_y { 0.0 }
+                    else { ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001 };
                 wall.min(nbr) - centre_pen
             };
 
