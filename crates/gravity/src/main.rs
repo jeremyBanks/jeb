@@ -1957,7 +1957,7 @@ use std::io::{BufWriter, Write};
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
             if live_nbrs.is_empty() { continue; }
-            let (vx, vy) = if self.wrap {
+            let (vx, vy) = if self.wrap_x || self.wrap_y {
                 // Wrap mode: inherit avg neighbour velocity for interesting dynamics
                 let n_nbrs = live_nbrs.len() as f32;
                 let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
