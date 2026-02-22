@@ -405,7 +405,9 @@ impl Sim {
             // Circle centres are chosen greedily to maximise minimum distance
             // from canvas walls and from each other (tie-break: closer to centre).
             let cells_per_circle = (target_pop / circles).max(1);
-            let radius = ((cells_per_circle as f32 / PI).sqrt()).max(4.0)
+            // Checkerboard: only (xi+yi)%2==0 cells are filled → 50% density.
+            // Area must be 2× larger to contain the same cell count, so radius × √2.
+            let radius = ((2.0 * cells_per_circle as f32 / PI).sqrt()).max(4.0)
                           .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
             let margin = radius + 1.0;
 
@@ -454,6 +456,7 @@ impl Sim {
                     let xi    = fpx as usize;
                     let yi    = fpy as usize;
                     if xi >= W || yi >= H { continue; }
+                    if (xi + yi) % 2 != 0 { continue; }  // checkerboard: 50% density
                     let idx = yi * W + xi;
                     if occupied[idx] { continue; }
                     let (vx, vy) = make_vel(xi, yi, &mut rng);
@@ -1877,9 +1880,10 @@ fn main() {
     let init_pop = if circles > 0 {
         use std::f32::consts::PI;
         let cells_per = (target_pop / circles).max(1);
-        let r = ((cells_per as f32 / PI).sqrt()).max(4.0)
+        // Checkerboard → radius×√2, actual cells ≈ target_pop
+        let r = ((2.0 * cells_per as f32 / PI).sqrt()).max(4.0)
                  .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
-        (PI * r * r) as usize * circles
+        (PI * r * r * 0.5) as usize * circles  // 50% of disk area
     } else if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
     let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
