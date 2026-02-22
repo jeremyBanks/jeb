@@ -1,14 +1,15 @@
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{Arc, OnceLock, atomic::{AtomicBool, Ordering}};
 
-const W: usize = 256;
-const H: usize = 160; // raw sim grid; upscaled to 3840×2400 at concat time
-
-// Output video settings
-const OUT_W: u32 = 256; // raw — ffmpeg upscales to 3840×2400 at concat
-const OUT_H: u32 = 160;
+// Runtime-configurable grid resolution (set once in main before any use).
+static W_CELL: OnceLock<usize> = OnceLock::new();
+static H_CELL: OnceLock<usize> = OnceLock::new();
+#[inline] fn W() -> usize { *W_CELL.get().expect("W not initialised") }
+#[inline] fn H() -> usize { *H_CELL.get().expect("H not initialised") }
+#[inline] fn OUT_W() -> u32 { W() as u32 }
+#[inline] fn OUT_H() -> u32 { H() as u32 }
 const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 4096; // 68.3s at 60fps → 64 segments for a 64³-frame run
