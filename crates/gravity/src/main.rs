@@ -2999,3 +2999,9 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
 /// right / left  → blue vs orange (#635BFF periwinkle / #FF9B3B orange-gold — opposite hues)
 /// down  / up    → pink family  (#F44BCC hot-pink    / #FAF0F5 soft blush)
 /// zero-speed anchor: #061B31 dark navy.
+
+// [recovery] edit target not found, appending:
+#[inline] fn W() -> usize { *W_CELL.get().expect("W not initialised") }
+#[inline] fn H() -> usize { *H_CELL.get().expect("H not initialised") }
+#[inline] fn OUT_W() -> u32 { W() as u32 }
+#[inline] fn OUT_H() -> u32 { H() as u32 }
