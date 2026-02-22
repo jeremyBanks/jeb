@@ -174,6 +174,7 @@ struct Sim {
     start_pop: usize,
     pop_band: f32,
     rate_limit: usize,
+    conway_every: usize, // fire Conway every N ticks (1 = every tick, 4 = every 4th tick)
     tick_count: usize,
     prev_live: Vec<bool>,
     wrap_x: bool,  // toroidal wrapping on x-axis (horizontal)
