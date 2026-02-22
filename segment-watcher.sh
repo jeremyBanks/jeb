@@ -111,6 +111,14 @@ while true; do
         seg_name=$(basename "$seg" .mp4)
         frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
         frame_offset=${frame_offset:-0}
+
+        # Skip epilogue segments (frame_offset >= total frames = past the end of main render)
+        if [ "$TOTAL_FRAMES" -gt 0 ] && [ "$frame_offset" -ge "$TOTAL_FRAMES" ]; then
+            echo "[watcher] skipping epilogue segment $seg_name (frame $frame_offset >= $TOTAL_FRAMES)"
+            echo "$seg" >> "$SEEN_FILE"
+            continue
+        fi
+
         (( chunk_count++ )) || true
         chunk_num=$chunk_count
         # Percentage based on actual frame offset (accurate regardless of chunk size)
