@@ -1567,7 +1567,7 @@ impl DirectionalPalette {
             c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),
             c_left:              rgb_to_oklab(0x53, 0x3A, 0xFD),
             c_down:              rgb_to_oklab(0xF4, 0x4B, 0xCC),
-            c_up:                rgb_to_oklab(0xF6, 0xF9, 0xFC),
+            c_up:                rgb_to_oklab(0xFA, 0xF0, 0xF5),  // soft blush (was cool-white #F6F9FC)
             wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
             pos_rotation_enabled,
         }
@@ -1660,9 +1660,9 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, pale
                 (l, tgt_a * c_scale, tgt_b * c_scale)
             };
 
-            // Output hue rotation: rotate (a, b) by pos_rot turns in OKLab.
-            // Same angle as the input rotation → compounds the positional colour effect.
-            let out_angle = pos_rot * 2.0 * std::f32::consts::PI;
+            // Output hue rotation: rotate (a, b) by the full combined angle in OKLab.
+            // Both wheel_rotation AND pos_rot applied to both input and output — symmetric.
+            let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
             let (oca, osa) = (out_angle.cos(), out_angle.sin());
             (l, a * oca - b * osa, a * osa + b * oca)
         }
@@ -1900,14 +1900,20 @@ fn main() {
     let run_id: String = parse_arg("--run-id")
         .unwrap_or_else(|| format!("seed{}", rng_seed));
 
-    let checkpoint_path = "state/checkpoint.bin";
-    let segments_dir    = "segments";
-    let frames_dir      = "frames/chunk";
-    let segments_file   = "segments.txt";
+    // Per-run directory: all data for this run lives under runs/{run_id}/
+    let run_dir         = format!("runs/{}", run_id);
+    let checkpoint_path = format!("{}/checkpoint.bin", run_dir);
+    let segments_dir    = format!("{}/segments", run_dir);
+    let frames_dir      = format!("{}/frames", run_dir);
+    let segments_file   = format!("{}/segments.txt", run_dir);
     let shared_dir = std::env::var("GRAVITY_SHARED_DIR")
         .unwrap_or_else(|_| String::from("/Users/matte/.openclaw/workspace/shared/gravity"));
     fs::create_dir_all(&shared_dir).ok();
-    let output_file = format!("{}/gravity_{}.mp4", shared_dir, run_id);
+    // Final video alongside the run dir (runs/{run_id}.mp4) + copy to shared
+    let output_file_local  = format!("runs/{}.mp4", run_id);
+    let output_file_shared = format!("{}/{}.mp4", shared_dir, run_id);
+    // Use local as primary; copy to shared after concat
+    let output_file = output_file_local.clone();
 
     // Write settings file alongside video and run_info for the watcher
     let init_pop = if circles > 0 {
@@ -1926,17 +1932,20 @@ fn main() {
          resolution:    {}x{} → 2048x1280\n",
         OUT_W * 2, OUT_H * 2
     );
-    let settings_file = format!("{}/gravity_{}.txt", shared_dir, run_id);
-    let _ = fs::write(&settings_file, &settings);
-    let _ = fs::write("state/run_info.txt", format!("run_id={run_id}\n{settings}"));
-
-    fs::create_dir_all(segments_dir).unwrap();
-    fs::create_dir_all(frames_dir).unwrap();
+    fs::create_dir_all(&segments_dir).unwrap();
+    fs::create_dir_all(&frames_dir).unwrap();
+    fs::create_dir_all("runs").unwrap();
+    // Write run_info to the run dir AND to state/ (watcher compat pointer)
+    let run_info_content = format!("run_id={run_id}\n{settings}");
+    let _ = fs::write(format!("{}/run_info.txt", run_dir), &run_info_content);
     fs::create_dir_all("state").unwrap();
+    let _ = fs::write("state/run_info.txt", &run_info_content);
+    // Settings copy to shared dir for reference
+    let _ = fs::write(format!("{}/{}.txt", shared_dir, run_id), &settings);
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_chunk) =
-        Sim::load_checkpoint(checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y)
+        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y)
         .map(|(s, c, ci)| {
             println!("Resuming from checkpoint: chunk {}/{}", ci, n_chunks);
             (s, c, ci)
@@ -1952,7 +1961,7 @@ fn main() {
             (s, c, 0)
         });
 
-    let orig_state_path = "state/orig_state.bin";
+    let orig_state_path = format!("{}/orig_state.bin", run_dir);
 
     // OriginalState = tick=0 layout. On fresh start: capture now and persist.
     // On checkpoint resume: load from disk so epilogue targets the actual first frame.
@@ -1963,12 +1972,12 @@ fn main() {
             velocities: sim.cells.iter().map(|c| ((c.gx(), c.gy()), (c.vx, c.vy))).collect(),
             count: sim.cells.len(),
         };
-        Sim::save_orig_state(&o, orig_state_path);
+        Sim::save_orig_state(&o, &orig_state_path);
         println!("Saved original state ({} cells) for epilogue target.", o.count);
         o
     } else {
         // Checkpoint resume — load the tick=0 state saved on fresh start
-        match Sim::load_orig_state(orig_state_path) {
+        match Sim::load_orig_state(&orig_state_path) {
             Some(o) => { println!("Loaded original state ({} cells) for epilogue target.", o.count); o }
             None => {
                 println!("WARNING: orig_state.bin not found — epilogue will target checkpoint state, not tick=0.");
@@ -1995,7 +2004,7 @@ fn main() {
     // Open/append segments list
     let mut seg_list = fs::OpenOptions::new()
         .create(true).append(true)
-        .open(segments_file).unwrap();
+        .open(&segments_file).unwrap();
 
     'chunks: for chunk in start_chunk..n_chunks {
         let chunk_start_frame = chunk * CHUNK_FRAMES;
@@ -2015,7 +2024,7 @@ fn main() {
                 // Discard partial chunk and stop immediately
                 println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
                     chunk + 1, local_frame);
-                delete_frames(frames_dir);
+                delete_frames(&frames_dir);
                 break 'chunks;
             }
             let global_frame = chunk_start_frame + local_frame;
@@ -2038,7 +2047,7 @@ fn main() {
             // Encode chunk
             let enc_t0 = std::time::Instant::now();
             let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
-            encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+            encode_chunk(&frames_dir, &seg_path, this_chunk_frames);
             mux_audio_into_segment(&seg_path, &chunk_audio);
             enc_ms = enc_t0.elapsed().as_millis();
 
@@ -2047,13 +2056,13 @@ fn main() {
             seg_list.flush().unwrap();
 
             // Delete PNGs
-            delete_frames(frames_dir);
+            delete_frames(&frames_dir);
         } else {
             enc_ms = 0;
         }
 
         // Save checkpoint (next chunk index)
-        sim.save_checkpoint(&canvas, chunk + 1, checkpoint_path);
+        sim.save_checkpoint(&canvas, chunk + 1, &checkpoint_path);
 
         let pct = (chunk + 1) * 100 / n_chunks;
         let pop = sim.cells.len();
@@ -2082,10 +2091,10 @@ fn main() {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
                         ep_seg_start + ep_frame - ep_chunk_frames.len());
-                    encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
+                    encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len());
                     writeln!(seg_list, "file '{seg_path}'").unwrap();
                     seg_list.flush().unwrap();
-                    delete_frames(frames_dir);
+                    delete_frames(&frames_dir);
                     ep_chunk_frames.clear();
                 }
                 println!("[signal] Stopping epilogue — concatenating completed segments.");
@@ -2128,10 +2137,10 @@ fn main() {
             if ep_chunk_frames.len() == CHUNK_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
-                    encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
+                    encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len());
                     writeln!(seg_list, "file '{seg_path}'").unwrap();
                     seg_list.flush().unwrap();
-                    delete_frames(frames_dir);
+                    delete_frames(&frames_dir);
                     ep_chunk_frames.clear();
                 }
             }
@@ -2153,9 +2162,9 @@ fn main() {
     }
 
     // Final concat
-    let total_segs = fs::read_to_string(segments_file).unwrap_or_default().lines().count();
+    let total_segs = fs::read_to_string(&segments_file).unwrap_or_default().lines().count();
     println!("\nConcatenating {total_segs} segments → {output_file}");
-    concat_segments(segments_file, &output_file);
+    concat_segments(&segments_file, &output_file);
 
     let size = fs::metadata(&output_file).map(|m| m.len()).unwrap_or(0);
     println!("Done! {output_file} ({:.1} MB)", size as f64 / 1_048_576.0);
