@@ -2166,7 +2166,6 @@ fn main() {
         .create(true).append(true)
         .open(&segments_file).unwrap();
 
-    let mut chunk_frames = CHUNK_FRAMES; // dynamic; adjusted each chunk based on render time
     let mut chunk_start_frame = start_frame;
     let mut chunk_num = 0usize;
 
@@ -2175,45 +2174,54 @@ fn main() {
         if !keep_running.load(Ordering::Relaxed) { break; }
         chunk_num += 1;
 
-        let chunk_end_frame = (chunk_start_frame + chunk_frames).min(total_frames);
-        let this_chunk_frames = chunk_end_frame - chunk_start_frame;
         let pct_done = chunk_start_frame * 100 / total_frames;
-        let frames_left = total_frames - chunk_start_frame;
-        let est_chunks_left = (frames_left + chunk_frames - 1) / chunk_frames;
-
-        println!("\n[chunk {chunk_num} | {pct_done}% | ~{est_chunks_left} left] frames {chunk_start_frame}..{chunk_end_frame} ({chunk_frames} frames)");
+        println!("\n[chunk {chunk_num} | {pct_done}%] starting at frame {chunk_start_frame}");
         let palette = load_palette(pos_rotation_enabled, pos_rotation_output);
         if !headless { println!("  palette: {:?}", palette); }
-        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2);
+        let mut chunk_audio: Vec<f32> = Vec::new();
 
         let chunk_wall_t0 = std::time::Instant::now();
         let sim_t0 = std::time::Instant::now();
-        for local_frame in 0..this_chunk_frames {
+        let mut local_frame = 0usize;
+
+        // Render frames in CHUNK_CHECK_FRAMES increments; flush when wall time is in [min, max].
+        'render: loop {
+            let global_frame = chunk_start_frame + local_frame;
+            if global_frame >= total_frames { break 'render; }
+
             if !keep_running.load(Ordering::Relaxed) {
                 println!("[signal] Discarding partial chunk {chunk_num}, cleaning up {local_frame} frames...");
                 delete_frames(&frames_dir);
                 break 'chunks;
             }
-            let global_frame = chunk_start_frame + local_frame;
+
             if !headless {
                 sim.paint_frame(&mut canvas, &palette);
                 Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
             }
             sim.tick();
             if !no_audio { sim.generate_audio(&mut chunk_audio); }
+            local_frame += 1;
 
             let log_every = if headless { FPS as usize } else { 480 };
             if local_frame % log_every == 0 {
                 println!("  frame {}/{total_frames}  {}", global_frame, sim.stats());
             }
+
+            // Every CHUNK_MIN_FRAMES frames, check if we've been running long enough to flush.
+            if local_frame % CHUNK_MIN_FRAMES == 0 {
+                let elapsed = chunk_wall_t0.elapsed().as_secs_f64();
+                if elapsed >= CHUNK_MIN_SECS || elapsed >= CHUNK_MAX_SECS { break 'render; }
+            }
         }
         let sim_ms = sim_t0.elapsed().as_millis();
+        let chunk_end_frame = chunk_start_frame + local_frame;
 
         let enc_ms;
         if !headless {
             let enc_t0 = std::time::Instant::now();
             let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
-            encode_chunk(&frames_dir, &seg_path, this_chunk_frames, tile_2x2);
+            encode_chunk(&frames_dir, &seg_path, local_frame, tile_2x2);
             mux_audio_into_segment(&seg_path, &chunk_audio);
             enc_ms = enc_t0.elapsed().as_millis();
             writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
@@ -2228,21 +2236,9 @@ fn main() {
 
         let wall_secs = chunk_wall_t0.elapsed().as_secs_f64();
         let pop = sim.cells.len();
-        println!("  chunk {chunk_num} done ({pct_done}%)  pop={pop}  wall={wall_secs:.1}s  sim={sim_ms}ms enc={enc_ms}ms  chunk_frames={chunk_frames}");
+        println!("  chunk {chunk_num} done ({pct_done}%)  pop={pop}  wall={wall_secs:.1}s  sim={sim_ms}ms enc={enc_ms}ms  frames={local_frame}");
         let _ = fs::write("state/last_stats.txt",
             format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
-
-        // Adjust chunk_frames for next chunk: target CHUNK_TARGET_SECS wall time,
-        // clamped to [CHUNK_MIN_SECS, CHUNK_MAX_SECS].
-        if wall_secs > 0.5 {
-            let scale = CHUNK_TARGET_SECS / wall_secs;
-            let next = (chunk_frames as f64 * scale).round() as usize;
-            let fps_render = this_chunk_frames as f64 / wall_secs;
-            let min_by_time = (fps_render * CHUNK_MIN_SECS).round() as usize;
-            let max_by_time = (fps_render * CHUNK_MAX_SECS).round() as usize;
-            chunk_frames = next.clamp(min_by_time.max(CHUNK_MIN_FRAMES), max_by_time.max(CHUNK_MIN_FRAMES));
-            println!("  next chunk_frames={chunk_frames} (wall={wall_secs:.1}s target={CHUNK_TARGET_SECS}s [{CHUNK_MIN_SECS}..{CHUNK_MAX_SECS}])");
-        }
 
         chunk_start_frame = chunk_end_frame;
     }
@@ -2309,7 +2305,7 @@ fn main() {
             ep_tick += 1;
 
             // Encode + flush at same chunk size as last main chunk
-            if ep_chunk_frames.len() == chunk_frames || done || ep_tick >= MAX_EPILOGUE_TICKS {
+            if ep_chunk_frames.len() >= CHUNK_MIN_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
                     encode_chunk(&frames_dir, &seg_path, ep_chunk_frames.len(), tile_2x2);
