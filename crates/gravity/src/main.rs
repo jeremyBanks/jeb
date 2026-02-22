@@ -1887,8 +1887,8 @@ fn main() {
             ep_frame += 1;
             ep_tick += 1;
 
-            // Encode + flush every CHUNK_FRAMES frames
-            if ep_chunk_frames.len() == CHUNK_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
+            // Encode + flush at same chunk size as last main chunk
+            if ep_chunk_frames.len() == chunk_frames || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:08}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
                     encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
