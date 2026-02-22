@@ -578,7 +578,8 @@ impl Sim {
     }
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
-                       pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
+                       pop_band: f32, rate_limit: usize, conway_every: usize,
+                       _seed_density_inv: usize,
                        target_pop: usize, wrap_x: bool, wrap_y: bool,
                        bounce_x: bool, bounce_y: bool, steer: bool,
                        dampen_x: f32, dampen_y: f32)
