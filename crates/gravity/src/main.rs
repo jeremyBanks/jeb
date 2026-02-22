@@ -2850,3 +2850,32 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
     // Recommended invocation: --wrap --dampen-y 1.0 (vertical COM drift removal).
     // Good first defaults (may need tuning):
     //   G=0.075  soft=3  cap=2  pop=768  band=256  rate=16  vel=swirl  wrap  --dampen-y 1.0
+
+// [recovery] edit target not found, appending:
+        // Axis gravity scale: (1 - dampen) fraction of normal force on each axis.
+        // Clamped to [0,1] so dampen>=1 means no gravity on that axis (not reversed).
+        let gx_scale = (1.0 - self.dampen_x).clamp(0.0, 1.0);
+        let gy_scale = (1.0 - self.dampen_y).clamp(0.0, 1.0);
+        for i in 0..n {
+            let (px, py) = (self.cells[i].px, self.cells[i].py);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening, self.wrap);
+            self.cells[i].vx += gfx * gx_scale;
+            self.cells[i].vy += gfy * gy_scale;
+        }
+
+        for c in &mut self.cells {
+            // Isotropic speed cap (unchanged)
+            let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
+            let effective_cap = c.prev_speed.max(self.speed_cap);
+            if spd > effective_cap {
+                c.vx = c.vx / spd * effective_cap;
+                c.vy = c.vy / spd * effective_cap;
+            }
+            let hard_ceil = self.speed_cap * 2.0;
+            c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
+            // Per-axis speed cap: dampen axis gets a proportionally lower ceiling
+            let vx_cap = self.speed_cap * gx_scale;
+            let vy_cap = self.speed_cap * gy_scale;
+            c.vx = c.vx.clamp(-vx_cap, vx_cap);
+            c.vy = c.vy.clamp(-vy_cap, vy_cap);
+        }
