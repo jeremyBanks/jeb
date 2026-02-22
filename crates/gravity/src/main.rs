@@ -2862,7 +2862,7 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
         let gy_scale = (1.0 - self.dampen_y).clamp(0.0, 1.0);
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
-            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening, self.wrap);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening, self.wrap_x, self.wrap_y);
             self.cells[i].vx += gfx * gx_scale;
             self.cells[i].vy += gfy * gy_scale;
         }
