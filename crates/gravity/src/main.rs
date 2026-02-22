@@ -2927,30 +2927,37 @@ const DEFAULT_DOWN:  (u8,u8,u8) = (0xFF, 0xC0, 0x1F);
 const DEFAULT_UP:    (u8,u8,u8) = (0xEA, 0x22, 0x61);
 
 fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> DirectionalPalette {
-    let mut zero  = DEFAULT_ZERO;
-    let mut right = DEFAULT_RIGHT;
-    let mut left  = DEFAULT_LEFT;
-    let mut down  = DEFAULT_DOWN;
-    let mut up    = DEFAULT_UP;
+    let raw = std::fs::read_to_string("palettes/active.txt")
+        .expect("palettes/active.txt not found — copy a palette file there before running");
 
-    if let Ok(raw) = std::fs::read_to_string("palettes/active.txt") {
-        for line in raw.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') { continue; }
-            if let Some((key, val)) = line.split_once('=') {
-                if let Some(rgb) = parse_hex_color(val) {
-                    match key.trim() {
-                        "zero"  => zero  = rgb,
-                        "right" => right = rgb,
-                        "left"  => left  = rgb,
-                        "down"  => down  = rgb,
-                        "up"    => up    = rgb,
-                        _ => {}
-                    }
-                }
+    let mut zero:  Option<(u8,u8,u8)> = None;
+    let mut right: Option<(u8,u8,u8)> = None;
+    let mut left:  Option<(u8,u8,u8)> = None;
+    let mut down:  Option<(u8,u8,u8)> = None;
+    let mut up:    Option<(u8,u8,u8)> = None;
+
+    for line in raw.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') { continue; }
+        if let Some((key, val)) = line.split_once('=') {
+            let rgb = parse_hex_color(val)
+                .unwrap_or_else(|| panic!("invalid hex colour {:?} in palettes/active.txt", val.trim()));
+            match key.trim() {
+                "zero"  => zero  = Some(rgb),
+                "right" => right = Some(rgb),
+                "left"  => left  = Some(rgb),
+                "down"  => down  = Some(rgb),
+                "up"    => up    = Some(rgb),
+                other   => panic!("unknown palette key {:?} in palettes/active.txt", other),
             }
         }
     }
+
+    let zero  = zero .expect("palettes/active.txt missing 'zero'");
+    let right = right.expect("palettes/active.txt missing 'right'");
+    let left  = left .expect("palettes/active.txt missing 'left'");
+    let down  = down .expect("palettes/active.txt missing 'down'");
+    let up    = up   .expect("palettes/active.txt missing 'up'");
 
     DirectionalPalette::build(zero, right, left, down, up, pos_rotation_enabled, pos_rotation_output)
 }
