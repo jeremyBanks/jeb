@@ -63,6 +63,17 @@ while true; do
         sleep 3
     fi
 
+    # ── Clean up leftover frames/segments from any killed renders ─────────
+    # Frames and segments should never persist after a render finishes.
+    # If a render was SIGKILL'd mid-chunk they'll be stranded here.
+    # cleanup-old-runs.sh handles this properly after each render, but also
+    # do a quick sweep here before starting so we never start full.
+    LEFTOVER_FRAMES=$(find runs/ -path "*/frames/*.png" -type f 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$LEFTOVER_FRAMES" -gt 0 ]; then
+        echo "[batch] cleaning $LEFTOVER_FRAMES leftover frame PNGs from previous run(s)..."
+        find runs/ -path "*/frames/*.png" -type f -delete
+    fi
+
     # ── Clean state ────────────────────────────────────────────────────────
     rm -f state/checkpoint.bin state/orig_state.bin state/run_info.txt state/last_stats.txt
     rm -f segments.txt 2>/dev/null || true
@@ -103,6 +114,10 @@ while true; do
     fi
 
     kill "$WATCHER_PID" 2>/dev/null || true
+
+    # ── Post-render cleanup: delete frames/segments/audio from older runs ──
+    bash scripts/cleanup-old-runs.sh "$RUN_ID" 2>/dev/null || true
+
     sleep 5
     echo ""
 done
