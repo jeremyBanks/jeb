@@ -570,7 +570,7 @@ impl Sim {
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
                        pop_band: f32, rate_limit: usize, _seed_density_inv: usize,
-                       target_pop: usize, wrap: bool, steer: bool, dampen: bool)
+                       target_pop: usize, wrap: bool, steer: bool, dampen_x: f32, dampen_y: f32)
         -> Option<(Self, Vec<f32>, usize)>
     {
         let buf = fs::read(path).ok()?;
