@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
@@ -15,79 +14,63 @@ const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 1920; // 32s at 60fps
 
 // ── Audio constants ────────────────────────────────────────────────────────
-const SAMPLE_RATE: u32    = 44100;
-const SAMPLES_PER_FRAME: usize = 735; // 44100 / 60, truncated (acceptable drift)
-const AUDIO_BASE_FREQ: f32  = 130.81; // C3
-const AUDIO_OCTAVE_SPAN: f32 = 3.0;   // C3→C6
-const AUDIO_SLEW: f32       = 0.05;   // per-sample freq snap (fast — less glide between scale degrees)
-const AUDIO_AMP_SCALE: f32  = 0.0015; // per-voice amplitude scale; tanh handles headroom
-const AUDIO_ATTACK: usize   = 1058;   // 24 ms — softer onset, less click
-const AUDIO_RELEASE: usize  = 88200;  // 2 seconds — long enough to outlive Conway deaths smoothly
+const SAMPLE_RATE: u32         = 44100;
+const SAMPLES_PER_FRAME: usize = 735;    // 44100 / 60, truncated (acceptable drift)
+const AUDIO_AMP_SCALE: f32     = 0.0015; // per-voice scale; tanh handles headroom
 
-#[derive(Clone, Copy, PartialEq)]
-enum VoiceKind {
-    Sustain,  // moving cell — sustained while cell keeps moving
-    Birth,    // Conway birth — sine ping, 150ms decay, no sustain
-    Death,    // Conway death — saw thud, 70ms decay + pitch drop
+// 8 direction buckets (clockwise from East): C major pentatonic over 2 octaves
+// E=C4  SE=D4  S=E4  SW=G4  W=A4  NW=C5  N=E5  NE=G5
+const BUCKET_FREQS: [f32; 8] = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 659.25, 783.99];
+
+const TREM_RATE:        f32 = 5.5;   // Hz
+const PITCH_BEND_MAX:   f32 = 30.0;  // cents ±
+const PAN_MAX:          f32 = 0.25;  // ± — signal stays strong in both channels at all times
+const BASE_REVERB_SEND: f32 = 0.55;
+const REVERB_Y_RANGE:   f32 = 0.12;  // top of screen → this much extra reverb vs bottom
+const MAX_TREMOLO:      f32 = 0.35;
+const MAX_NOISE:        f32 = 0.04;
+const FIXED_CUTOFF:     f32 = 0.1568; // one-pole LP ≈ 1200 Hz: 1-exp(-2π×1200/44100)
+
+// Slew rates per frame: val += (target - val) * α
+const SLEW_AMP:    f32 = 0.15; // half-life ~4 frames / 72 ms
+const SLEW_PITCH:  f32 = 0.12;
+const SLEW_TREM:   f32 = 0.10;
+const SLEW_NOISE:  f32 = 0.10;
+const SLEW_PAN:    f32 = 0.08; // half-life ~8 frames / 133 ms
+const SLEW_REVERB: f32 = 0.05; // half-life ~14 frames / 230 ms — most stable
+
+/// Per-frame statistics accumulated for one 45° direction bucket.
+#[derive(Default, Clone, Copy)]
+struct BucketStats {
+    move_mag_sum:  f32, // Σ speed of cells that actually crossed a grid square in this dir
+    stuck_mag_sum: f32, // Σ speed of cells blocked from crossing in this dir
+    angle_dev_sum: f32, // Σ (vel_angle − bucket_centre_angle) for movers
+    angle_dev_n:   f32, // count of movers contributing to angle_dev
+    wx_sum:        f32, // weighted Σ x-position (movers weight=1, stuck weight=1/64)
+    wy_sum:        f32, // weighted Σ y-position
+    w_total:       f32, // Σ weight
 }
 
-struct AudioEvent {
-    kind: VoiceKind,
-    px: f32, py: f32,
-    vx: f32, vy: f32,
+/// One persistent directional voice — always active, amplitude→0 when idle.
+struct DirVoice {
+    base_freq:     f32,
+    phase:         f32,
+    tremolo_phase: f32,
+    filter_state:  f32,
+    // smoothed parameters (slewed each frame)
+    amplitude:     f32,
+    pitch_cents:   f32,
+    tremolo_depth: f32,
+    noise_level:   f32,
+    pan:           f32,
+    reverb_send:   f32,
 }
-
-struct Voice {
-    kind: VoiceKind,
-    phase: f32,
-    current_freq: f32,
-    target_freq: f32,
-    pitch_drop: f32,           // per-sample pitch multiplier for Death glide
-    filter_state: f32,         // one-pole LP memory
-    current_cutoff: f32,
-    target_cutoff: f32,
-    sin_angle: f32,            // waveform blend: -1=pure sine, +1=triangle
-    current_amp: f32,
-    target_amp: f32,
-    current_pan: f32,          // stereo position: -1=full left, 0=center, +1=full right
-    target_pan: f32,
-    attack_samples: usize,
-    releasing: bool,
-    release_samples: usize,
-    release_total: usize,      // varies by kind
-    refreshed: bool,
-    init_delay: usize,         // samples to skip before voice starts (event temporal spreading)
-}
-
-impl Voice {
-    fn new_sustain(freq: f32) -> Self {
-        Voice {
-            kind: VoiceKind::Sustain,
-            phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop: 1.0,
-            filter_state: 0.0, current_cutoff: 0.02, target_cutoff: 0.02,
-            sin_angle: 0.0, current_amp: 0.0, target_amp: 0.0,
-            current_pan: 0.0, target_pan: 0.0,
-            attack_samples: 0, releasing: false,
-            release_samples: 0, release_total: AUDIO_RELEASE, refreshed: true,
-            init_delay: 0,
-        }
-    }
-    fn new_event(kind: VoiceKind, freq: f32, cutoff: f32, sin_angle: f32, amp: f32, pan: f32, delay: usize) -> Self {
-        let (release_total, pitch_drop) = match kind {
-            VoiceKind::Birth => (6615_usize,  1.0_f32),         // 150ms
-            VoiceKind::Death => (3087_usize,  0.9997_f32),      // 70ms, drops ~half-step
-            VoiceKind::Sustain => (AUDIO_RELEASE, 1.0),
-        };
-        Voice {
-            kind,
-            phase: 0.0, current_freq: freq, target_freq: freq, pitch_drop,
-            filter_state: 0.0, current_cutoff: cutoff, target_cutoff: cutoff,
-            sin_angle, current_amp: amp, target_amp: amp,
-            current_pan: pan, target_pan: pan,
-            attack_samples: 0,              // ramp up through attack before releasing
-            releasing: false,               // attack first, then release kicks in
-            release_samples: 0, release_total, refreshed: true,
-            init_delay: delay,
+impl DirVoice {
+    fn new(base_freq: f32) -> Self {
+        DirVoice {
+            base_freq, phase: 0.0, tremolo_phase: 0.0, filter_state: 0.0,
+            amplitude: 0.0, pitch_cents: 0.0, tremolo_depth: 0.0,
+            noise_level: 0.0, pan: 0.0, reverb_send: BASE_REVERB_SEND,
         }
     }
 }
@@ -195,8 +178,8 @@ struct Sim {
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
-    voice_pool: HashMap<u64, Voice>,
-    audio_events: Vec<AudioEvent>,  // filled by conway_step, drained by generate_audio
+    bucket_stats: [BucketStats; 8], // accumulated per-frame, cleared after generate_audio
+    dir_voices:   [DirVoice; 8],    // persistent directional voices
     reverb: Reverb,
 }
 
@@ -361,7 +344,7 @@ impl Sim {
         let cx_global = W as f32 / 2.0;
         let cy_global = H as f32 / 2.0;
         let aspect = W as f32 / H as f32; // e.g. 256/160 = 1.6
-        let mut make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
+        let make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
             let (vx, vy) = match init_vel {
                 "swirl" => {
                     if xi < W / 2 && yi < H / 2 {
@@ -549,7 +532,10 @@ impl Sim {
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
-              conway_births: 0, conway_deaths: 0, next_id, voice_pool: HashMap::new(), audio_events: Vec::new(), reverb: Reverb::new() }
+              conway_births: 0, conway_deaths: 0, next_id,
+              bucket_stats: [BucketStats::default(); 8],
+              dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
+              reverb: Reverb::new() }
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
@@ -633,7 +619,10 @@ impl Sim {
                         start_pop: target_pop, pop_band, rate_limit,
                         tick_count, prev_live: prev_live_rebuilt, wrap, steer, dampen,
                         conway_births: 0, conway_deaths: 0,
-                        next_id, voice_pool: HashMap::new(), audio_events: Vec::new(), reverb: Reverb::new() };
+                        next_id,
+                        bucket_stats: [BucketStats::default(); 8],
+                        dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
+                        reverb: Reverb::new() };
         Some((sim, canvas, chunk_index))
     }
 
@@ -773,10 +762,6 @@ impl Sim {
         let mut death_indices: Vec<usize> = dying.drain().collect();
         death_indices.sort_unstable_by(|a, b| b.cmp(a));
         self.conway_deaths += death_indices.len();
-        for &i in &death_indices {
-            let c = &self.cells[i];
-            self.audio_events.push(AudioEvent { kind: VoiceKind::Death, px: c.px, py: c.py, vx: c.vx, vy: c.vy });
-        }
         for i in death_indices { self.cells.swap_remove(i); }
 
         let mut grid2 = vec![usize::MAX; W * H];
@@ -820,7 +805,7 @@ impl Sim {
             let id = self.next_id; self.next_id += 1;
             let (bpx, bpy) = (gx as f32 + 0.5, gy as f32 + 0.5);
             self.cells.push(Cell { px: bpx, py: bpy, vx, vy, prev_speed: birth_spd, id, moved: false });
-            self.audio_events.push(AudioEvent { kind: VoiceKind::Birth, px: bpx, py: bpy, vx, vy });
+            // (no per-event audio in new direction-bucket system)
             grid2[gy * W + gx] = new_idx;
             self.conway_births += 1;
         }
@@ -900,32 +885,67 @@ impl Sim {
             self.order.swap(i, j);
         }
         for &idx in &self.order {
-            let c = &self.cells[idx];
+            // Capture pre-move state for audio stats (avoid borrow conflict later)
+            let (cvx, cvy, cpx, cpy) = {
+                let c = &self.cells[idx]; (c.vx, c.vy, c.px, c.py)
+            };
+            let old_gx = ((cpx.floor() as i32).rem_euclid(W as i32)) as usize;
+            let old_gy = ((cpy.floor() as i32).rem_euclid(H as i32)) as usize;
             let new_px; let new_py;
             if self.wrap {
-                new_px = (c.px + c.vx).rem_euclid(W as f32);
-                new_py = (c.py + c.vy).rem_euclid(H as f32);
+                new_px = (cpx + cvx).rem_euclid(W as f32);
+                new_py = (cpy + cvy).rem_euclid(H as f32);
             } else {
-                let rx = c.px + c.vx; let ry = c.py + c.vy;
+                let rx = cpx + cvx; let ry = cpy + cvy;
                 if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 { continue; }
                 new_px = rx; new_py = ry;
             }
             let tgx = (new_px.floor() as i32).rem_euclid(W as i32) as usize;
             let tgy = (new_py.floor() as i32).rem_euclid(H as i32) as usize;
-            let old_gx = c.gx(); let old_gy = c.gy();
-            if tgx == old_gx && tgy == old_gy {
+            let crossing = tgx != old_gx || tgy != old_gy;
+            let moved_cross;
+            if !crossing {
                 // Same grid square — update float position freely
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
+                moved_cross = false;
             } else if grid[tgy * W + tgx] == usize::MAX {
-                // Target square free — move; mark for audio
+                // Target square free — move
                 grid[old_gy * W + old_gx] = usize::MAX;
                 grid[tgy * W + tgx] = idx;
                 self.cells[idx].px = new_px;
                 self.cells[idx].py = new_py;
                 self.cells[idx].moved = true;
+                moved_cross = true;
+            } else {
+                // Target occupied — stay put
+                moved_cross = false;
             }
-            // else: target occupied — stay put (no audio this tick)
+            // ── Audio bucket stats (only for cells attempting a grid crossing) ──
+            if crossing {
+                use std::f32::consts::PI;
+                let speed = (cvx*cvx + cvy*cvy).sqrt();
+                if speed > 1e-6 {
+                    let angle_norm = (cvy.atan2(cvx) + PI).rem_euclid(2.0 * PI); // 0..2π
+                    let bi = ((angle_norm / (PI / 4.0)) as usize).min(7);
+                    let bucket_centre = bi as f32 * (PI / 4.0);
+                    let dev = angle_norm - bucket_centre; // deviation within bucket
+                    let bs = &mut self.bucket_stats[bi];
+                    if moved_cross {
+                        bs.move_mag_sum  += speed;
+                        bs.angle_dev_sum += dev;
+                        bs.angle_dev_n   += 1.0;
+                        bs.wx_sum        += cpx;
+                        bs.wy_sum        += cpy;
+                        bs.w_total       += 1.0;
+                    } else {
+                        bs.stuck_mag_sum += speed;
+                        bs.wx_sum        += cpx / 64.0;
+                        bs.wy_sum        += cpy / 64.0;
+                        bs.w_total       += 1.0 / 64.0;
+                    }
+                }
+            }
         }
     }
 
@@ -1228,194 +1248,97 @@ impl Sim {
     // Pitch is attracted toward the nearest C major pentatonic degree but not
     // fully snapped — like a gravity well. Close to a note = nearly there.
     // Between two notes = pulled toward the nearer one, but still audibly between.
-    fn pentatonic_freq(t: f32) -> f32 {
-        const PULL: f32 = 0.82; // attraction strength: 0=continuous, 1=full snap
-        const DEGREES: &[f32] = &[
-            0., 2., 4., 7., 9.,
-            12., 14., 16., 19., 21.,
-            24., 26., 28., 31., 33.,
-            36.,
-        ];
-        let semitone = t.clamp(0.0, 1.0) * 36.0;
-        let nearest = DEGREES.iter().copied()
-            .min_by(|&a, &b| (a - semitone).abs().partial_cmp(&(b - semitone).abs()).unwrap())
-            .unwrap_or(0.0);
-        // Pull semitone toward nearest degree — gravity well, not hard snap
-        let attracted = semitone + (nearest - semitone) * PULL;
-        AUDIO_BASE_FREQ * 2.0_f32.powf(attracted / 12.0)
-    }
-
-    // ── Audio parameter helper ─────────────────────────────────────────────
-    // Shared by both sustain voices and event voices.
-    fn audio_params(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32)
-        -> (f32, f32, f32, f32, f32)  // (target_freq, target_cutoff, sin_angle, target_amp, pan)
-    {
-        use std::f32::consts::PI;
-        let speed = (vx * vx + vy * vy).sqrt();
-        let t = (speed / speed_cap).clamp(0.0, 1.0);
-        let (cos_th, sin_th) = if speed > 1e-6 {
-            (vx / speed, vy / speed)
-        } else { (0.0, 0.0) };
-
-        // Pitch: |sin(θ)| → pentatonic scale degree (horizontal=C3, vertical=C6)
-        // Position detune: ±5 cents shimmer — keeps clusters from sounding robotic
-        let px_a = px / W as f32 * 2.0 * PI;
-        let py_a = py / H as f32 * 2.0 * PI;
-        let detune = 2.0_f32.powf((px_a.cos() * 5.0 + py_a.sin() * 3.0) / 1200.0);
-        let target_freq = Self::pentatonic_freq(sin_th.abs()) * detune;
-
-        // Filter: cos(θ) → brightness (right=bright, left=dark), base 400 Hz ±1.5 oct
-        let cutoff_hz = 400.0 * 2.0_f32.powf(cos_th * 1.5);
-        let target_cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-
-        // Amplitude: proportional to speed, sqrt curve
-        let target_amp = t.sqrt() * AUDIO_AMP_SCALE;
-
-        // Pan: cos(θ) — rightward=+1 (right), leftward=-1 (left), vertical=0 (center)
-        let pan = cos_th;
-
-        (target_freq, target_cutoff, sin_th, target_amp, pan)
-    }
-
     fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
         use std::f32::consts::PI;
 
-        // ── 1. Mark all sustain voices not refreshed ───────────────────────
-        for v in self.voice_pool.values_mut() {
-            if v.kind == VoiceKind::Sustain { v.refreshed = false; }
-        }
+        // ── 1. Compute raw targets from accumulated bucket stats ───────────
+        let mut amp_targets    = [0.0f32; 8];
+        let mut pitch_targets  = [0.0f32; 8];
+        let mut trem_targets   = [0.0f32; 8];
+        let mut noise_targets  = [0.0f32; 8];
+        let mut pan_targets    = [0.0f32; 8];
+        let mut reverb_targets = [BASE_REVERB_SEND; 8];
 
-        // ── 2. Update/spawn sustain voices for ALL alive cells ─────────────
-        // Voice lifetime = cell lifetime. Amplitude naturally = 0 when stationary.
-        // Release only triggers when the cell no longer exists (Conway death).
-        let speed_cap = self.speed_cap;
-        for c in &self.cells {
-            let (tfreq, tcutoff, sin_th, tamp, tpan) =
-                Self::audio_params(c.vx, c.vy, c.px, c.py, speed_cap);
-            let v = self.voice_pool.entry(c.id)
-                .or_insert_with(|| Voice::new_sustain(tfreq));
-            v.target_freq   = tfreq;
-            v.target_cutoff = tcutoff;
-            v.sin_angle     = sin_th;
-            v.target_amp    = tamp;
-            v.target_pan    = tpan;
-            v.refreshed     = true;
-            if v.releasing { v.releasing = false; v.release_samples = 0; }
-        }
+        for (bi, bs) in self.bucket_stats.iter().enumerate() {
+            amp_targets[bi] = bs.move_mag_sum + bs.stuck_mag_sum / 64.0;
 
-        // ── 3. Release sustain voices whose cell no longer exists ──────────
-        // (cell was removed by Conway death or epilogue — not by temporary blocking)
-        for v in self.voice_pool.values_mut() {
-            if v.kind == VoiceKind::Sustain && !v.refreshed && !v.releasing {
-                v.releasing = true;
+            if bs.angle_dev_n > 0.0 {
+                let dev_norm = (bs.angle_dev_sum / bs.angle_dev_n) / (PI / 8.0);
+                pitch_targets[bi] = dev_norm.clamp(-1.0, 1.0) * PITCH_BEND_MAX;
+            }
+
+            let total_mag = bs.move_mag_sum + bs.stuck_mag_sum;
+            if total_mag > 1e-6 {
+                let stuck_ratio = bs.stuck_mag_sum / total_mag;
+                trem_targets[bi]  = stuck_ratio * MAX_TREMOLO;
+                noise_targets[bi] = stuck_ratio * MAX_NOISE;
+            }
+
+            if bs.w_total > 1e-6 {
+                let avg_x = bs.wx_sum / bs.w_total;
+                let avg_y = bs.wy_sum / bs.w_total;
+                pan_targets[bi]    = (avg_x / W as f32 - 0.5) * 2.0 * PAN_MAX;
+                reverb_targets[bi] = BASE_REVERB_SEND
+                    + (1.0 - avg_y / H as f32) * REVERB_Y_RANGE;
             }
         }
 
-        // ── 4. Spawn one-shot voices for Conway events ────────────────────────
-        // Events use position-based pitch/timbre — NOT velocity.
-        // Fixed low amplitude: always audible as subtle texture, but when cells are
-        // moving the sustain voices naturally dominate the soundscape.
-        let events: Vec<AudioEvent> = self.audio_events.drain(..).collect();
-        for ev in events {
-            use std::f32::consts::PI;
-            let x_t = (ev.px / W as f32).clamp(0.0, 1.0); // 0=left … 1=right
-            let y_t = (ev.py / H as f32).clamp(0.0, 1.0); // 0=top  … 1=bottom
-            let (adj_freq, adj_cutoff, adj_sin, adj_amp) = match ev.kind {
-                VoiceKind::Birth => {
-                    let t = 0.5 + (1.0 - y_t) * 0.5;
-                    let freq = Self::pentatonic_freq(t);
-                    let cutoff_hz = 400.0 * 2.0_f32.powf(x_t * 3.0);
-                    let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-                    (freq, cutoff, -1.0_f32, AUDIO_AMP_SCALE * 0.03_f32)
-                },
-                VoiceKind::Death => {
-                    let t = x_t * 0.45;
-                    let freq = Self::pentatonic_freq(t);
-                    let cutoff_hz = 700.0 * 2.0_f32.powf((1.0 - y_t) * -2.0);
-                    let cutoff = 1.0 - (-2.0 * PI * cutoff_hz / SAMPLE_RATE as f32).exp();
-                    (freq, cutoff, 1.0_f32, AUDIO_AMP_SCALE * 0.02_f32)
-                },
-                VoiceKind::Sustain => unreachable!(),
-            };
-            // Temporal spreading: X position offsets event start across the frame
-            // Left=early, right=late — staggers simultaneous events, kills constructive buzzing
-            let delay = (x_t * (SAMPLES_PER_FRAME - 1) as f32) as usize;
-            // Pan: X position maps directly to stereo field
-            let pan = x_t * 2.0 - 1.0;  // 0..1 → -1..+1
-            let id = self.next_id; self.next_id += 1;
-            self.voice_pool.insert(id, Voice::new_event(ev.kind, adj_freq, adj_cutoff, adj_sin, adj_amp, pan, delay));
+        // ── 2. Slew voice parameters toward targets (once per frame) ───────
+        for (bi, v) in self.dir_voices.iter_mut().enumerate() {
+            v.amplitude     += (amp_targets[bi]    - v.amplitude)     * SLEW_AMP;
+            v.pitch_cents   += (pitch_targets[bi]  - v.pitch_cents)   * SLEW_PITCH;
+            v.tremolo_depth += (trem_targets[bi]   - v.tremolo_depth) * SLEW_TREM;
+            v.noise_level   += (noise_targets[bi]  - v.noise_level)   * SLEW_NOISE;
+            v.pan           += (pan_targets[bi]    - v.pan)           * SLEW_PAN;
+            v.reverb_send   += (reverb_targets[bi] - v.reverb_send)   * SLEW_REVERB;
         }
 
-        // ── 5. Remove fully-released voices ────────────────────────────────
-        self.voice_pool.retain(|_, v| {
-            !(v.releasing && v.release_samples >= v.release_total)
-        });
-
-        // ── 6. Synthesise SAMPLES_PER_FRAME stereo pairs (interleaved L, R) ──
+        // ── 3. Synthesise SAMPLES_PER_FRAME stereo pairs ──────────────────
+        // noise_rng is local so we can borrow dir_voices mutably in the inner loop
+        let mut noise_rng = xoru64(&mut self.rng);
         for _ in 0..SAMPLES_PER_FRAME {
-            let mut sum_l = 0.0_f32;
-            let mut sum_r = 0.0_f32;
-            for v in self.voice_pool.values_mut() {
-                // Temporal spread: stagger event voices across the frame by their X position
-                if v.init_delay > 0 { v.init_delay -= 1; continue; }
+            let mut sum_l     = 0.0f32;
+            let mut sum_r     = 0.0f32;
+            let mut reverb_in = 0.0f32;
 
-                // Slew (sustain only — events are one-shot)
-                if v.kind == VoiceKind::Sustain {
-                    v.current_freq   += (v.target_freq   - v.current_freq)   * AUDIO_SLEW;
-                    v.current_cutoff += (v.target_cutoff - v.current_cutoff) * AUDIO_SLEW;
-                    v.current_amp    += (v.target_amp    - v.current_amp)    * 0.01;
-                    v.current_pan    += (v.target_pan    - v.current_pan)    * 0.02;
-                }
-                // Death glide
-                v.current_freq *= v.pitch_drop;
+            for v in self.dir_voices.iter_mut() {
+                // Pitch (with bend)
+                let freq = v.base_freq * 2.0f32.powf(v.pitch_cents / 1200.0);
+                v.phase = (v.phase + freq / SAMPLE_RATE as f32).rem_euclid(1.0);
 
-                // Phase advance
-                v.phase = (v.phase + v.current_freq / SAMPLE_RATE as f32).rem_euclid(1.0);
-
-                // Waveform: sin_angle=-1 → pure sine, +1 → triangle
-                let blend  = (v.sin_angle + 1.0) * 0.5;
-                let sine_s = (v.phase * 2.0 * PI).sin();
-                let tri_s  = 1.0 - 4.0 * (v.phase - 0.5).abs();
-                let raw    = blend * tri_s + (1.0 - blend) * sine_s;
+                // Waveform + noise
+                let raw   = (v.phase * 2.0 * PI).sin();
+                let noise = (xorf32(&mut noise_rng) * 2.0 - 1.0) * v.noise_level;
+                let noisy = raw + noise;
 
                 // One-pole LP filter
-                v.filter_state += v.current_cutoff * (raw - v.filter_state);
+                v.filter_state += FIXED_CUTOFF * (noisy - v.filter_state);
 
-                // Envelope
-                let env = if v.releasing {
-                    let t = (v.release_samples as f32 / v.release_total as f32).min(1.0);
-                    v.release_samples += 1;
-                    let d = 1.0 - t;
-                    d * d
-                } else if v.attack_samples < AUDIO_ATTACK {
-                    let t = v.attack_samples as f32 / AUDIO_ATTACK as f32;
-                    v.attack_samples += 1;
-                    t
-                } else { 1.0 };
+                // Tremolo LFO
+                v.tremolo_phase =
+                    (v.tremolo_phase + TREM_RATE / SAMPLE_RATE as f32).rem_euclid(1.0);
+                let trem = 1.0
+                    - v.tremolo_depth * (1.0 + (v.tremolo_phase * 2.0 * PI).sin()) * 0.5;
 
-                // Equal-power panning: cos(θ)=right moves image right, left moves left
-                let angle = (v.current_pan + 1.0) * 0.5 * PI * 0.5;  // -1..+1 → 0..π/2
-                let gain_l = angle.cos();
-                let gain_r = angle.sin();
-                let s = v.filter_state * env * v.current_amp;
-                sum_l += s * gain_l;
-                sum_r += s * gain_r;
+                let s = v.filter_state * trem * v.amplitude * AUDIO_AMP_SCALE;
 
-                // Event voices: start releasing once attack ramp finishes
-                if v.kind != VoiceKind::Sustain && !v.releasing && v.attack_samples >= AUDIO_ATTACK {
-                    v.releasing = true;
-                }
+                // Equal-power pan: -1=left … +1=right → 0…π/2
+                let pan_angle = (v.pan + 1.0) * 0.5 * PI * 0.5;
+                sum_l     += s * pan_angle.cos();
+                sum_r     += s * pan_angle.sin();
+                reverb_in += s * v.reverb_send;
             }
 
-            // Mid-side reverb: wet reverb on mono mid, dry stereo width preserved
-            let mid  = (sum_l + sum_r) * 0.5;
+            // Mid-side reverb (same topology as before)
+            let wet  = self.reverb.process(reverb_in.tanh() * 0.7);
             let side = (sum_l - sum_r) * 0.5;
-            let wet  = self.reverb.process(mid.tanh() * 0.7);
-            // Final soft clip on output: tanh keeps us out of hard clipping
-            // even when many fast cells sum to large amplitudes
-            chunk_audio.push((wet + side).tanh());  // L
-            chunk_audio.push((wet - side).tanh());  // R
+            chunk_audio.push((wet + side).tanh()); // L
+            chunk_audio.push((wet - side).tanh()); // R
         }
+        self.rng = noise_rng; // propagate RNG state forward
+
+        // ── 4. Clear stats for next frame ──────────────────────────────────
+        self.bucket_stats = [BucketStats::default(); 8];
     }
 
     fn paint_frame(&mut self, canvas: &mut Vec<f32>, palette: &PaletteMode) {
