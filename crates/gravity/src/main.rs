@@ -2847,3 +2847,8 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
                         bucket_stats: [BucketStats::default(); 8],
                         dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
                         reverb: Reverb::new() };
+
+// [recovery] edit target not found, appending:
+    // Recommended invocation: --wrap --dampen-y 1.0 (vertical COM drift removal).
+    // Good first defaults (may need tuning):
+    //   G=0.075  soft=3  cap=2  pop=768  band=256  rate=16  vel=swirl  wrap  --dampen-y 1.0
