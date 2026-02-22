@@ -2880,3 +2880,6 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
             c.vx = c.vx.clamp(-vx_cap, vx_cap);
             c.vy = c.vy.clamp(-vy_cap, vy_cap);
         }
+
+// [recovery] edit target not found, appending:
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening, self.wrap_x, self.wrap_y);
