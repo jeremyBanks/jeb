@@ -1933,4 +1933,9 @@ fn main() {
     // Clean up checkpoint on successful completion
     let _ = fs::remove_file(checkpoint_path);
     println!("Checkpoint removed.");
+
+    // Clean up segments after successful concat
+    if fs::remove_dir_all(&segments_dir).is_ok() {
+        println!("Segments deleted.");
+    }
 }
