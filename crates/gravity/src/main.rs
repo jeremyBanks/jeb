@@ -2795,7 +2795,7 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 
 const PALETTE_SRGB: &[(u8, u8, u8)] = &[
     (0x53, 0x3A, 0xFD), // #533AFD — violet
-    (0x06, 0x1B, 0x31), // #061B31 — dark navy  (also zero-speed anchor)
+    (0x08, 0x22, 0x3D), // #08223D — dark navy  (also zero-speed anchor)
     (0x50, 0x61, 0x7A), // #50617A — steel blue-gray
     (0xF6, 0xF9, 0xFC), // #F6F9FC — near white  (C < 0.02, skipped from wheel)
     (0xFF, 0xC0, 0x1F), // #FFC01F — golden yellow
