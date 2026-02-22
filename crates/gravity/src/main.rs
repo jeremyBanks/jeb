@@ -456,6 +456,7 @@ impl Sim {
                     let xi    = fpx as usize;
                     let yi    = fpy as usize;
                     if xi >= W || yi >= H { continue; }
+                    if (xi + yi) % 2 != 0 { continue; }  // checkerboard: 50% density
                     let idx = yi * W + xi;
                     if occupied[idx] { continue; }
                     let (vx, vy) = make_vel(xi, yi, &mut rng);
