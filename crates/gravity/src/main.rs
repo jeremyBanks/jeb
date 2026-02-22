@@ -2923,3 +2923,10 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
 
 // [recovery] edit target not found, appending:
             let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening, self.wrap_x, self.wrap_y);
+
+// [recovery] edit target not found, appending:
+              region_stats: [RegionStats::default(); 9],
+              region_voices: std::array::from_fn(|i| RegionVoice::new(
+                  REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
+              reverb: Reverb::new() }
+    }
