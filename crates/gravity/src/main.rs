@@ -2120,7 +2120,7 @@ use std::io::{BufWriter, Write};
         if total == 0.0 {
             return "pop=0 births=0 deaths=0 avg_spd=0 max=0 p10=0 spread=0 blk=0/0 com=(0,0)".into();
         }
-        let in_bounds: Vec<&Cell> = if self.wrap {
+        let in_bounds: Vec<&Cell> = if self.wrap_x && self.wrap_y {
             self.cells.iter().collect()
         } else {
             self.cells.iter().filter(|c| c.in_bounds()).collect()
