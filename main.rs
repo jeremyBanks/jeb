@@ -292,13 +292,13 @@ fn min_image(d: f32, dim: f32) -> f32 {
 }
 
 fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
-            px: f32, py: f32, g: f32, softening: f32, wrap: bool) -> (f32, f32) {
+            px: f32, py: f32, g: f32, softening: f32, wrap_x: bool, wrap_y: bool) -> (f32, f32) {
     let node = &nodes[node_idx];
     if node.body == -2 { return (0.0, 0.0); } // empty node
     let raw_dx = node.com_x - px;
     let raw_dy = node.com_y - py;
-    let dx = if wrap { min_image(raw_dx, W as f32) } else { raw_dx };
-    let dy = if wrap { min_image(raw_dy, H as f32) } else { raw_dy };
+    let dx = if wrap_x { min_image(raw_dx, W as f32) } else { raw_dx };
+    let dy = if wrap_y { min_image(raw_dy, H as f32) } else { raw_dy };
     // Leaf: exact pairwise force (skip self)
     if node.body >= 0 {
         if node.body as usize == body { return (0.0, 0.0); }
