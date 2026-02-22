@@ -1936,6 +1936,29 @@ fn main() {
     if fs::remove_dir_all(&segments_dir).is_ok() {
         println!("Segments deleted.");
     }
+
+    // Archive final video: copy to shared storage, verify, delete local
+    if output_file_local != output_file_shared {
+        println!("Archiving video to shared storage...");
+        match fs::copy(&output_file_local, &output_file_shared) {
+            Ok(_) => {
+                let identical = Command::new("cmp")
+                    .args(["-s", &output_file_local, &output_file_shared])
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false);
+                if identical {
+                    let _ = fs::remove_file(&output_file_local);
+                    println!("Video archived successfully. Local copy removed.");
+                } else {
+                    eprintln!("Archive ERROR: verification failed — local copy kept.");
+                }
+            }
+            Err(e) => {
+                eprintln!("Archive ERROR: copy failed ({e}) — local copy kept.");
+            }
+        }
+    }
 }
 
 // [recovery] edit target not found, appending:
