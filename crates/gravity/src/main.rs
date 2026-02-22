@@ -2849,14 +2849,22 @@ struct DirectionalPalette {
 }
 
 impl DirectionalPalette {
-    fn build(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Self {
+    fn build(
+        zero:  (u8,u8,u8),
+        right: (u8,u8,u8),
+        left:  (u8,u8,u8),
+        down:  (u8,u8,u8),
+        up:    (u8,u8,u8),
+        pos_rotation_enabled: bool,
+        pos_rotation_output:  bool,
+    ) -> Self {
         DirectionalPalette {
-            dark:                rgb_to_oklab(0x08, 0x22, 0x3D),  // dark navy (brighter) — zero-speed anchor
-            c_right:             rgb_to_oklab(0x53, 0x3A, 0xFD),  // violet          — +x
-            c_left:              rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — −x
-            c_down:              rgb_to_oklab(0xFF, 0xC0, 0x1F),  // golden yellow   — +y
-            c_up:                rgb_to_oklab(0xEA, 0x22, 0x61),  // hot pink        — −y
-            wheel_rotation:      -11.0 / 360.0,  // 11° CCW — current scheme
+            dark:    rgb_to_oklab(zero.0,  zero.1,  zero.2),
+            c_right: rgb_to_oklab(right.0, right.1, right.2),
+            c_left:  rgb_to_oklab(left.0,  left.1,  left.2),
+            c_down:  rgb_to_oklab(down.0,  down.1,  down.2),
+            c_up:    rgb_to_oklab(up.0,    up.1,    up.2),
+            wheel_rotation:      -11.0 / 360.0,
             pos_rotation_enabled,
             pos_rotation_output,
         }
