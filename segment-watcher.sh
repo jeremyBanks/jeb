@@ -55,7 +55,7 @@ make_preview() {
         local ss="$1" name="$2"
         local slow_ss; slow_ss=$(echo "scale=3; $ss + $CLIP_FULL" | bc)
         ffmpeg -y -ss "$ss"      -i "$seg" -t $CLIP_FULL     -vf "$scale" \
-            -r 60 -c:v libx264 -crf 22 -preset fast "$tmp/${name}_fast.mp4" 2>/dev/null
+            -r $SLOW_FPS -c:v libx264 -crf 22 -preset fast "$tmp/${name}_fast.mp4" 2>/dev/null
         ffmpeg -y -ss "$slow_ss" -i "$seg" -t $CLIP_SLOW_SRC -vf "${scale},setpts=3*PTS" \
             -r $SLOW_FPS -c:v libx264 -crf 22 -preset fast "$tmp/${name}_slow.mp4" 2>/dev/null
         printf "file '%s'\nfile '%s'\n" "$tmp/${name}_fast.mp4" "$tmp/${name}_slow.mp4" > "$tmp/${name}_list.txt"
