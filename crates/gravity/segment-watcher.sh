@@ -118,7 +118,8 @@ while true; do
                 DAMP_X=$(  grep "^dampen_x:"   state/run_info.txt | awk '{print $2}')
                 DAMP_Y=$(  grep "^dampen_y:"   state/run_info.txt | awk '{print $2}')
                 INITPOP=$( grep "^init_pop:"   state/run_info.txt | awk '{print $2}')
-                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} wx=${WRAP_X} wy=${WRAP_Y} dx=${DAMP_X} dy=${DAMP_Y} vel=${INITV}×${VELSC} grid=256×160"
+                RES=$(   grep "^resolution:"  state/run_info.txt | awk '{print $2}')
+                EXTRA=" | \`${RUN_ID}\` ${CMT} G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} wx=${WRAP_X} wy=${WRAP_Y} dx=${DAMP_X} dy=${DAMP_Y} vel=${INITV}×${VELSC} grid=${RES}"
             fi
 
             # Current state from render log (last stats line before chunk boundary)
