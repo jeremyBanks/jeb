@@ -1487,6 +1487,7 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize, tile_2x2: boo
                 "-c:v", "libx264",
                 "-crf", &CRF.to_string(),
                 "-pix_fmt", "yuv420p",
+                "-f", "mp4",
                 seg_path,
             ])
             .status()
@@ -1503,6 +1504,7 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize, tile_2x2: boo
                 "-c:v", "libx264",
                 "-crf", &CRF.to_string(),
                 "-pix_fmt", "yuv420p",
+                "-f", "mp4",
                 seg_path,
             ])
             .status()
