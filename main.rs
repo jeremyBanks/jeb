@@ -600,7 +600,7 @@ impl Sim {
                        _seed_density_inv: usize,
                        target_pop: usize, wrap_x: bool, wrap_y: bool,
                        bounce_x: bool, bounce_y: bool, steer: bool,
-                       dampen_x: f32, dampen_y: f32)
+                       dampen_x: f32, dampen_y: f32, vel_decay: f32)
         -> Option<(Self, Vec<f32>, usize)>
     {
         let buf = fs::read(path).ok()?;
