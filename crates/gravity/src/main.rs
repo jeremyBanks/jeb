@@ -344,7 +344,7 @@ impl Sim {
         let cx_global = W as f32 / 2.0;
         let cy_global = H as f32 / 2.0;
         let aspect = W as f32 / H as f32; // e.g. 256/160 = 1.6
-        let mut make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
+        let make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
             let (vx, vy) = match init_vel {
                 "swirl" => {
                     if xi < W / 2 && yi < H / 2 {
