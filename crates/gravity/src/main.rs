@@ -1665,6 +1665,7 @@ impl DirectionalPalette {
         left:  (u8,u8,u8),
         down:  (u8,u8,u8),
         up:    (u8,u8,u8),
+        wheel_rotation: f32,
         pos_rotation_enabled: bool,
         pos_rotation_output:  bool,
     ) -> Self {
@@ -1674,7 +1675,7 @@ impl DirectionalPalette {
             c_left:  rgb_to_oklab(left.0,  left.1,  left.2),
             c_down:  rgb_to_oklab(down.0,  down.1,  down.2),
             c_up:    rgb_to_oklab(up.0,    up.1,    up.2),
-            wheel_rotation:      -11.0 / 360.0,
+            wheel_rotation,
             pos_rotation_enabled,
             pos_rotation_output,
         }
@@ -1731,20 +1732,31 @@ fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Direct
     let mut left:  Option<(u8,u8,u8)> = None;
     let mut down:  Option<(u8,u8,u8)> = None;
     let mut up:    Option<(u8,u8,u8)> = None;
+    let mut wheel: Option<f32>        = None;  // turns; optional, default -11/360
 
     for line in raw.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') { continue; }
         if let Some((key, val)) = line.split_once('=') {
-            let rgb = parse_hex_color(val)
-                .unwrap_or_else(|| panic!("invalid hex colour {:?} in palettes/active.txt", val.trim()));
-            match key.trim() {
-                "zero"  => zero  = Some(rgb),
-                "right" => right = Some(rgb),
-                "left"  => left  = Some(rgb),
-                "down"  => down  = Some(rgb),
-                "up"    => up    = Some(rgb),
-                other   => panic!("unknown palette key {:?} in palettes/active.txt", other),
+            let key = key.trim();
+            let val = val.trim();
+            match key {
+                "wheel_rotation" => {
+                    wheel = Some(val.parse::<f32>()
+                        .unwrap_or_else(|_| panic!("invalid wheel_rotation {:?} in palettes/active.txt (must be a number in turns)", val)));
+                }
+                _ => {
+                    let rgb = parse_hex_color(val)
+                        .unwrap_or_else(|| panic!("invalid hex colour {:?} in palettes/active.txt", val));
+                    match key {
+                        "zero"  => zero  = Some(rgb),
+                        "right" => right = Some(rgb),
+                        "left"  => left  = Some(rgb),
+                        "down"  => down  = Some(rgb),
+                        "up"    => up    = Some(rgb),
+                        other   => panic!("unknown palette key {:?} in palettes/active.txt", other),
+                    }
+                }
             }
         }
     }
@@ -1754,8 +1766,9 @@ fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Direct
     let left  = left .expect("palettes/active.txt missing 'left'");
     let down  = down .expect("palettes/active.txt missing 'down'");
     let up    = up   .expect("palettes/active.txt missing 'up'");
+    let wheel = wheel.unwrap_or(-11.0 / 360.0);
 
-    DirectionalPalette::build(zero, right, left, down, up, pos_rotation_enabled, pos_rotation_output)
+    DirectionalPalette::build(zero, right, left, down, up, wheel, pos_rotation_enabled, pos_rotation_output)
 }
 
 fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, dp: &DirectionalPalette) -> (f32, f32, f32) {

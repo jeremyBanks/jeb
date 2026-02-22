@@ -5,3 +5,6 @@ right=#533AFD
 left=#635BFF
 down=#FFC01F
 up=#EA2261
+
+# 11° CCW — 0 = right, positive = CCW
+wheel_rotation=-0.030556
