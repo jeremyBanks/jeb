@@ -3441,3 +3441,42 @@ fn parse_hex_color(s: &str) -> Option<(u8, u8, u8)> {
     let n = u32::from_str_radix(s, 16).ok()?;
     Some(((n >> 16) as u8, ((n >> 8) & 0xFF) as u8, (n & 0xFF) as u8))
 }
+
+// [recovery] edit target not found, appending:
+fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, dp: &DirectionalPalette) -> (f32, f32, f32) {
+    let spd = (vx * vx + vy * vy).sqrt();
+
+    // t = 0 → still (zero-speed anchor), t = 1 → speed_cap, up to ~2.0 beyond.
+    let t = spd / speed_cap;
+
+    let pos_rot = if dp.pos_rotation_enabled {
+        px / W() as f32 + (py / H() as f32) * 3.0
+    } else { 0.0 };
+
+    let (dl, da, db) = dp.dark;
+    let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
+        dp.directional_color(vx / spd, vy / spd, px, py)
+    } else {
+        (dl, da, db)
+    };
+
+    let (l, a, b) = if t <= 1.0 {
+        let l = dl + (tgt_l - dl) * t;
+        let a = da + (tgt_a - da) * t;
+        let b = db + (tgt_b - db) * t;
+        (l, a, b)
+    } else {
+        let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
+        let l = (tgt_l + (0.92 - tgt_l) * extra * 0.45).min(0.93);
+        let c_scale = 1.0 + extra * 0.40;
+        (l, tgt_a * c_scale, tgt_b * c_scale)
+    };
+
+    if dp.pos_rotation_output {
+        let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
+        let (oca, osa) = (out_angle.cos(), out_angle.sin());
+        (l, a * oca - b * osa, a * osa + b * oca)
+    } else {
+        (l, a, b)
+    }
+}
