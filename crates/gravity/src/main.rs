@@ -1754,7 +1754,7 @@ fn main() {
         }
 
         // Save checkpoint (next chunk index)
-        sim.save_checkpoint(&canvas, chunk + 1, checkpoint_path);
+        sim.save_checkpoint(&canvas, chunk + 1, &checkpoint_path);
 
         let pct = (chunk + 1) * 100 / n_chunks;
         let pop = sim.cells.len();
