@@ -1553,7 +1553,7 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 /// zero-speed anchor: #061B31 dark navy.
 #[derive(Clone, Debug)]
 struct DirectionalPalette {
-    dark:           (f32, f32, f32),  // #F44BCC  hot-pink  — slow/still anchor
+    dark:           (f32, f32, f32),  // #061B31  dark navy — slow/still anchor
     c_right:        (f32, f32, f32),  // #635BFF  periwinkle — +x
     c_left:         (f32, f32, f32),  // #533AFD  violet      — −x
     c_down:         (f32, f32, f32),  // #061B31  dark navy  — +y (screen-down)
@@ -1566,7 +1566,7 @@ struct DirectionalPalette {
 impl DirectionalPalette {
     fn build(pos_rotation_enabled: bool, pos_rotation_output: bool) -> Self {
         DirectionalPalette {
-            dark:                rgb_to_oklab(0xF4, 0x4B, 0xCC),  // hot-pink — zero-speed anchor
+            dark:                rgb_to_oklab(0x06, 0x1B, 0x31),  // dark navy — zero-speed anchor
             c_right:             rgb_to_oklab(0x63, 0x5B, 0xFF),  // periwinkle blue — +x
             c_left:              rgb_to_oklab(0x53, 0x3A, 0xFD),  // violet          — −x
             c_down:              rgb_to_oklab(0x06, 0x1B, 0x31),  // dark navy       — +y
