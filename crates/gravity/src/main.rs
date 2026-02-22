@@ -360,8 +360,9 @@ impl Sim {
         // Helper: compute velocity for a seeded cell at grid (xi, yi).
         let cx_global = W as f32 / 2.0;
         let cy_global = H as f32 / 2.0;
+        let aspect = W as f32 / H as f32; // e.g. 256/160 = 1.6
         let mut make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
-            match init_vel {
+            let (vx, vy) = match init_vel {
                 "swirl" => {
                     if xi < W / 2 && yi < H / 2 {
                         (xorf32(rng) * 0.75 - 0.25, (xorf32(rng) - 0.5) * 0.25)
@@ -395,7 +396,8 @@ impl Sim {
                     (dx/r * 0.4 + (xorf32(rng)-0.5)*0.1, dy/r * 0.4 + (xorf32(rng)-0.5)*0.1)
                 }
                 "zero" | _ => (0.0, 0.0),
-            }
+            };
+            (vx * aspect, vy)
         };
 
         if circles > 0 {
