@@ -2760,13 +2760,13 @@ enum PaletteMode {
     Radical(DirectionalPalette),
 }
 
-fn load_palette(pos_rotation_enabled: bool) -> PaletteMode {
+fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> PaletteMode {
     let raw = std::fs::read_to_string("/tmp/gravity_palette").unwrap_or_default();
     let s = raw.trim().to_lowercase();
     if s.starts_with("classic") {
         PaletteMode::Classic
     } else {
-        PaletteMode::Radical(DirectionalPalette::build(pos_rotation_enabled))
+        PaletteMode::Radical(DirectionalPalette::build(pos_rotation_enabled, pos_rotation_output))
     }
 }
 
