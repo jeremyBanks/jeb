@@ -174,8 +174,8 @@ struct Sim {
     prev_live: Vec<bool>,
     wrap: bool,    // toroidal wrapping (false = hard walls)
     steer: bool,   // counter-rotate velocity to compensate discrete-move angular error
-    dampen_x: f32, // horizontal COM-drift removal per tick: fraction = dampen_x/512 (0=off)
-    dampen_y: f32, // vertical   COM-drift removal per tick: fraction = dampen_y/512 (0=off)
+    dampen_x: f32, // fraction of COM horizontal velocity removed per tick (0=off, 0.125=fast)
+    dampen_y: f32, // fraction of COM vertical   velocity removed per tick (0=off, 0.125=fast)
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
@@ -858,17 +858,15 @@ impl Sim {
             c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
         }
 
-        // Momentum damping: remove a fraction of COM velocity each tick.
-        // dampen_x/dampen_y are scale factors; 1.0 = 1/512 removed per tick.
+        // Momentum damping: remove dampen_x/dampen_y fraction of COM velocity each tick.
+        // e.g. dampen_y=0.125 removes 12.5% of avg vertical velocity per tick.
         if (self.dampen_x > 0.0 || self.dampen_y > 0.0) && !self.cells.is_empty() {
             let n = self.cells.len() as f32;
             let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
             let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
-            let fx = self.dampen_x / 512.0;
-            let fy = self.dampen_y / 512.0;
             for c in &mut self.cells {
-                c.vx -= avg_vx * fx;
-                c.vy -= avg_vy * fy;
+                c.vx -= avg_vx * self.dampen_x;
+                c.vy -= avg_vy * self.dampen_y;
             }
         }
 
