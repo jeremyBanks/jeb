@@ -2694,10 +2694,10 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 }
 
 /// Directional colour anchors (OKLab).  Velocity components select four basis colours
-/// via squared-clamp weights that always sum to 1 on the unit circle:
-///   w_right = max(ux,0)²   w_left = max(−ux,0)²
-///   w_down  = max(uy,0)²   w_up   = max(−uy,0)²
-/// (ux²+uy²=1 guarantees Σwᵢ=1.)
+/// via squared-clamp weights (normalised).  Blue axes rotated 11° off horizontal:
+///   w_right = max( ux·cos11 − uy·sin11, 0)²  (peaks at 11° above right)
+///   w_left  = max(−ux·cos11 + uy·sin11, 0)²  (peaks at 11° below left)
+///   w_down  = max(uy, 0)²   w_up = max(−uy, 0)²   (unchanged)
 ///
 /// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
 /// down  / up    → warm family (#F44BCC hot-pink    / #F6F9FC near-white)
