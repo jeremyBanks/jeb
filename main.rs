@@ -13,9 +13,9 @@ static H_CELL: OnceLock<usize> = OnceLock::new();
 const FPS: u32 = 60;
 const CRF: u32 = 12;
 const CHUNK_FRAMES: usize = 4096; // initial chunk size; adjusted dynamically at runtime
-// Dynamic chunk target: each segment should take ~64s to render (range 64..512s).
-const CHUNK_TARGET_SECS: f64 = 64.0;
-const CHUNK_MAX_SECS:    f64 = 512.0;  // 8 × target
+// Dynamic chunk target: each segment should take ~12s to render (range 12..64s).
+const CHUNK_TARGET_SECS: f64 = 12.0;
+const CHUNK_MAX_SECS:    f64 = 64.0;
 const CHUNK_MIN_FRAMES:  usize = 64;
 const CHUNK_MAX_FRAMES:  usize = 1 << 20; // 1M frames hard cap
 
