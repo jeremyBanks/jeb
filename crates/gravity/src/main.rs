@@ -1843,7 +1843,7 @@ fn main() {
     // Sim parameters
     let g: f32 = parse_arg("--gravity")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0.075_f32);
+        .unwrap_or(0.125_f32);
     let softening: f32 = parse_arg("--softening")
         .and_then(|s| s.parse().ok())
         .unwrap_or(3.0_f32);
@@ -1858,7 +1858,7 @@ fn main() {
         .unwrap_or(256.0);
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
-        .unwrap_or(16);
+        .unwrap_or(pop_band as usize); // default: same as pop_band so Conway can move pop by its full range per tick
 
     // --init-vel MODE: initial velocity field for seeded cells.
     //   swirl     (default) — asymmetric quadrant bias, net angular momentum
