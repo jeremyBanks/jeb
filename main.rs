@@ -1738,7 +1738,7 @@ fn main() {
 
     // OriginalState = tick=0 layout. On fresh start: capture now and persist.
     // On checkpoint resume: load from disk so epilogue targets the actual first frame.
-    let orig = if start_chunk == 0 {
+    let orig = if start_frame == 0 {
         // Fresh start — this IS tick=0
         let o = OriginalState {
             positions:  sim.cells.iter().map(|c| (c.x as usize % W, c.y as usize % H)).collect(),
