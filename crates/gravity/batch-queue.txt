@@ -1,62 +1,62 @@
 # ── KNOWN-GOOD CONFIGS ────────────────────────────────────────────────────────
-3am_baseline:--gravity 0.03125 --softening 6 --speed-cap 4.5 --pop-target 5120 --pop-band 160 --rate-limit 4 --init-vel zero --wrap --width 256 --height 160
-radout_x2_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --vel-nudge-rate 0.03125 --width 256 --height 160
+3am_baseline:--gravity 0.03125 --softening 6 --speed-cap 4.5 --pop-target 5120 --pop-band 160 --rate-limit 4 --init-vel zero --wrap --width 256 --height 160 --tile-2x2
+radout_x2_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --vel-nudge-rate 0.03125 --width 256 --height 160 --tile-2x2
 
 # ── WILDLY DIFFERENT EXPLORATIONS ────────────────────────────────────────────
 # 1. Slow Conway gas cloud — low gravity, huge population, swirl, both axes damped
-gas_cloud:--gravity 0.015625 --softening 6 --speed-cap 3 --pop-target 4096 --pop-band 512 --rate-limit 32 --init-vel swirl --wrap --dampen-x 0.03125 --dampen-y 0.03125 --width 256 --height 160
+gas_cloud:--gravity 0.015625 --softening 6 --speed-cap 3 --pop-target 4096 --pop-band 512 --rate-limit 32 --init-vel swirl --wrap --dampen-x 0.03125 --dampen-y 0.03125 --width 256 --height 160 --tile-2x2
 
 # 2. Mosh pit — high rate, random chaos, medium gravity
-mosh_pit:--gravity 0.125 --softening 4 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 256 --init-vel random --wrap --width 256 --height 160
+mosh_pit:--gravity 0.125 --softening 4 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 256 --init-vel random --wrap --width 256 --height 160 --tile-2x2
 
 # 3. Bounce walls — no wrap, spin into hard walls
-bounce_spin:--gravity 0.2 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 1.5 --init-vel spin --bounce-x --bounce-y --width 256 --height 160
+bounce_spin:--gravity 0.2 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 1.5 --init-vel spin --bounce-x --bounce-y --width 256 --height 160 --tile-2x2
 
 # 4. Eight circles, zero velocity — pure gravity collapse from arranged clusters
-eight_circles_collapse:--gravity 0.1 --softening 5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 32 --circles 8 --init-vel zero --wrap --width 256 --height 160
+eight_circles_collapse:--gravity 0.1 --softening 5 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 32 --circles 8 --init-vel zero --wrap --width 256 --height 160 --tile-2x2
 
 # 5. Strong gravity, tiny population — intense tight-cluster dynamics
-strong_g_tiny:--gravity 0.5 --softening 6 --speed-cap 8 --pop-target 512 --pop-band 64 --rate-limit 32 --circles 1 --vel-scale 1 --init-vel spin --wrap --width 256 --height 160
+strong_g_tiny:--gravity 0.5 --softening 6 --speed-cap 8 --pop-target 512 --pop-band 64 --rate-limit 32 --circles 1 --vel-scale 1 --init-vel spin --wrap --width 256 --height 160 --tile-2x2
 
 # 6. Velocity decay — speed bleeds off every frame, patterns crystallize
-vel_decay:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --vel-nudge-rate 0.03125 --width 256 --height 160
+vel_decay:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --vel-nudge-rate 0.03125 --width 256 --height 160 --tile-2x2
 
 # 7. Spin-flat — flattened vortex, horizontal band dynamics
-spin_flat:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel spin-flat --wrap --dampen-y 0.0625 --width 256 --height 160
+spin_flat:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel spin-flat --wrap --dampen-y 0.0625 --width 256 --height 160 --tile-2x2
 
 # 8. Upward nudge — all cells steered toward up over time
-nudge_up:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.25 --vel-nudge-rate 0.0625 --width 256 --height 160
+nudge_up:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.25 --vel-nudge-rate 0.0625 --width 256 --height 160 --tile-2x2
 
 # 9. Three-body spin — three circles creating chaotic orbital dance
-three_body:--gravity 0.165 --softening 3 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 3 --vel-scale 1.5 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160
+three_body:--gravity 0.165 --softening 3 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 3 --vel-scale 1.5 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160 --tile-2x2
 
 # 10. Pos-color on — cells shift color as they travel across the canvas
-pos_color_spin:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --pos-color --width 256 --height 160
+pos_color_spin:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --pos-color --width 256 --height 160 --tile-2x2
 
 # 11. Inverted damping — strong X, weak Y (normally strong Y, weak X)
-inverted_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-x 0.0625 --dampen-y 0.015625 --vel-nudge-rate 0.03125 --width 256 --height 160
+inverted_damp:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-x 0.0625 --dampen-y 0.015625 --vel-nudge-rate 0.03125 --width 256 --height 160 --tile-2x2
 
 # 12. Extreme softening — very mushy gravity wells, cells deflect everywhere
-mushy_gravity:--gravity 0.25 --softening 12 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160
+mushy_gravity:--gravity 0.25 --softening 12 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160 --tile-2x2
 
 # ── ASPECT RATIO EXPERIMENTS ─────────────────────────────────────────────────
 # Square — symmetric gravity, no preferred axis
-square_spin:--width 240 --height 240 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge-rate 0.03125
+square_spin:--width 240 --height 240 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge-rate 0.03125 --tile-2x2
 
 # Ultra-wide letterbox — horizontal band dynamics, gravity squished vertically
-ultrawide_chaos:--width 384 --height 80 --gravity 0.25 --softening 3 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-y 0.125
+ultrawide_chaos:--width 384 --height 80 --gravity 0.25 --softening 3 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-y 0.125 --tile-2x2
 
 # Tall portrait — vertical column collapse, gravity pulls down a narrow strip
-portrait_collapse:--width 96 --height 320 --gravity 0.2 --softening 4 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-x 0.0625 --dampen-y 0.015625
+portrait_collapse:--width 96 --height 320 --gravity 0.2 --softening 4 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-x 0.0625 --dampen-y 0.015625 --tile-2x2
 
 # Widescreen 16:9 — cinematic, large population across wide canvas
-widescreen_gas:--width 320 --height 180 --gravity 0.03125 --softening 8 --speed-cap 3 --pop-target 3072 --pop-band 384 --rate-limit 16 --init-vel swirl --wrap --dampen-x 0.03125 --dampen-y 0.03125
+widescreen_gas:--width 320 --height 180 --gravity 0.03125 --softening 8 --speed-cap 3 --pop-target 3072 --pop-band 384 --rate-limit 16 --init-vel swirl --wrap --dampen-x 0.03125 --dampen-y 0.03125 --tile-2x2
 
 # Classic 4:3 — tight square-ish with bounce walls, no wrap
-classic_bounce:--width 256 --height 192 --gravity 0.2 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 3 --vel-scale 1.5 --init-vel spin --bounce-x --bounce-y
+classic_bounce:--width 256 --height 192 --gravity 0.2 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 3 --vel-scale 1.5 --init-vel spin --bounce-x --bounce-y --tile-2x2
 
 # Extreme portrait — phone-screen shape, strong vertical gravity bias
-phone_portrait:--width 72 --height 288 --gravity 0.3 --softening 5 --speed-cap 5 --pop-target 768 --pop-band 96 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel zero --wrap --dampen-x 0.125 --dampen-y 0
+phone_portrait:--width 72 --height 288 --gravity 0.3 --softening 5 --speed-cap 5 --pop-target 768 --pop-band 96 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel zero --wrap --dampen-x 0.125 --dampen-y 0 --tile-2x2
 
 # Large square, massive population — dense field dynamics
-big_square_dense:--width 320 --height 320 --gravity 0.05 --softening 6 --speed-cap 4 --pop-target 5120 --pop-band 640 --rate-limit 32 --init-vel random --wrap
+big_square_dense:--width 320 --height 320 --gravity 0.05 --softening 6 --speed-cap 4 --pop-target 5120 --pop-band 640 --rate-limit 32 --init-vel random --wrap --tile-2x2
