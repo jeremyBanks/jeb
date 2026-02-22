@@ -2037,12 +2037,29 @@ use std::io::{BufWriter, Write};
             };
             let old_gx = ((cpx.floor() as i32).rem_euclid(W as i32)) as usize;
             let old_gy = ((cpy.floor() as i32).rem_euclid(H as i32)) as usize;
-            let rx = cpx + cvx; let ry = cpy + cvy;
-            // Per-axis: wrap or bounds-check independently
-            let new_px = if self.wrap_x { rx.rem_euclid(W as f32) }
-                         else { if rx < 0.0 || rx >= W as f32 { continue; } rx };
-            let new_py = if self.wrap_y { ry.rem_euclid(H as f32) }
-                         else { if ry < 0.0 || ry >= H as f32 { continue; } ry };
+            // Resolve position per axis: wrap / bounce / hard-wall
+            let mut nx = cpx + cvx;
+            let mut ny = cpy + cvy;
+            let mut nvx = cvx;
+            let mut nvy = cvy;
+            // X axis
+            if self.wrap_x {
+                nx = nx.rem_euclid(W as f32);
+            } else if self.bounce_x {
+                if nx < 0.0       { nx = -nx;                      nvx = -nvx; }
+                else if nx >= W as f32 { nx = 2.0 * W as f32 - nx; nvx = -nvx; }
+            } else if nx < 0.0 || nx >= W as f32 { continue; }
+            // Y axis
+            if self.wrap_y {
+                ny = ny.rem_euclid(H as f32);
+            } else if self.bounce_y {
+                if ny < 0.0       { ny = -ny;                      nvy = -nvy; }
+                else if ny >= H as f32 { ny = 2.0 * H as f32 - ny; nvy = -nvy; }
+            } else if ny < 0.0 || ny >= H as f32 { continue; }
+            // Apply any velocity changes from bounce before grid logic
+            if nvx != cvx { self.cells[idx].vx = nvx; }
+            if nvy != cvy { self.cells[idx].vy = nvy; }
+            let (new_px, new_py) = (nx, ny);
             let tgx = (new_px.floor() as i32).rem_euclid(W as i32) as usize;
             let tgy = (new_py.floor() as i32).rem_euclid(H as i32) as usize;
             let crossing = tgx != old_gx || tgy != old_gy;
