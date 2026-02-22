@@ -458,8 +458,9 @@ impl Sim {
                         (dx*dx + dy*dy).sqrt()
                     })
                     .fold(f32::INFINITY, f32::min);
-                let centre_pen = if wrap_x && wrap_y { 0.0 }
-                    else { ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001 };
+                // Always prefer canvas centre as tiebreaker (even on wrapped grids)
+                // so circles land near the middle rather than a random corner.
+                let centre_pen = ((px - cx_global).powi(2) + (py - cy_global).powi(2)).sqrt() * 0.001;
                 wall.min(nbr) - centre_pen
             };
 
@@ -508,12 +509,35 @@ impl Sim {
 
                 let mut placed = 0usize;
 
+                // For spin modes, compute velocity relative to THIS circle's centre
+                // (disk_cx/disk_cy), not the global canvas centre.  Calling make_vel
+                // for spin would use cx_global and give wrong tangential directions for
+                // off-centre circles.
+                let disk_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
+                    match init_vel {
+                        "spin" | "spin-ccw" | "spin-flat" => {
+                            let dx = xi as f32 + 0.5 - disk_cx;
+                            let dy = yi as f32 + 0.5 - disk_cy;
+                            let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                            let scale = (r / radius).min(1.0) * 0.5;
+                            let nx = (xorf32(rng)-0.5)*0.1;
+                            let ny = (xorf32(rng)-0.5)*0.1;
+                            match init_vel {
+                                "spin"      => (-dy/r * scale + nx,  dx/r * scale + ny),
+                                "spin-ccw"  => ( dy/r * scale + nx, -dx/r * scale + ny),
+                                _/* flat */ => (-dy/r * scale + nx, (dx/r * scale + ny) * 0.09375),
+                            }
+                        }
+                        _ => make_vel(xi, yi, rng),
+                    }
+                };
+
                 // Primary pass: 50% coin flip at each point in distance order.
                 for &(xi, yi, _) in &pts {
                     if placed >= cells_this_circle { break; }
                     if occupied[yi * W() + xi] { continue; }
                     if xoru64(&mut rng) & 1 == 0 { continue; } // 50% skip
-                    let (vx, vy) = make_vel(xi, yi, &mut rng);
+                    let (vx, vy) = disk_vel(xi, yi, &mut rng);
                     let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                     cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                       prev_speed: 0.0, id: next_id, moved: false });
@@ -527,7 +551,7 @@ impl Sim {
                     for &(xi, yi, _) in &pts {
                         if placed >= cells_this_circle { break; }
                         if occupied[yi * W() + xi] { continue; }
-                        let (vx, vy) = make_vel(xi, yi, &mut rng);
+                        let (vx, vy) = disk_vel(xi, yi, &mut rng);
                         let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                         cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                           prev_speed: 0.0, id: next_id, moved: false });

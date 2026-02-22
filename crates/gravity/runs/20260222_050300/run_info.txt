@@ -1,0 +1,31 @@
+run_id=20260222_050300
+run_id:        20260222_050300
+seed:          2464049257
+seconds:       4369
+commit:        e48b41043ed0
+gravity:       0.25
+softening:     0.5
+speed_cap:     2.9
+pop_target:    640
+pop_band:      256
+rate_limit:    256
+conway_every:  1
+seed_density:  1/128
+init_pop:      640
+init_vel:      spin
+circles:       1
+vel_scale:     0.125
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+dampen_x:      0.0078125
+dampen_y:      0.015625
+vel_decay:     0.0009765625
+vel_nudge:     -0.030556
+vel_nudge_rate:0.125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    128x128 → 256x256
