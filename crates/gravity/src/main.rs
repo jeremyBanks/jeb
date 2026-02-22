@@ -1569,6 +1569,9 @@ fn main() {
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
         .unwrap_or(pop_band as usize); // default: same as pop_band so Conway can move pop by its full range per tick
+    let conway_every: usize = parse_arg("--conway-every")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1); // default: every tick
 
     // --init-vel MODE: initial velocity field for seeded cells.
     //   swirl     (default) — asymmetric quadrant bias, net angular momentum
