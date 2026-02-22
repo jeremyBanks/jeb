@@ -737,8 +737,10 @@ impl Sim {
         // Pop-band alone throttles births/deaths (cells can only be born up to pop_max,
         // killed down to pop_min). No speed-based shutoff.
         let rate_limit = self.rate_limit;
-        let max_births = pop_max.saturating_sub(n).min(rate_limit);
-        let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
+        // Hard cutoff at band edges: inside the band Conway runs freely and population
+        // floats naturally. We only block births when at pop_max, deaths when at pop_min.
+        let max_births = if n >= pop_max { 0 } else { rate_limit };
+        let max_deaths = if n <= pop_min { 0 } else { rate_limit };
         // desired_births NOT truncated here — weighted selection happens post-deaths
         desired_deaths.truncate(max_deaths);
 
