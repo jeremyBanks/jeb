@@ -1585,6 +1585,7 @@ fn main() {
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let vel_decay: f32 = parse_arg("--vel-decay").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+    let vel_nudge: f32 = parse_arg("--vel-nudge").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let rng_seed: u64 = parse_arg("--seed")
         .and_then(|s| s.parse().ok())
         .unwrap_or(44);
