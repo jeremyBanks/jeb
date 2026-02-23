@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 
 BIN="/Users/matte/jeb/target/release/gravity"
 QUEUE_FILE="batch-queue.txt"
-SECONDS_EACH=546   # half of original
+SECONDS_EACH=${GRAVITY_SECONDS:-546}   # override with GRAVITY_SECONDS env var
 
 if [ ! -f "$QUEUE_FILE" ]; then
     echo "[batch] no queue file at $QUEUE_FILE — nothing to do"
