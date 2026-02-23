@@ -1706,7 +1706,7 @@ fn main() {
     let frames_dir      = format!("{}/frames", run_dir);
     let segments_file   = format!("{}/segments.txt", run_dir);
     let shared_dir = std::env::var("GRAVITY_SHARED_DIR")
-        .unwrap_or_else(|_| String::from("/Users/matte/.openclaw/workspace/shared/gravity"));
+        .unwrap_or_else(|_| String::from("/Volumes/My Shared Files/shared/"));
     fs::create_dir_all(&shared_dir).ok();
     // Final video alongside the run dir (runs/{run_id}.mp4) + copy to shared
     let output_file_local  = format!("runs/{}.mp4", run_id);
