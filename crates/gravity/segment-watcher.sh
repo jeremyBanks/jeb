@@ -104,8 +104,9 @@ while true; do
             [ -f "$seg" ] || continue
 
             # Validate segment belongs to THIS run (check mtime vs run start time)
-            # run_id is YYYYMMDD_HHMMSS — convert to epoch for comparison
-            RUN_EPOCH=$(date -j -f "%Y%m%d_%H%M%S" "$RUN_ID" "+%s" 2>/dev/null || echo 0)
+            # run_id is YYYYMMDD_HHMMSS_name — extract first 15 chars for timestamp
+            RUN_TS=$(echo "$RUN_ID" | cut -c1-15)
+            RUN_EPOCH=$(date -j -f "%Y%m%d_%H%M%S" "$RUN_TS" "+%s" 2>/dev/null || echo 0)
             SEG_MTIME=$(stat -f %m "$seg" 2>/dev/null || echo 0)
             if [ "$SEG_MTIME" -lt "$RUN_EPOCH" ]; then
                 echo "[watcher] skipping stale segment $seg (predates run $RUN_ID)"
