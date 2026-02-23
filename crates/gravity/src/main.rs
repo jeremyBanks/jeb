@@ -1962,7 +1962,7 @@ fn main() {
     // Final concat
     let total_segs = fs::read_to_string(&segments_file).unwrap_or_default().lines().count();
     println!("\nConcatenating {total_segs} segments → {output_file}");
-    concat_segments(&segments_file, &output_file);
+    concat_segments(&segments_file, &output_file, tile_2x2);
 
     let size = fs::metadata(&output_file).map(|m| m.len()).unwrap_or(0);
     println!("Done! {output_file} ({:.1} MB)", size as f64 / 1_048_576.0);
