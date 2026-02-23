@@ -1,3 +1,30 @@
+var_rate_128:--stagger-y 28 --gravity 0.142 --softening 4.3 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 128 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.068 --frames 131072
+var_soft_39:--stagger-y 28 --gravity 0.142 --softening 3.9 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 58 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.068 --frames 131072
+var_cap_36:--stagger-y 28 --gravity 0.142 --softening 4.3 --speed-cap 3.6 --pop-target 1536 --pop-band 192 --rate-limit 58 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.068 --frames 131072
+var_L01:--width 256 --height 160 --gravity 0.14 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 11 --vel-scale 1.8 --init-vel spin --wrap --dampen-y 0.06
+var_L02:--width 256 --height 160 --gravity 0.16 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 11 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.065
+var_L03:--width 256 --height 160 --gravity 0.155 --softening 3.5 --speed-cap 4.2 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 13 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
+var_L04:--width 256 --height 160 --gravity 0.135 --softening 4.5 --speed-cap 3.8 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 9 --vel-scale 2.4 --init-vel spin --wrap --dampen-y 0.07
+var_L05:--width 272 --height 160 --gravity 0.145 --softening 4.0 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 1.6 --init-vel spin --wrap --dampen-y 0.058
+var_L06:--width 240 --height 160 --gravity 0.158 --softening 3.6 --speed-cap 4.1 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 12 --vel-scale 2.1 --init-vel spin --wrap --dampen-y 0.062
+var_P01:--width 160 --height 256 --gravity 0.14 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 11 --vel-scale 1.8 --init-vel spin --wrap --dampen-y 0.06
+var_P02:--width 160 --height 256 --gravity 0.16 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 11 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.065
+var_P03:--width 160 --height 256 --gravity 0.155 --softening 3.5 --speed-cap 4.2 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 13 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
+var_P04:--width 160 --height 256 --gravity 0.135 --softening 4.5 --speed-cap 3.8 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 9 --vel-scale 2.4 --init-vel spin --wrap --dampen-y 0.07
+var_P05:--width 160 --height 272 --gravity 0.145 --softening 4.0 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 1.6 --init-vel spin --wrap --dampen-y 0.058
+var_P06:--width 176 --height 256 --gravity 0.158 --softening 3.6 --speed-cap 4.1 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 12 --vel-scale 2.1 --init-vel spin --wrap --dampen-y 0.062
+var_S01:--width 208 --height 208 --gravity 0.14 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 11 --vel-scale 1.8 --init-vel spin --wrap --dampen-y 0.06
+var_S02:--width 208 --height 208 --gravity 0.16 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 11 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.065
+var_S03:--width 192 --height 192 --gravity 0.155 --softening 3.5 --speed-cap 4.2 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 13 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
+var_S04:--width 224 --height 224 --gravity 0.135 --softening 4.5 --speed-cap 3.8 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 9 --vel-scale 2.4 --init-vel spin --wrap --dampen-y 0.07
+var_R01:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2.0 --init-vel radial-out --wrap --dampen-y 0.0625
+var_R02:--width 160 --height 256 --gravity 0.17 --softening 3.3 --speed-cap 5.0 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 1 --vel-scale 2.2 --init-vel radial-out --wrap --dampen-y 0.07
+var_R03:--width 208 --height 208 --gravity 0.16 --softening 3.7 --speed-cap 4.8 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 1 --vel-scale 1.8 --init-vel radial-out --wrap --dampen-y 0.055
+var_D01:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995
+var_D02:--width 160 --height 256 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9998
+var_D03:--width 208 --height 208 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9992
+var_H01:--width 256 --height 160 --gravity 0.2 --softening 3.0 --speed-cap 4.5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.08
+var_H02:--width 160 --height 256 --gravity 0.18 --softening 3.2 --speed-cap 4.3 --pop-target 1280 --pop-band 160 --rate-limit 60 --circles 9 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.075
 # 24 threads variants - testing tiling logic with varied stagger/wrap/aspect
 # Base: threads (G=0.15, soft=4, cap=4, pop=1536/192, rate=64, circles=15, spin, wrap, dampen_y=0.0625)
 # 65536 frames each
@@ -15,7 +42,6 @@
 # Portrait - both staggers
 
 # Square - stagger_y (even seed default)
-threads_S1:--width 208 --height 208 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
 threads_S2:--width 192 --height 192 --gravity 0.148 --softening 4.1 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 66 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
 
 # Square - explicit stagger_x
@@ -34,37 +60,16 @@ threads_N4:--width 272 --height 176 --no-stagger --gravity 0.145 --softening 4.2
 # Mix of landscape, portrait, square with varied gravity/softening/rate/vel-scale
 
 # Landscape variations (256x160, default stagger_y)
-var_L01:--width 256 --height 160 --gravity 0.14 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 11 --vel-scale 1.8 --init-vel spin --wrap --dampen-y 0.06
-var_L02:--width 256 --height 160 --gravity 0.16 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 11 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.065
-var_L03:--width 256 --height 160 --gravity 0.155 --softening 3.5 --speed-cap 4.2 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 13 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
-var_L04:--width 256 --height 160 --gravity 0.135 --softening 4.5 --speed-cap 3.8 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 9 --vel-scale 2.4 --init-vel spin --wrap --dampen-y 0.07
-var_L05:--width 272 --height 160 --gravity 0.145 --softening 4.0 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 1.6 --init-vel spin --wrap --dampen-y 0.058
-var_L06:--width 240 --height 160 --gravity 0.158 --softening 3.6 --speed-cap 4.1 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 12 --vel-scale 2.1 --init-vel spin --wrap --dampen-y 0.062
 
 # Portrait variations (160x256, default stagger_x)
-var_P01:--width 160 --height 256 --gravity 0.14 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 11 --vel-scale 1.8 --init-vel spin --wrap --dampen-y 0.06
-var_P02:--width 160 --height 256 --gravity 0.16 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 11 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.065
-var_P03:--width 160 --height 256 --gravity 0.155 --softening 3.5 --speed-cap 4.2 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 13 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
-var_P04:--width 160 --height 256 --gravity 0.135 --softening 4.5 --speed-cap 3.8 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 9 --vel-scale 2.4 --init-vel spin --wrap --dampen-y 0.07
-var_P05:--width 160 --height 272 --gravity 0.145 --softening 4.0 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 1.6 --init-vel spin --wrap --dampen-y 0.058
-var_P06:--width 176 --height 256 --gravity 0.158 --softening 3.6 --speed-cap 4.1 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 12 --vel-scale 2.1 --init-vel spin --wrap --dampen-y 0.062
 
 # Square variations (default stagger from seed)
-var_S01:--width 208 --height 208 --gravity 0.14 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 11 --vel-scale 1.8 --init-vel spin --wrap --dampen-y 0.06
-var_S02:--width 208 --height 208 --gravity 0.16 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 11 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.065
-var_S03:--width 192 --height 192 --gravity 0.155 --softening 3.5 --speed-cap 4.2 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 13 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
-var_S04:--width 224 --height 224 --gravity 0.135 --softening 4.5 --speed-cap 3.8 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 9 --vel-scale 2.4 --init-vel spin --wrap --dampen-y 0.07
 
 # Radial-out variations
-var_R01:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 2.0 --init-vel radial-out --wrap --dampen-y 0.0625
-var_R02:--width 160 --height 256 --gravity 0.17 --softening 3.3 --speed-cap 5.0 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 1 --vel-scale 2.2 --init-vel radial-out --wrap --dampen-y 0.07
-var_R03:--width 208 --height 208 --gravity 0.16 --softening 3.7 --speed-cap 4.8 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 1 --vel-scale 1.8 --init-vel radial-out --wrap --dampen-y 0.055
 
 # Vel-decay variations (based on earlier good config)
-var_D01:--width 256 --height 160 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995
-var_D02:--width 160 --height 256 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9998
-var_D03:--width 208 --height 208 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9992
 
 # Higher gravity experiments
-var_H01:--width 256 --height 160 --gravity 0.2 --softening 3.0 --speed-cap 4.5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.08
-var_H02:--width 160 --height 256 --gravity 0.18 --softening 3.2 --speed-cap 4.3 --pop-target 1280 --pop-band 160 --rate-limit 60 --circles 9 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.075
+
+# Variants of threads_11pct (G=0.142, soft=4.3, cap=4, rate=58, dy=0.068, stagger_y=28)
+threads_S1_redo:--width 208 --height 208 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 11 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625

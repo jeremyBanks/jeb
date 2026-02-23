@@ -508,9 +508,10 @@ impl Sim {
                 }
             }
             // Flip circle centers vertically so CCW spin drifts right+up instead of right+down
-            let h = H() as f32;
+            // Use (H-1) - cy to keep centers in valid range [0, H-1]
+            let h_max = (H() - 1) as f32;
             for (_, cy) in centres.iter_mut() {
-                *cy = h - *cy;
+                *cy = h_max - *cy;
             }
 
             // Fill each disk using distance-sorted grid walk with 50% coin flip.
@@ -530,10 +531,18 @@ impl Sim {
                 for yi in 0..H() {
                     for xi in 0..W() {
                         if occupied[yi * W() + xi] { continue; }
-                        // Stagger-aware distance from (xi, yi) to disk center
+                        // Simple wrap-aware distance (no stagger) for circle filling.
+                        // Stagger affects physics but not visual circle shape.
                         let raw_dx = xi as f32 + 0.5 - disk_cx;
                         let raw_dy = yi as f32 + 0.5 - disk_cy;
-                        let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+                        let dx = if wrap_x {
+                            let d = raw_dx.abs();
+                            d.min(W() as f32 - d) * raw_dx.signum()
+                        } else { raw_dx };
+                        let dy = if wrap_y {
+                            let d = raw_dy.abs();
+                            d.min(H() as f32 - d) * raw_dy.signum()
+                        } else { raw_dy };
                         let d2 = dx * dx + dy * dy;
                         if d2 <= r_sq {
                             pts.push((xi, yi, d2));
