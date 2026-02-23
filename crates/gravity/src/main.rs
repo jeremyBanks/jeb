@@ -785,17 +785,30 @@ impl Sim {
             (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
         ];
         let (wrap_x, wrap_y) = (self.wrap_x, self.wrap_y);
-        // Resolve a neighbour offset to a grid index, respecting per-axis wrap.
+        let stag_x = self.stagger_x.round() as i32;
+        let stag_y = self.stagger_y.round() as i32;
+        // Resolve a neighbour offset to a grid index, respecting per-axis wrap + stagger.
+        // When crossing the X boundary, apply stagger_y to Y (and vice versa).
         let resolve_nbr = |gy: usize, gx: usize, dy: i32, dx: i32| -> Option<(usize, usize)> {
-            let ry = gy as i32 + dy;
-            let rx = gx as i32 + dx;
-            let ry = if wrap_y { Some(ry.rem_euclid(H() as i32) as usize) }
-                     else if ry >= 0 && ry < H() as i32 { Some(ry as usize) }
-                     else { None };
-            let rx = if wrap_x { Some(rx.rem_euclid(W() as i32) as usize) }
-                     else if rx >= 0 && rx < W() as i32 { Some(rx as usize) }
-                     else { None };
-            match (ry, rx) { (Some(ry), Some(rx)) => Some((ry, rx)), _ => None }
+            let mut ry = gy as i32 + dy;
+            let mut rx = gx as i32 + dx;
+            // Detect boundary crossings and apply stagger offsets
+            if wrap_x {
+                if rx < 0        { ry -= stag_y; }
+                else if rx >= W() as i32 { ry += stag_y; }
+                rx = rx.rem_euclid(W() as i32);
+            } else if rx < 0 || rx >= W() as i32 { return None; }
+            if wrap_y {
+                if ry < 0        { rx -= stag_x; }
+                else if ry >= H() as i32 { rx += stag_x; }
+                ry = ry.rem_euclid(H() as i32);
+            } else if ry < 0 || ry >= H() as i32 { return None; }
+            // After stagger, re-wrap both axes (stagger offset may push out of bounds)
+            if wrap_x { rx = rx.rem_euclid(W() as i32); }
+            else if rx < 0 || rx >= W() as i32 { return None; }
+            if wrap_y { ry = ry.rem_euclid(H() as i32); }
+            else if ry < 0 || ry >= H() as i32 { return None; }
+            Some((ry as usize, rx as usize))
         };
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
