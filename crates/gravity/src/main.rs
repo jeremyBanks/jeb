@@ -4013,3 +4013,28 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
             let c = vec![0.0f32; W() * H() * 3];
             (s, c, 0)
         });
+
+// [recovery] edit target not found, appending:
+        // Birth selection: if chance-based, filter by probability; otherwise shuffle and take max_births.
+        let mut birth_indices: Vec<usize> = desired_births.iter()
+            .enumerate()
+            .filter_map(|(i, (gy, gx, _))| {
+                if grid2[gy * W() + gx] != usize::MAX { return None; }
+                Some(i)
+            })
+            .collect();
+        
+        let birth_limit = if let Some(birth_chance) = self.birth_chance {
+            if births_allowed {
+                // Filter by probability
+                birth_indices.retain(|_| xorf32(&mut self.rng) < birth_chance);
+                birth_indices.len() // take all that passed the probability filter
+            } else {
+                0
+            }
+        } else {
+            shuffle_vec(&mut birth_indices, &mut self.rng);
+            if births_allowed { self.rate_limit } else { 0 }
+        };
+
+        for bi in birth_indices.into_iter().take(birth_limit) {
