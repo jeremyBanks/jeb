@@ -95,6 +95,9 @@ impl VideoController for GameBoy {
 
     fn draw_output(&mut self) {
         // redraw display because vram was touched!
+        // TODO: Window layer (LCDC bits 5+6, WX/WY registers) not implemented.
+        // TODO: OBJ-to-BG priority (sprite attr bit 7) not implemented.
+        // TODO: STAT register / LCD mode interrupts not implemented.
         let (mut display, mut bg_0, mut tiles, mut bgp) = {
             let output_buffer = self
                 .output_buffer
