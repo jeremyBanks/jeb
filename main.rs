@@ -1915,11 +1915,6 @@ fn main() {
     let stagger_y: f32 = if no_stagger { 0.0 } else {
         parse_arg("--stagger-y").and_then(|s| s.parse().ok()).unwrap_or(auto_stagger_y)
     };
-    if stagger_x != 0.0 && stagger_y != 0.0 {
-        eprintln!("Error: cannot stagger both axes simultaneously (stagger_x={}, stagger_y={})", stagger_x, stagger_y);
-        eprintln!("Use --stagger-x N --stagger-y 0, or --stagger-x 0 --stagger-y N, or --no-stagger");
-        std::process::exit(1);
-    }
     let pos_rotation_enabled =  args.iter().any(|a| a == "--pos-color");     // default: off
     let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
     let tile_2x2_forced      =  args.iter().any(|a| a == "--tile-2x2");
