@@ -181,6 +181,8 @@ struct Sim {
     start_pop: usize,
     pop_band: f32,
     rate_limit: usize,
+    birth_chance: Option<f32>,  // if set, each birth candidate has this probability (replaces rate_limit for births)
+    death_chance: Option<f32>,  // if set, each death candidate has this probability (replaces rate_limit for deaths)
     conway_every: usize, // fire Conway every N ticks (1 = every tick, 4 = every 4th tick)
     tick_count: usize,
     prev_live: Vec<bool>,
@@ -374,7 +376,8 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, conway_every: usize, seed_density_inv: usize, target_pop: usize,
+           rate_limit: usize, birth_chance: Option<f32>, death_chance: Option<f32>,
+           conway_every: usize, seed_density_inv: usize, target_pop: usize,
            wrap_x: bool, wrap_y: bool, bounce_x: bool, bounce_y: bool, steer: bool,
            dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32,
            stagger_x: f32, stagger_y: f32,
@@ -657,7 +660,8 @@ impl Sim {
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()],
+              pop_band, rate_limit, birth_chance, death_chance,
+              conway_every, tick_count: 0, prev_live: vec![false; W() * H()],
               wrap_x, wrap_y, bounce_x, bounce_y, steer,
               dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
               stagger_x, stagger_y,
@@ -700,8 +704,8 @@ impl Sim {
     }
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
-                       pop_band: f32, rate_limit: usize, conway_every: usize,
-                       _seed_density_inv: usize,
+                       pop_band: f32, rate_limit: usize, birth_chance: Option<f32>, death_chance: Option<f32>,
+                       conway_every: usize, _seed_density_inv: usize,
                        target_pop: usize, wrap_x: bool, wrap_y: bool,
                        bounce_x: bool, bounce_y: bool, steer: bool,
                        dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32,
@@ -751,8 +755,8 @@ impl Sim {
         }
         let order = (0..cells.len()).collect();
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
-                        start_pop: target_pop, pop_band, rate_limit, conway_every,
-                        tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
+                        start_pop: target_pop, pop_band, rate_limit, birth_chance, death_chance,
+                        conway_every, tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
                         dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
                         stagger_x, stagger_y,
                         conway_births: 0, conway_deaths: 0,
@@ -888,13 +892,22 @@ impl Sim {
         // Conway runs at a fixed rate regardless of cell speed.
         // Pop-band alone throttles births/deaths (cells can only be born up to pop_max,
         // killed down to pop_min). No speed-based shutoff.
-        let rate_limit = self.rate_limit;
         // Hard cutoff at band edges: inside the band Conway runs freely and population
         // floats naturally. We only block births when at pop_max, deaths when at pop_min.
-        let max_births = if n >= pop_max { 0 } else { rate_limit };
-        let max_deaths = if n <= pop_min { 0 } else { rate_limit };
-        // desired_births NOT truncated here — weighted selection happens post-deaths
-        desired_deaths.truncate(max_deaths);
+        let births_allowed = n < pop_max;
+        let deaths_allowed = n > pop_min;
+        
+        // If chance-based mode: filter by probability; otherwise use rate_limit
+        if let Some(death_chance) = self.death_chance {
+            if deaths_allowed {
+                desired_deaths.retain(|_| xorf32(&mut self.rng) < death_chance);
+            } else {
+                desired_deaths.clear();
+            }
+        } else {
+            let max_deaths = if deaths_allowed { self.rate_limit } else { 0 };
+            desired_deaths.truncate(max_deaths);
+        }
 
         let mut dying: std::collections::HashSet<usize> = desired_deaths.iter().cloned().collect();
 
@@ -923,7 +936,7 @@ impl Sim {
             grid2[c.gy() * W() + c.gx()] = i;
         }
 
-        // Uniform birth selection: shuffle candidates, take first max_births.
+        // Birth selection: if chance-based, filter by probability; otherwise shuffle and take max_births.
         let mut birth_indices: Vec<usize> = desired_births.iter()
             .enumerate()
             .filter_map(|(i, (gy, gx, _))| {
@@ -931,9 +944,21 @@ impl Sim {
                 Some(i)
             })
             .collect();
-        shuffle_vec(&mut birth_indices, &mut self.rng);
+        
+        let birth_limit = if let Some(birth_chance) = self.birth_chance {
+            if births_allowed {
+                // Filter by probability
+                birth_indices.retain(|_| xorf32(&mut self.rng) < birth_chance);
+                birth_indices.len() // take all that passed the probability filter
+            } else {
+                0
+            }
+        } else {
+            shuffle_vec(&mut birth_indices, &mut self.rng);
+            if births_allowed { self.rate_limit } else { 0 }
+        };
 
-        for bi in birth_indices.into_iter().take(max_births) {
+        for bi in birth_indices.into_iter().take(birth_limit) {
             let (gy, gx, _) = desired_births[bi];
             if grid2[gy * W() + gx] != usize::MAX { continue; } // double-check: may have been filled
             let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
@@ -2218,6 +2243,20 @@ fn main() {
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
         .unwrap_or(pop_band as usize); // default: same as pop_band so Conway can move pop by its full range per tick
+    
+    // Parse chance as either decimal (0.0625) or fraction (1/16)
+    fn parse_chance(s: &str) -> Option<f32> {
+        if let Some((num, denom)) = s.split_once('/') {
+            let n: f32 = num.trim().parse().ok()?;
+            let d: f32 = denom.trim().parse().ok()?;
+            if d != 0.0 { Some(n / d) } else { None }
+        } else {
+            s.parse().ok()
+        }
+    }
+    let birth_chance: Option<f32> = parse_arg("--birth-chance").and_then(|s| parse_chance(&s));
+    let death_chance: Option<f32> = parse_arg("--death-chance").and_then(|s| parse_chance(&s));
+    
     let conway_every: usize = parse_arg("--conway-every")
         .and_then(|s| s.parse().ok())
         .unwrap_or(1); // default: every tick
@@ -2297,7 +2336,7 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_frame) =
-        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
+        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
         .map(|(s, c, sf)| {
             println!("Resuming from checkpoint: frame {} / {}", sf, total_frames);
             (s, c, sf)
@@ -2308,7 +2347,7 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W() * H() * 3];
             (s, c, 0)
         });
