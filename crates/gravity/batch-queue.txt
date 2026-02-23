@@ -27,6 +27,9 @@
 # 12. Extreme softening — very mushy gravity wells, cells deflect everywhere
 
 # ── PORTRAIT (160×256) — known-good configs, opposite aspect ratio ────────────
+# Square 256×256, nudge 11° right of up (0.25 turns - 11/360 = 79/360)
+nudge_sq_11r:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.2194 --vel-nudge-rate 0.0625 --width 256 --height 256
+
 radout_portrait:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --width 160 --height 256
 
 veldecay_portrait:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --width 160 --height 256
