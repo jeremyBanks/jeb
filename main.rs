@@ -84,6 +84,58 @@ impl RegionVoice {
             pitch_bend: 0.0, filter_coeff: FILTER_WARM,
         }
     }
+
+    // Send a preview of the final video to Discord
+    let final_video = if std::path::Path::new(&output_file_shared).exists() {
+        &output_file_shared
+    } else {
+        &output_file_local
+    };
+    if std::path::Path::new(final_video).exists() {
+        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
+        let dur_secs = seconds as f64;
+        let mid = dur_secs / 2.0;
+        let end_start = (dur_secs - 3.0).max(0.0);
+        let preview_filter = format!(
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
+             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
+             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
+             [va][vb][vc]concat=n=3:v=1:a=0[vout]"
+        );
+        let preview_ok = Command::new("ffmpeg")
+            .args([
+                "-y", "-i", final_video,
+                "-filter_complex", &preview_filter,
+                "-map", "[vout]",
+                "-an",
+                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                &preview_path,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if preview_ok {
+            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
+            let msg = format!(
+                "✅ **{}** complete | {}MB | {}s\n`{}`",
+                run_id, size_mb, seconds, 
+                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
+            );
+            let _ = Command::new("openclaw")
+                .args([
+                    "message", "send",
+                    "--channel", "discord",
+                    "-t", "1467063568712339561",
+                    "--media", &preview_path,
+                    "-m", &msg,
+                ])
+                .status();
+            let _ = fs::remove_file(&preview_path);
+        }
+    }
 }
 
 struct Cell {
@@ -243,6 +295,58 @@ impl QNode {
             _ => (mx,       my,       self.x1, self.y1),
         }
     }
+
+    // Send a preview of the final video to Discord
+    let final_video = if std::path::Path::new(&output_file_shared).exists() {
+        &output_file_shared
+    } else {
+        &output_file_local
+    };
+    if std::path::Path::new(final_video).exists() {
+        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
+        let dur_secs = seconds as f64;
+        let mid = dur_secs / 2.0;
+        let end_start = (dur_secs - 3.0).max(0.0);
+        let preview_filter = format!(
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
+             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
+             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
+             [va][vb][vc]concat=n=3:v=1:a=0[vout]"
+        );
+        let preview_ok = Command::new("ffmpeg")
+            .args([
+                "-y", "-i", final_video,
+                "-filter_complex", &preview_filter,
+                "-map", "[vout]",
+                "-an",
+                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                &preview_path,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if preview_ok {
+            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
+            let msg = format!(
+                "✅ **{}** complete | {}MB | {}s\n`{}`",
+                run_id, size_mb, seconds, 
+                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
+            );
+            let _ = Command::new("openclaw")
+                .args([
+                    "message", "send",
+                    "--channel", "discord",
+                    "-t", "1467063568712339561",
+                    "--media", &preview_path,
+                    "-m", &msg,
+                ])
+                .status();
+            let _ = fs::remove_file(&preview_path);
+        }
+    }
 }
 
 fn qt_insert(nodes: &mut Vec<QNode>, idx: usize, body: usize, px: f32, py: f32, depth: u32) {
@@ -302,6 +406,58 @@ fn qt_insert(nodes: &mut Vec<QNode>, idx: usize, body: usize, px: f32, py: f32, 
                 nodes[idx].ch[q_new] as usize
             };
             qt_insert(nodes, child_new, body, px, py, depth + 1);
+        }
+    }
+
+    // Send a preview of the final video to Discord
+    let final_video = if std::path::Path::new(&output_file_shared).exists() {
+        &output_file_shared
+    } else {
+        &output_file_local
+    };
+    if std::path::Path::new(final_video).exists() {
+        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
+        let dur_secs = seconds as f64;
+        let mid = dur_secs / 2.0;
+        let end_start = (dur_secs - 3.0).max(0.0);
+        let preview_filter = format!(
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
+             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
+             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
+             [va][vb][vc]concat=n=3:v=1:a=0[vout]"
+        );
+        let preview_ok = Command::new("ffmpeg")
+            .args([
+                "-y", "-i", final_video,
+                "-filter_complex", &preview_filter,
+                "-map", "[vout]",
+                "-an",
+                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                &preview_path,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if preview_ok {
+            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
+            let msg = format!(
+                "✅ **{}** complete | {}MB | {}s\n`{}`",
+                run_id, size_mb, seconds, 
+                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
+            );
+            let _ = Command::new("openclaw")
+                .args([
+                    "message", "send",
+                    "--channel", "discord",
+                    "-t", "1467063568712339561",
+                    "--media", &preview_path,
+                    "-m", &msg,
+                ])
+                .status();
+            let _ = fs::remove_file(&preview_path);
         }
     }
 }
@@ -1445,6 +1601,58 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, pale
             (l, c * h_biased.cos(), c * h_biased.sin())
         }
     }
+
+    // Send a preview of the final video to Discord
+    let final_video = if std::path::Path::new(&output_file_shared).exists() {
+        &output_file_shared
+    } else {
+        &output_file_local
+    };
+    if std::path::Path::new(final_video).exists() {
+        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
+        let dur_secs = seconds as f64;
+        let mid = dur_secs / 2.0;
+        let end_start = (dur_secs - 3.0).max(0.0);
+        let preview_filter = format!(
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
+             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
+             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
+             [va][vb][vc]concat=n=3:v=1:a=0[vout]"
+        );
+        let preview_ok = Command::new("ffmpeg")
+            .args([
+                "-y", "-i", final_video,
+                "-filter_complex", &preview_filter,
+                "-map", "[vout]",
+                "-an",
+                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                &preview_path,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if preview_ok {
+            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
+            let msg = format!(
+                "✅ **{}** complete | {}MB | {}s\n`{}`",
+                run_id, size_mb, seconds, 
+                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
+            );
+            let _ = Command::new("openclaw")
+                .args([
+                    "message", "send",
+                    "--channel", "discord",
+                    "-t", "1467063568712339561",
+                    "--media", &preview_path,
+                    "-m", &msg,
+                ])
+                .status();
+            let _ = fs::remove_file(&preview_path);
+        }
+    }
 }
 
 fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
@@ -1557,6 +1765,58 @@ fn delete_frames(frames_dir: &str) {
         let path = entry.unwrap().path();
         if path.extension().map_or(false, |e| e == "png") {
             fs::remove_file(path).unwrap();
+        }
+    }
+
+    // Send a preview of the final video to Discord
+    let final_video = if std::path::Path::new(&output_file_shared).exists() {
+        &output_file_shared
+    } else {
+        &output_file_local
+    };
+    if std::path::Path::new(final_video).exists() {
+        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
+        let dur_secs = seconds as f64;
+        let mid = dur_secs / 2.0;
+        let end_start = (dur_secs - 3.0).max(0.0);
+        let preview_filter = format!(
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
+             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
+             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
+             [va][vb][vc]concat=n=3:v=1:a=0[vout]"
+        );
+        let preview_ok = Command::new("ffmpeg")
+            .args([
+                "-y", "-i", final_video,
+                "-filter_complex", &preview_filter,
+                "-map", "[vout]",
+                "-an",
+                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                &preview_path,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if preview_ok {
+            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
+            let msg = format!(
+                "✅ **{}** complete | {}MB | {}s\n`{}`",
+                run_id, size_mb, seconds, 
+                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
+            );
+            let _ = Command::new("openclaw")
+                .args([
+                    "message", "send",
+                    "--channel", "discord",
+                    "-t", "1467063568712339561",
+                    "--media", &preview_path,
+                    "-m", &msg,
+                ])
+                .status();
+            let _ = fs::remove_file(&preview_path);
         }
     }
 }
@@ -2003,6 +2263,58 @@ fn main() {
             Err(e) => {
                 eprintln!("Archive ERROR: copy failed ({e}) — local copy kept.");
             }
+        }
+    }
+
+    // Send a preview of the final video to Discord
+    let final_video = if std::path::Path::new(&output_file_shared).exists() {
+        &output_file_shared
+    } else {
+        &output_file_local
+    };
+    if std::path::Path::new(final_video).exists() {
+        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
+        let dur_secs = seconds as f64;
+        let mid = dur_secs / 2.0;
+        let end_start = (dur_secs - 3.0).max(0.0);
+        let preview_filter = format!(
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
+             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
+             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
+             [va][vb][vc]concat=n=3:v=1:a=0[vout]"
+        );
+        let preview_ok = Command::new("ffmpeg")
+            .args([
+                "-y", "-i", final_video,
+                "-filter_complex", &preview_filter,
+                "-map", "[vout]",
+                "-an",
+                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                &preview_path,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if preview_ok {
+            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
+            let msg = format!(
+                "✅ **{}** complete | {}MB | {}s\n`{}`",
+                run_id, size_mb, seconds, 
+                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
+            );
+            let _ = Command::new("openclaw")
+                .args([
+                    "message", "send",
+                    "--channel", "discord",
+                    "-t", "1467063568712339561",
+                    "--media", &preview_path,
+                    "-m", &msg,
+                ])
+                .status();
+            let _ = fs::remove_file(&preview_path);
         }
     }
 }
