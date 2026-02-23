@@ -1846,7 +1846,7 @@ fn main() {
         "run_id:        {run_id}\nseed:          {rng_seed}\nframes:        {total_frames}\nseconds:       {seconds}\n\
          commit:        {commit_id}\n\
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
-         pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\nconway_every:  {conway_every}\n\
+         pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\nstagger_x:     {stagger_x}\nstagger_y:     {stagger_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nvel_decay:     {vel_decay}\nvel_nudge:     {vel_nudge}\nvel_nudge_rate:{vel_nudge_rate}\nsteer:         {steer}\n\
