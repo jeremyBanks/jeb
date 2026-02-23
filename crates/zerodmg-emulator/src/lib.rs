@@ -296,8 +296,11 @@ impl GameBoy {
         }
     }
 
-    /// Advance the timer hardware by one T-cycle.
+    /// Advance the timer hardware by one M-cycle (= 4 T-cycles).
     pub fn timer_cycle(&mut self) {
+        self.timer_tick();
+        self.timer_tick();
+        self.timer_tick();
         self.timer_tick();
     }
 
@@ -358,9 +361,8 @@ impl GameBoy {
                 const MAX_LAG: Duration = Duration::from_millis(8);
                 const ZERO: Duration = Duration::from_secs(0);
 
-                // Game Boy CPU: 4,194,304 t-cycles per second (≈4.194 MHz)
-                const GB_HZ: f64 = 4_194_304.0;
-                let internal_elapsed = Duration::from_secs_f64(self.t as f64 / GB_HZ);
+                // self.t counts M-cycles; GB M-cycle frequency = 4,194,304 / 4 = 1,048,576 Hz
+                let internal_elapsed = Duration::from_secs_f64(self.t as f64 / 1_048_576.0);
                 let wall_elapsed = start_time.elapsed().expect("failed to get elapsed time?!");
 
                 let skew_ahead = if internal_elapsed > wall_elapsed {
