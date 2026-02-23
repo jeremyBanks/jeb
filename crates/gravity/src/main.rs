@@ -1970,18 +1970,15 @@ fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> Stri
         )
     } else {
         // Both stagger non-zero: four distinct tiles.
-        // Build y-rolled source first, then x-roll it for BR; x-rolled source for BL.
+        // TL = original, TR = y-rolled, BL = x-rolled, BR = y-rolled then x-rolled
         let h_upper = h - dy;
         let w_right = w - dx;
         format!(
-            "[0:v]split=5[tl][yr_a][yr_b][xr_a][xr_b];\
-             [yr_a]crop={w}:{h_upper}:0:{dy}[yu];[yr_b]crop={w}:{dy}:0:0[yl];\
-             [yu][yl]vstack[ysrc];[ysrc]split=2[tr][br_y];\
-             [xr_a]crop={w_right}:{h}:{dx}:0[xr];[xr_b]crop={dx}:{h}:0:0[xl];\
-             [xr][xl]hstack[bl];\
-             [br_y]split=2[br_ya][br_yb];\
-             [br_ya]crop={w_right}:{h}:{dx}:0[brr];[br_yb]crop={dx}:{h}:0:0[brl];\
-             [brr][brl]hstack[br];\
+            "[0:v]split=4[tl][src_y][src_x][src_yx];\
+             [src_y]split=2[sy1][sy2];[sy1]crop={w}:{h_upper}:0:{dy}[y_u];[sy2]crop={w}:{dy}:0:0[y_l];[y_u][y_l]vstack[tr];\
+             [src_x]split=2[sx1][sx2];[sx1]crop={w_right}:{h}:{dx}:0[x_r];[sx2]crop={dx}:{h}:0:0[x_l];[x_r][x_l]hstack[bl];\
+             [src_yx]split=2[syx1][syx2];[syx1]crop={w}:{h_upper}:0:{dy}[yx_u];[syx2]crop={w}:{dy}:0:0[yx_l];[yx_u][yx_l]vstack[yx_y];\
+             [yx_y]split=2[yxs1][yxs2];[yxs1]crop={w_right}:{h}:{dx}:0[yx_r];[yxs2]crop={dx}:{h}:0:0[yx_l2];[yx_r][yx_l2]hstack[br];\
              [tl][tr]hstack[top];[bl][br]hstack[bot];\
              [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
         )
