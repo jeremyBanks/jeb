@@ -523,22 +523,19 @@ impl Sim {
                 let cells_this_circle = base_cells + if ci < extra_circles { 1 } else { 0 };
 
                 // Collect integer grid points within a search radius (1.5× for buffer).
+                // Use stagger-aware distance so circles near edges wrap correctly.
                 let r_search = radius * 1.5;
                 let r_sq     = r_search * r_search;
-                let r_ceil   = r_search.ceil() as isize;
                 let mut pts: Vec<(usize, usize, f32)> = Vec::new();
-                for dy in -r_ceil..=r_ceil {
-                    for dx in -r_ceil..=r_ceil {
-                        let d2 = (dx as f32).powi(2) + (dy as f32).powi(2);
-                        if d2 > r_sq { continue; }
-                        let xi_i = disk_cx as isize + dx;
-                        let yi_i = disk_cy as isize + dy;
-                        // On non-wrapped axes skip out-of-bounds; on wrapped axes fold around.
-                        if !wrap_x && (xi_i < 0 || xi_i >= W() as isize) { continue; }
-                        if !wrap_y && (yi_i < 0 || yi_i >= H() as isize) { continue; }
-                        let xi = xi_i.rem_euclid(W() as isize) as usize;
-                        let yi = yi_i.rem_euclid(H() as isize) as usize;
-                        if !occupied[yi * W() + xi] {
+                for yi in 0..H() {
+                    for xi in 0..W() {
+                        if occupied[yi * W() + xi] { continue; }
+                        // Stagger-aware distance from (xi, yi) to disk center
+                        let raw_dx = xi as f32 + 0.5 - disk_cx;
+                        let raw_dy = yi as f32 + 0.5 - disk_cy;
+                        let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+                        let d2 = dx * dx + dy * dy;
+                        if d2 <= r_sq {
                             pts.push((xi, yi, d2));
                         }
                     }
