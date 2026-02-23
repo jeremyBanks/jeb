@@ -3816,23 +3816,8 @@ fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> Stri
              [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
         )
     } else {
-        // Both stagger non-zero: four distinct tiles.
-        // TL = original, TR = y-rolled, BL = x-rolled, BR = x+y-rolled
-        let h_upper = h - dy;
-        let w_right = w - dx;
-        format!(
-            "[0:v]split=8[tl][tr1][tr2][bl1][bl2][br1][br2][br3];\
-             [tr1]crop={w}:{h_upper}:0:{dy}[tr_u];[tr2]crop={w}:{dy}:0:0[tr_l];\
-             [tr_u][tr_l]vstack[tr];\
-             [bl1]crop={w_right}:{h}:{dx}:0[bl_r];[bl2]crop={dx}:{h}:0:0[bl_l];\
-             [bl_r][bl_l]hstack[bl];\
-             [br1]crop={w_right}:{h_upper}:{dx}:{dy}[br_ru];[br2]crop={dx}:{h_upper}:0:{dy}[br_lu];\
-             [br3]split=2[br3a][br3b];\
-             [br3a]crop={w_right}:{dy}:{dx}:0[br_rl];[br3b]crop={dx}:{dy}:0:0[br_ll];\
-             [br_ru][br_lu]hstack[br_u];[br_rl][br_ll]hstack[br_l];[br_u][br_l]vstack[br];\
-             [tl][tr]hstack[top];[bl][br]hstack[bot];\
-             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
-        )
+        // Both stagger non-zero: not supported (should be caught at arg parsing)
+        panic!("build_tile_filter called with both stagger_x and stagger_y non-zero");
     }
 }
 
