@@ -111,9 +111,14 @@ while true; do
     done
     cp "runs/${RUN_ID}/run_info.txt" state/run_info.txt 2>/dev/null || true
 
-    nohup bash segment-watcher.sh > /tmp/watcher.log 2>&1 &
-    WATCHER_PID=$!
-    echo "[batch] watcher PID=$WATCHER_PID"
+    # Only launch segment watcher for long renders (>60s); short breadth runs
+    # finish before the watcher can catch any segments.
+    WATCHER_PID=""
+    if [ "$SECONDS_EACH" -gt 60 ]; then
+        nohup bash segment-watcher.sh > /tmp/watcher.log 2>&1 &
+        WATCHER_PID=$!
+        echo "[batch] watcher PID=$WATCHER_PID"
+    fi
 
     # ── Wait for render ────────────────────────────────────────────────────
     echo "[batch] waiting for render..."
@@ -123,7 +128,7 @@ while true; do
         echo "[batch] ✗ $label exited non-zero — see /tmp/gravity_render_${label}.log"
     fi
 
-    kill "$WATCHER_PID" 2>/dev/null || true
+    [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null || true
 
     # ── Post-render cleanup: delete frames/segments/audio from older runs ──
     bash scripts/cleanup-old-runs.sh "$RUN_ID" 2>/dev/null || true
