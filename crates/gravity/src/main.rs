@@ -104,7 +104,8 @@ impl RegionVoice {
              [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
              [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
              [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
-             [va][vb][vc]concat=n=3:v=1:a=0[vout]"
+             [va][vb][vc]concat=n=3:v=1:a=0[raw];\
+             [raw]scale=512:-2:flags=neighbor[vout]"
         );
         let preview_ok = Command::new("ffmpeg")
             .args([
