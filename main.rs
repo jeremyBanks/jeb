@@ -1999,6 +1999,20 @@ fn main() {
     let rate_limit: usize = parse_arg("--rate-limit")
         .and_then(|s| s.parse().ok())
         .unwrap_or(pop_band as usize); // default: same as pop_band so Conway can move pop by its full range per tick
+    
+    // Parse chance as either decimal (0.0625) or fraction (1/16)
+    fn parse_chance(s: &str) -> Option<f32> {
+        if let Some((num, denom)) = s.split_once('/') {
+            let n: f32 = num.trim().parse().ok()?;
+            let d: f32 = denom.trim().parse().ok()?;
+            if d != 0.0 { Some(n / d) } else { None }
+        } else {
+            s.parse().ok()
+        }
+    }
+    let birth_chance: Option<f32> = parse_arg("--birth-chance").and_then(|s| parse_chance(&s));
+    let death_chance: Option<f32> = parse_arg("--death-chance").and_then(|s| parse_chance(&s));
+    
     let conway_every: usize = parse_arg("--conway-every")
         .and_then(|s| s.parse().ok())
         .unwrap_or(1); // default: every tick
