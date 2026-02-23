@@ -541,6 +541,11 @@ impl Sim {
                     centres.push(best);
                 }
             }
+            // Flip circle centers vertically so CCW spin drifts right+up instead of right+down
+            let h = H() as f32;
+            for (_, cy) in centres.iter_mut() {
+                *cy = h - *cy;
+            }
 
             // Fill each disk using distance-sorted grid walk with 50% coin flip.
             // Points are visited closest-to-centre first; a coin flip decides
