@@ -1697,7 +1697,7 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(128);
 
-    let total_frames = seconds * FPS as usize;
+    // total_frames already set from --frames arg
     let est_n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES; // estimate only; actual varies
 
     println!("gravity: {}s × {}fps = {} frames, ~{} chunks (dynamic sizing {}..{}s per chunk)",
