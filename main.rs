@@ -1606,8 +1606,10 @@ fn main() {
     // stagger_x: X-shift when crossing Y boundary (portrait default: H-W when H>W).
     // --no-stagger disables auto; --stagger-x / --stagger-y override independently.
     let no_stagger = args.iter().any(|a| a == "--no-stagger");
-    let auto_stagger_y = if (wrap_x || wrap_y) && W() > H() { (W() - H()) as f32 } else { 0.0 };
-    let auto_stagger_x = if (wrap_x || wrap_y) && H() > W() { (H() - W()) as f32 } else { 0.0 };
+    // 50% of the shorter dimension gives a half-brick offset — the 2×2 tiled view repeats with
+    // a clean square-compatible period rather than an arbitrary parallelogram.
+    let auto_stagger_y = if (wrap_x || wrap_y) && W() > H() { H() as f32 * 0.5 } else { 0.0 };
+    let auto_stagger_x = if (wrap_x || wrap_y) && H() > W() { W() as f32 * 0.5 } else { 0.0 };
     let stagger_x: f32 = if no_stagger { 0.0 } else {
         parse_arg("--stagger-x").and_then(|s| s.parse().ok()).unwrap_or(auto_stagger_x)
     };
