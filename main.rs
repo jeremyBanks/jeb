@@ -1874,9 +1874,10 @@ fn main() {
     W_CELL.set(width).expect("W already set");
     H_CELL.set(height).expect("H already set");
 
-    let seconds: usize = parse_arg("--seconds")
+    let total_frames: usize = parse_arg("--frames")
         .and_then(|s| s.parse().ok())
-        .expect("Usage: gravity --seconds <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
+        .expect("Usage: gravity --frames <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
+    let seconds = total_frames / FPS as usize;
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
     let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
     let no_audio    = headless || args.iter().any(|a| a == "--no-audio"); // skip audio synthesis
