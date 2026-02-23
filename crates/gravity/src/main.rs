@@ -3993,7 +3993,7 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
         let order = (0..cells.len()).collect();
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit, birth_chance, death_chance,
-                        conway_every, tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
+                        tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
 
 // [recovery] edit target not found, appending:
     let (mut sim, mut canvas, start_frame) =
