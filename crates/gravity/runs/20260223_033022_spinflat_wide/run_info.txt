@@ -1,0 +1,34 @@
+run_id=20260223_033022_spinflat_wide
+run_id:        20260223_033022_spinflat_wide
+seed:          20442808
+frames:        131072
+seconds:       2184
+commit:        ac725bc78424
+gravity:       0.19
+softening:     2.2
+speed_cap:     3.9
+pop_target:    896
+pop_band:      256
+rate_limit:    64
+conway_every:  1
+seed_density:  1/18
+init_pop:      2275
+init_vel:      spin-flat
+circles:       none
+vel_scale:     1.75
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+stagger_x:     0
+stagger_y:     28
+dampen_x:      0.0078125
+dampen_y:      0.0078125
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    256x160 → 512x320
