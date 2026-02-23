@@ -3433,7 +3433,7 @@ fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
                         ep_seg_start + ep_frame - ep_chunk_frames.len());
                     let seg_tmp = format!("{seg_path}.tmp");
-                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2);
+                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2, stagger_x, stagger_y);
                     fs::rename(&seg_tmp, &seg_path).expect("rename epilogue segment");
                     writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
                     seg_list.flush().unwrap();
