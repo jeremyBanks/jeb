@@ -136,3 +136,6 @@ while true; do
     sleep 5
     echo ""
 done
+
+// [recovery] edit target not found, appending:
+SECONDS_EACH=${GRAVITY_SECONDS:-546}   # override with GRAVITY_SECONDS env var
