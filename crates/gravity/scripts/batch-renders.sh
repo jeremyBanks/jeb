@@ -13,7 +13,8 @@ cd "$(dirname "$0")/.."
 
 BIN="/Users/matte/jeb/target/release/gravity"
 QUEUE_FILE="batch-queue.txt"
-SECONDS_EACH="${GRAVITY_SECONDS:-546}"
+FRAMES="${GRAVITY_FRAMES:-32768}"   # 64*64*8 = 32768 default
+SECONDS_EACH=$(( FRAMES / 60 ))    # binary takes seconds; 60fps
 
 if [ ! -f "$QUEUE_FILE" ]; then
     echo "[batch] no queue file at $QUEUE_FILE — nothing to do"
