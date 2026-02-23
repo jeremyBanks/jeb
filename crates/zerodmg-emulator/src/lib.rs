@@ -361,9 +361,9 @@ impl GameBoy {
                 const MAX_LAG: Duration = Duration::from_millis(8);
                 const ZERO: Duration = Duration::from_secs(0);
 
-                // TODO: this is exactly 1MHz, which is wrong.
-                let internal_elapsed =
-                    Duration::new(self.t / 1000000, ((self.t * 1000) % 1000000000) as u32);
+                // Game Boy CPU: 4,194,304 t-cycles per second (≈4.194 MHz)
+                const GB_HZ: f64 = 4_194_304.0;
+                let internal_elapsed = Duration::from_secs_f64(self.t as f64 / GB_HZ);
                 let wall_elapsed = start_time.elapsed().expect("failed to get elapsed time?!");
 
                 let skew_ahead = if internal_elapsed > wall_elapsed {
