@@ -542,15 +542,10 @@ impl Sim {
                 }
             }
             // Flip circle centers vertically so CCW spin drifts right+up instead of right+down
-            let h = H() as f32;
+            // Use (H-1) - cy to keep centers in valid range [0, H-1]
+            let h_max = (H() - 1) as f32;
             for (_, cy) in centres.iter_mut() {
-                *cy = h - *cy;
-            }
-            
-            // Debug: print circle centers
-            eprintln!("Circle centers after flip (radius={:.1}):", radius);
-            for (i, (cx, cy)) in centres.iter().enumerate() {
-                eprintln!("  circle {}: ({:.1}, {:.1})", i, cx, cy);
+                *cy = h_max - *cy;
             }
 
             // Fill each disk using distance-sorted grid walk with 50% coin flip.
