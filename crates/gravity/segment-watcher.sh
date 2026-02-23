@@ -3,7 +3,7 @@
 # Run-aware: reads run_id from state/run_info.txt at startup and validates
 # every segment against it. Self-terminates if the run changes (new render started).
 # Scopes seen-file to run_id so restarts never replay old segments.
-set -euo pipefail
+set -uo pipefail  # no -e: handle errors explicitly to avoid early exit
 cd "$(dirname "$0")"
 
 DISCORD_CHANNEL="1467063568712339561"
@@ -83,7 +83,8 @@ make_preview() {
         [a4]atrim=start=${c0}:duration=${CLIP_FULL},asetpts=PTS-STARTPTS[acf];
         [a5]atrim=start=${c1}:duration=${slow_audio_dur},asetpts=PTS-STARTPTS[acs];
         [vaf][aaf][vas][aas][vbf][abf][vbs][abs][vcf][acf][vcs][acs]concat=n=6:v=1:a=1[vout][aout]
-    " -map "[vout]" -map "[aout]" -c:v libx264 -crf 22 -preset fast -c:a aac -b:a 128k "$out" 2>/tmp/watcher_ffmpeg.log
+    " -map "[vout]" -map "[aout]" -c:v libx264 -crf 22 -preset fast -c:a aac -b:a 128k "$out" 2>/tmp/watcher_ffmpeg.log || true
+    [ -f "$out" ]  # return success only if output file exists
 }
 
 # ── main loop ───────────────────────────────────────────────────────────────
@@ -104,8 +105,9 @@ while true; do
             [ -f "$seg" ] || continue
 
             # Validate segment belongs to THIS run (check mtime vs run start time)
-            # run_id is YYYYMMDD_HHMMSS — convert to epoch for comparison
-            RUN_EPOCH=$(date -j -f "%Y%m%d_%H%M%S" "$RUN_ID" "+%s" 2>/dev/null || echo 0)
+            # run_id is YYYYMMDD_HHMMSS_name — extract first 15 chars for timestamp
+            RUN_TS=$(echo "$RUN_ID" | cut -c1-15)
+            RUN_EPOCH=$(date -j -f "%Y%m%d_%H%M%S" "$RUN_TS" "+%s" 2>/dev/null || echo 0)
             SEG_MTIME=$(stat -f %m "$seg" 2>/dev/null || echo 0)
             if [ "$SEG_MTIME" -lt "$RUN_EPOCH" ]; then
                 echo "[watcher] skipping stale segment $seg (predates run $RUN_ID)"
@@ -163,7 +165,7 @@ while true; do
                     BOUNCE_Y=$(  grep "^bounce_y:"     state/run_info.txt | awk '{print $2}')
                     VEL_DECAY=$( grep "^vel_decay:"    state/run_info.txt | awk '{print $2}')
                     VEL_NUDGE=$( grep "^vel_nudge:"    state/run_info.txt | awk '{print $2}')
-                    VNR=$(       grep "^vel_nudge_rate:" state/run_info.txt | awk '{print $2}')
+                    VNR=$(       grep "^vel_nudge_rate:" state/run_info.txt | sed 's/.*://' | awk '{print $1}')
                     SECS=$(      grep "^seconds:"      state/run_info.txt | awk '{print $2}')
                     STAG_X=$(    grep "^stagger_x:"    state/run_info.txt | awk '{print $2}')
                     STAG_Y=$(    grep "^stagger_y:"    state/run_info.txt | awk '{print $2}')
