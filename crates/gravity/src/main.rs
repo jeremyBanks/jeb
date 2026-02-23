@@ -3903,3 +3903,23 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
                         (dx*dx + dy*dy).sqrt()
                     })
                     .fold(f32::INFINITY, f32::min);
+
+// [recovery] edit target not found, appending:
+                // Collect integer grid points within a search radius (1.5× for buffer).
+                // Use stagger-aware distance so circles near edges wrap correctly.
+                let r_search = radius * 1.5;
+                let r_sq     = r_search * r_search;
+                let mut pts: Vec<(usize, usize, f32)> = Vec::new();
+                for yi in 0..H() {
+                    for xi in 0..W() {
+                        if occupied[yi * W() + xi] { continue; }
+                        // Stagger-aware distance from (xi, yi) to disk center
+                        let raw_dx = xi as f32 + 0.5 - disk_cx;
+                        let raw_dy = yi as f32 + 0.5 - disk_cy;
+                        let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+                        let d2 = dx * dx + dy * dy;
+                        if d2 <= r_sq {
+                            pts.push((xi, yi, d2));
+                        }
+                    }
+                }
