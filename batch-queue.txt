@@ -1,28 +1,49 @@
-# 24 threads variants - each with unique resolution + param tweaks
-# Base: threads_clumping (G=0.15, soft=4, cap=4, pop=1536/192, rate=64, circles=15, spin, wrap, dampen_y=0.0625)
+# 24 threads variants - testing tiling logic with varied stagger/wrap/aspect
+# Base: threads (G=0.15, soft=4, cap=4, pop=1536/192, rate=64, circles=15, spin, wrap, dampen_y=0.0625)
 # 65536 frames each
 
-threads_v01:--width 256 --height 160 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
-threads_v02:--width 240 --height 160 --gravity 0.155 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
-threads_v03:--width 272 --height 160 --gravity 0.145 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.065
-threads_v04:--width 224 --height 176 --gravity 0.16 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
-threads_v05:--width 288 --height 176 --gravity 0.14 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.07
-threads_v06:--width 208 --height 144 --gravity 0.165 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 52 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.058
-threads_v07:--width 304 --height 192 --gravity 0.135 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 76 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.068
-threads_v08:--width 256 --height 176 --gravity 0.152 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 62 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.063
-threads_v09:--width 160 --height 256 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
-threads_v10:--width 160 --height 240 --gravity 0.155 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
-threads_v11:--width 160 --height 272 --gravity 0.145 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.065
-threads_v12:--width 176 --height 224 --gravity 0.16 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
-threads_v13:--width 176 --height 288 --gravity 0.14 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.07
-threads_v14:--width 144 --height 208 --gravity 0.165 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 52 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.058
-threads_v15:--width 192 --height 304 --gravity 0.135 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 76 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.068
-threads_v16:--width 176 --height 256 --gravity 0.152 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 62 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.063
-threads_v17:--width 208 --height 208 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
-threads_v18:--width 192 --height 192 --gravity 0.155 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
-threads_v19:--width 224 --height 224 --gravity 0.145 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.065
-threads_v20:--width 176 --height 176 --gravity 0.16 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 56 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
-threads_v21:--width 240 --height 240 --gravity 0.14 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 72 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.07
-threads_v22:--width 160 --height 160 --gravity 0.165 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 52 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.058
-threads_v23:--width 256 --height 256 --gravity 0.135 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 76 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.068
-threads_v24:--width 200 --height 200 --gravity 0.152 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 62 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.063
+# Landscape - stagger_y (default for W>H)
+threads_L1:--width 256 --height 160 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
+threads_L2:--width 272 --height 160 --gravity 0.148 --softening 4.1 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 66 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
+threads_L3:--width 240 --height 176 --gravity 0.152 --softening 3.9 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 62 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.065
+threads_L4:--width 288 --height 176 --gravity 0.145 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.058
+
+# Landscape - explicit stagger_x (non-default)
+threads_L5:--width 256 --height 160 --stagger-x 80 --stagger-y 0 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
+threads_L6:--width 272 --height 176 --stagger-x 90 --stagger-y 0 --gravity 0.147 --softening 4.1 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.062
+
+# Landscape - both staggers
+threads_L7:--width 256 --height 160 --stagger-x 64 --stagger-y 40 --gravity 0.153 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
+threads_L8:--width 288 --height 192 --stagger-x 72 --stagger-y 48 --gravity 0.142 --softening 4.3 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 58 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.068
+
+# Portrait - stagger_x (default for H>W)
+threads_P1:--width 160 --height 256 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
+threads_P2:--width 160 --height 272 --gravity 0.148 --softening 4.1 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 66 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
+threads_P3:--width 176 --height 240 --gravity 0.152 --softening 3.9 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 62 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.065
+threads_P4:--width 176 --height 288 --gravity 0.145 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.058
+
+# Portrait - explicit stagger_y (non-default)
+threads_P5:--width 160 --height 256 --stagger-x 0 --stagger-y 80 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
+threads_P6:--width 176 --height 272 --stagger-x 0 --stagger-y 88 --gravity 0.147 --softening 4.1 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.062
+
+# Portrait - both staggers
+threads_P7:--width 160 --height 256 --stagger-x 40 --stagger-y 64 --gravity 0.153 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.055
+threads_P8:--width 192 --height 288 --stagger-x 48 --stagger-y 72 --gravity 0.142 --softening 4.3 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 58 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.068
+
+# Square - stagger_y (even seed default)
+threads_S1:--width 208 --height 208 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
+threads_S2:--width 192 --height 192 --gravity 0.148 --softening 4.1 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 66 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
+
+# Square - explicit stagger_x
+threads_S3:--width 224 --height 224 --stagger-x 56 --stagger-y 0 --gravity 0.152 --softening 3.9 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 62 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.065
+threads_S4:--width 176 --height 176 --stagger-x 44 --stagger-y 0 --gravity 0.145 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.058
+
+# Square - both staggers
+threads_S5:--width 240 --height 240 --stagger-x 60 --stagger-y 60 --gravity 0.147 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 60 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.063
+threads_S6:--width 200 --height 200 --stagger-x 50 --stagger-y 50 --gravity 0.153 --softening 3.8 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 70 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.057
+
+# No stagger (--no-stagger)
+threads_N1:--width 256 --height 160 --no-stagger --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
+threads_N2:--width 160 --height 256 --no-stagger --gravity 0.148 --softening 4.1 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 66 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
+threads_N3:--width 208 --height 208 --no-stagger --gravity 0.152 --softening 3.9 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 62 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.065
+threads_N4:--width 272 --height 176 --no-stagger --gravity 0.145 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.058
