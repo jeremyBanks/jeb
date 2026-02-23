@@ -1,0 +1,18 @@
+# Full hue wheel — evenly spaced 90° apart in Oklch
+# No rotation needed since directions map directly to hues
+# 
+# Oklch angles:
+#   right (+x) = 0°   → pink-red
+#   up    (-y) = 90°  → golden yellow  
+#   left  (-x) = 180° → teal-cyan
+#   down  (+y) = 270° → blue-violet
+#
+# L=0.72, C=0.16 for all directional colors
+
+zero=#505050
+right=#F275A0
+left=#00C4A8
+down=#7E9DFF
+up=#CB9E00
+
+wheel_rotation=0.0
