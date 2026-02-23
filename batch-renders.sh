@@ -128,7 +128,7 @@ while true; do
         echo "[batch] ✗ $label exited non-zero — see /tmp/gravity_render_${label}.log"
     fi
 
-    kill "$WATCHER_PID" 2>/dev/null || true
+    [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null || true
 
     # ── Post-render cleanup: delete frames/segments/audio from older runs ──
     bash scripts/cleanup-old-runs.sh "$RUN_ID" 2>/dev/null || true
