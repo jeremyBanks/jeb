@@ -1,3 +1,7 @@
+# Classic spin-flat recreation (from 20260221_201904)
+# G=0.075, soft=3, cap=2, pop=1024±128, rate=16, wrap, spin-flat
+# 64*64*8 = 32768 frames = ~546 seconds
+classic_spinflat:--width 256 --height 160 --gravity 0.075 --softening 3 --speed-cap 2 --pop-target 1024 --pop-band 128 --rate-limit 16 --init-vel spin-flat --wrap --frames 32768
 hue_wheel_test:--width 192 --height 192 --gravity 0.16 --softening 3.5 --speed-cap 4.5 --pop-target 1024 --pop-band 192 --rate-limit 64 --circles 3 --vel-scale 1.5 --init-vel spin --wrap --dampen-y 0.06 --seconds 32
 var_R03:--width 208 --height 208 --gravity 0.16 --softening 3.7 --speed-cap 4.8 --pop-target 832 --pop-band 192 --rate-limit 60 --circles 1 --vel-scale 1.8 --init-vel radial-out --wrap --dampen-y 0.055
 var_H02:--width 160 --height 256 --gravity 0.18 --softening 3.2 --speed-cap 4.3 --pop-target 864 --pop-band 160 --rate-limit 60 --circles 9 --vel-scale 2.2 --init-vel spin --wrap --dampen-y 0.075
