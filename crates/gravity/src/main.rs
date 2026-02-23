@@ -1787,7 +1787,7 @@ fn main() {
     } else if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
     let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
-        "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
+        "run_id:        {run_id}\nseed:          {rng_seed}\nframes:        {total_frames}\nseconds:       {seconds}\n\
          commit:        {commit_id}\n\
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\nconway_every:  {conway_every}\n\
