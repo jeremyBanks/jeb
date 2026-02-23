@@ -1,0 +1,33 @@
+run_id=20260222_212204_low_g_drift
+run_id:        20260222_212204_low_g_drift
+seed:          4232710950
+seconds:       4
+commit:        02c8411b3eb6
+gravity:       0.005
+softening:     8
+speed_cap:     2
+pop_target:    2048
+pop_band:      256
+rate_limit:    32
+conway_every:  1
+seed_density:  1/128
+init_pop:      320
+init_vel:      random
+circles:       none
+vel_scale:     1
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+stagger_x:     0
+stagger_y:     80
+dampen_x:      0
+dampen_y:      0
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    256x160 → 512x320

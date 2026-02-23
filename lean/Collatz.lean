@@ -297,3 +297,31 @@ example : ∀ n : Fin 101, 4 < n.val →
 -- odd → even is forced (odd_step_produces_even), giving the "2-step" view.
 -- But the interleaving of growth (×1.5) and shrinkage (÷2) has no
 -- algebraic invariant we can exploit for a general termination proof.
+
+-- ============================================================
+-- Powers of 2 converge in exactly k steps
+-- ============================================================
+-- 2^k is the "straightest" path to 1: k halvings, no odd steps.
+-- This is the simplest infinite family we can prove converges.
+
+-- Lemma: 2^(k+1) halves to 2^k in one step
+lemma collatz_pow2_step (k : Nat) : collatz (2^(k+1)) = 2^k := by
+  simp [collatz, Nat.pow_succ]
+  omega
+
+-- Main theorem: applying collatz k times to 2^k gives 1
+theorem pow2_converges_in_k_steps : ∀ k : Nat, collatzN k (2^k) = 1 := by
+  intro k
+  induction k with
+  | zero => rfl
+  | succ n ih =>
+    simp [collatzN, collatz_pow2_step, ih]
+
+-- Corollary: 2^k satisfies the Collatz conjecture for all k
+theorem pow2_converges : ∀ k : Nat, collatzConverges (2^k) := by
+  intro k
+  exact ⟨k, pow2_converges_in_k_steps k⟩
+
+-- Note: this also shows the trajectory length is TIGHT — you can't converge
+-- in fewer than k steps from 2^k, since each halving is forced.
+-- (Though we don't formally prove the lower bound here.)

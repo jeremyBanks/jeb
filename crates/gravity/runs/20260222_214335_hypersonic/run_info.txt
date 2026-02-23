@@ -1,0 +1,33 @@
+run_id=20260222_214335_hypersonic
+run_id:        20260222_214335_hypersonic
+seed:          1750506288
+seconds:       26
+commit:        f710d9891f26
+gravity:       0.1
+softening:     4
+speed_cap:     12
+pop_target:    1024
+pop_band:      128
+rate_limit:    64
+conway_every:  1
+seed_density:  1/128
+init_pop:      1024
+init_vel:      spin
+circles:       1
+vel_scale:     1
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+stagger_x:     0
+stagger_y:     80
+dampen_x:      0
+dampen_y:      0
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    256x160 → 512x320
