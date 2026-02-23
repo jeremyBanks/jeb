@@ -358,6 +358,9 @@ impl VideoController for GameBoy {
 
                         // Only draw if on screen
                         if pixel_y < GB_HEIGHT && pixel_x < GB_WIDTH {
+                            // TODO: sprite attribute bit 7 (OBJ-to-BG priority) not implemented.
+                            // When bit 7=1, sprite should be behind BG colors 1-3.
+                            // Implementing requires saving BG color indices per pixel.
                             let color = palette[color_num as usize];
                             display.put_pixel(pixel_x as u32, pixel_y as u32, color);
                         }
