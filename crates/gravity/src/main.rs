@@ -1685,7 +1685,8 @@ fn main() {
     };
     let pos_rotation_enabled =  args.iter().any(|a| a == "--pos-color");     // default: off
     let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
-    let tile_2x2             =  args.iter().any(|a| a == "--tile-2x2");      // default: off
+    let tile_2x2_forced      =  args.iter().any(|a| a == "--tile-2x2");
+    let tile_2x2             =  tile_2x2_forced || (wrap_x && wrap_y);  // auto-tile when both axes wrap
     let dampen_x: f32 = parse_arg("--dampen-x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let dampen_y: f32 = parse_arg("--dampen-y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let vel_decay: f32 = parse_arg("--vel-decay").and_then(|s| s.parse().ok()).unwrap_or(0.0);
