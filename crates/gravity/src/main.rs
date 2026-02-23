@@ -1969,19 +1969,8 @@ fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> Stri
              [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
         )
     } else {
-        // Both stagger non-zero: four distinct tiles.
-        // TL = original, TR = y-rolled, BL = x-rolled, BR = y-rolled then x-rolled
-        let h_upper = h - dy;
-        let w_right = w - dx;
-        format!(
-            "[0:v]split=4[tl][src_y][src_x][src_yx];\
-             [src_y]split=2[sy1][sy2];[sy1]crop={w}:{h_upper}:0:{dy}[y_u];[sy2]crop={w}:{dy}:0:0[y_l];[y_u][y_l]vstack[tr];\
-             [src_x]split=2[sx1][sx2];[sx1]crop={w_right}:{h}:{dx}:0[x_r];[sx2]crop={dx}:{h}:0:0[x_l];[x_r][x_l]hstack[bl];\
-             [src_yx]split=2[syx1][syx2];[syx1]crop={w}:{h_upper}:0:{dy}[yx_u];[syx2]crop={w}:{dy}:0:0[yx_l];[yx_u][yx_l]vstack[yx_y];\
-             [yx_y]split=2[yxs1][yxs2];[yxs1]crop={w_right}:{h}:{dx}:0[yx_r];[yxs2]crop={dx}:{h}:0:0[yx_l2];[yx_r][yx_l2]hstack[br];\
-             [tl][tr]hstack[top];[bl][br]hstack[bot];\
-             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
-        )
+        // Both stagger non-zero: not supported (caught at arg parsing)
+        panic!("build_tile_filter: both stagger_x and stagger_y non-zero not supported");
     }
 }
 
@@ -2143,6 +2132,11 @@ fn main() {
     let stagger_y: f32 = if no_stagger { 0.0 } else {
         parse_arg("--stagger-y").and_then(|s| s.parse().ok()).unwrap_or(auto_stagger_y)
     };
+    if stagger_x != 0.0 && stagger_y != 0.0 {
+        eprintln!("Error: cannot stagger both axes simultaneously (stagger_x={}, stagger_y={})", stagger_x, stagger_y);
+        eprintln!("Use --stagger-x N --stagger-y 0, or --stagger-x 0 --stagger-y N, or --no-stagger");
+        std::process::exit(1);
+    }
     let pos_rotation_enabled =  args.iter().any(|a| a == "--pos-color");     // default: off
     let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
     let tile_2x2_forced      =  args.iter().any(|a| a == "--tile-2x2");
