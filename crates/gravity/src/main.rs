@@ -546,6 +546,12 @@ impl Sim {
             for (_, cy) in centres.iter_mut() {
                 *cy = h - *cy;
             }
+            
+            // Debug: print circle centers
+            eprintln!("Circle centers after flip (radius={:.1}):", radius);
+            for (i, (cx, cy)) in centres.iter().enumerate() {
+                eprintln!("  circle {}: ({:.1}, {:.1})", i, cx, cy);
+            }
 
             // Fill each disk using distance-sorted grid walk with 50% coin flip.
             // Points are visited closest-to-centre first; a coin flip decides
