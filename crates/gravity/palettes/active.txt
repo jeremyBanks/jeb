@@ -1,3 +1,17 @@
+# Full hue wheel — evenly spaced 90° apart in Oklch
+# L=0.72, C=0.268 (saturation matched to old frozen scheme)
+# Rotated so violet lands at 11° above right
+#
+# Oklch angles (before rotation):
+#   right (+x) = 0°   → hot pink
+#   up    (-y) = 90°  → orange-gold
+#   left  (-x) = 180° → teal-cyan
+#   down  (+y) = 270° → blue-violet
 
-// [recovery] edit target not found, appending:
+zero=#505050
+right=#FF339E
+left=#00D4AB
+down=#688CFF
+up=#E59300
+
 wheel_rotation=0.738889
