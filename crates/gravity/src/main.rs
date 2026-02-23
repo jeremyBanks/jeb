@@ -1598,11 +1598,19 @@ fn main() {
     // stagger_y: Y-shift when crossing X boundary (landscape default: W-H when W>H).
     // stagger_x: X-shift when crossing Y boundary (portrait default: H-W when H>W).
     // --no-stagger disables auto; --stagger-x / --stagger-y override independently.
+    let rng_seed: u64 = parse_arg("--seed")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(44);
     let no_stagger = args.iter().any(|a| a == "--no-stagger");
     // 50% of the shorter dimension gives a half-brick offset — the 2×2 tiled view repeats with
     // a clean square-compatible period rather than an arbitrary parallelogram.
-    let auto_stagger_y = if (wrap_x || wrap_y) && W() > H() { H() as f32 * 0.5 } else { 0.0 };
-    let auto_stagger_x = if (wrap_x || wrap_y) && H() > W() { W() as f32 * 0.5 } else { 0.0 };
+    // Square canvases randomly pick horizontal or vertical (seeded, so reproducible).
+    let auto_stagger_y = if (wrap_x || wrap_y) && W() > H() { H() as f32 * 0.5 }
+                         else if (wrap_x || wrap_y) && W() == H() && rng_seed % 2 == 0 { H() as f32 * 0.5 }
+                         else { 0.0 };
+    let auto_stagger_x = if (wrap_x || wrap_y) && H() > W() { W() as f32 * 0.5 }
+                         else if (wrap_x || wrap_y) && W() == H() && rng_seed % 2 != 0 { W() as f32 * 0.5 }
+                         else { 0.0 };
     let stagger_x: f32 = if no_stagger { 0.0 } else {
         parse_arg("--stagger-x").and_then(|s| s.parse().ok()).unwrap_or(auto_stagger_x)
     };
@@ -1617,9 +1625,6 @@ fn main() {
     let vel_decay: f32 = parse_arg("--vel-decay").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let vel_nudge: f32      = parse_arg("--vel-nudge").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let vel_nudge_rate: f32 = parse_arg("--vel-nudge-rate").and_then(|s| s.parse().ok()).unwrap_or(1.0 / 32.0);
-    let rng_seed: u64 = parse_arg("--seed")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(44);
     // --seed-density: random cells as 1/N of empty cells (0 = none)
     // Default 128 = 1/128 of empty cells
     let seed_density_inv: usize = parse_arg("--seed-density")
