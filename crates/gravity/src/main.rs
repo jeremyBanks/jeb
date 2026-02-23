@@ -2536,7 +2536,7 @@ fn main() {
         &output_file_local
     };
     if std::path::Path::new(final_video).exists() {
-        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        let preview_path = format!("/Users/matte/.openclaw/workspace/shared/gravity/preview_{}.mp4", run_id);
         // Extract 3 clips (start/mid/end) for a ~9s preview
         let dur_secs = seconds as f64;
         let mid = dur_secs / 2.0;
