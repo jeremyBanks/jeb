@@ -94,7 +94,7 @@ while true; do
     rm -f segments.txt 2>/dev/null || true
 
     # ── Launch render ──────────────────────────────────────────────────────
-    export GRAVITY_SHARED_DIR="${GRAVITY_SHARED_DIR:-/Users/matte/.openclaw/workspace/shared/gravity}"
+    export GRAVITY_SHARED_DIR="${GRAVITY_SHARED_DIR:-/Volumes/My Shared Files/shared/}"
     mkdir -p "$GRAVITY_SHARED_DIR"
 
     "$BIN" \
