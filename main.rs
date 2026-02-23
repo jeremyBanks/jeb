@@ -2021,7 +2021,6 @@ fn main() {
     }
     let birth_chance: Option<f32> = parse_arg("--birth-chance").and_then(|s| parse_chance(&s));
     let death_chance: Option<f32> = parse_arg("--death-chance").and_then(|s| parse_chance(&s));
-    eprintln!("DEBUG: birth_chance={:?} death_chance={:?}", birth_chance, death_chance);
     
     let conway_every: usize = parse_arg("--conway-every")
         .and_then(|s| s.parse().ok())
