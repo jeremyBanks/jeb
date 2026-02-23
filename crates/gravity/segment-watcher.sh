@@ -3,6 +3,7 @@
 # Run-aware: reads run_id from state/run_info.txt at startup and validates
 # every segment against it. Self-terminates if the run changes (new render started).
 # Scopes seen-file to run_id so restarts never replay old segments.
+set -euo pipefail
 cd "$(dirname "$0")"
 
 DISCORD_CHANNEL="1467063568712339561"
@@ -17,7 +18,7 @@ GAP_DUR="0.125"
 # ── read current run_id ─────────────────────────────────────────────────────
 if [ ! -f state/run_info.txt ]; then
     echo "[watcher] waiting for state/run_info.txt..."
-    for i in $(seq 30); do sleep 2; [ -f state/run_info.txt ] && break; done
+    for (( i=0; i<30; i++ )); do sleep 2; [ -f state/run_info.txt ] && break; done
 fi
 RUN_ID=$(grep "^run_id=" state/run_info.txt 2>/dev/null | cut -d= -f2)
 if [ -z "$RUN_ID" ]; then echo "[watcher] no run_id, exiting"; exit 1; fi
@@ -43,27 +44,29 @@ make_preview() {
 
     local scale="scale=${PREVIEW_W}:${PREVIEW_H}:flags=neighbor"
 
-    local clip_total; clip_total=$(echo "scale=3; $CLIP_FULL + $CLIP_SLOW_SRC" | bc)
+    local clip_total
+    clip_total=$(echo "scale=3; $CLIP_FULL + $CLIP_SLOW_SRC" | bc)
     if (( $(echo "$dur < $(echo "scale=3; $clip_total * 2 + 1" | bc)" | bc -l) )); then
-        ffmpeg -y -i "$seg" -vf "$scale" -r $SLOW_FPS -c:v libx264 -crf 22 -preset fast "$out" 2>/dev/null
+        ffmpeg -y -i "$seg" -vf "$scale" -r "$SLOW_FPS" -c:v libx264 -crf 22 -preset fast "$out" 2>/dev/null
         return
     fi
 
     # Compute start times for each of the 3 positions (beginning / middle / end)
     local a0=0
-    local b0; b0=$(echo "scale=3; $dur / 2 - $clip_total / 2" | bc)
-    local c0; c0=$(echo "scale=3; $dur - $clip_total"          | bc)
-    # Slow section starts 2s into each clip
-    local a1; a1=$(echo "scale=3; $a0 + $CLIP_FULL" | bc)
-    local b1; b1=$(echo "scale=3; $b0 + $CLIP_FULL" | bc)
-    local c1; c1=$(echo "scale=3; $c0 + $CLIP_FULL" | bc)
+    local b0 c0 a1 b1 c1
+    b0=$(echo "scale=3; $dur / 2 - $clip_total / 2" | bc)
+    c0=$(echo "scale=3; $dur - $clip_total"          | bc)
+    a1=$(echo "scale=3; $a0 + $CLIP_FULL" | bc)
+    b1=$(echo "scale=3; $b0 + $CLIP_FULL" | bc)
+    c1=$(echo "scale=3; $c0 + $CLIP_FULL" | bc)
 
     echo "[watcher] preview seeks: a=${a0}+${a1} b=${b0}+${b1} c=${c0}+${c1} (dur=${dur})"
 
     # Single input decoded once, split 6 ways for video + 6 ways for audio.
     # trim+setpts/atrim+asetpts for accurate section extraction.
     # Slow sections: video pts ×3, audio also trimmed to match (not pitch-shifted).
-    local slow_audio_dur; slow_audio_dur=$(echo "scale=3; $CLIP_SLOW_SRC * 3" | bc)
+    local slow_audio_dur
+    slow_audio_dur=$(echo "scale=3; $CLIP_SLOW_SRC * 3" | bc)
     ffmpeg -y -i "$seg" -filter_complex "
         [0:v]split=6[v0][v1][v2][v3][v4][v5];
         [0:a]asplit=6[a0][a1][a2][a3][a4][a5];
@@ -92,108 +95,115 @@ while true; do
         exit 0
     fi
 
-    for seg in $(ls "runs/${RUN_ID}/segments/seg_"*.mp4 2>/dev/null | sort); do
-        grep -qF "$seg" "$SEEN_FILE" && continue
+    SEG_DIR="runs/${RUN_ID}/segments"
+    if [ -d "$SEG_DIR" ]; then
+        while IFS= read -r -d '' seg; do
+            grep -qF "$seg" "$SEEN_FILE" && continue
 
-        sleep 2
-        [ -f "$seg" ] || continue
+            sleep 2
+            [ -f "$seg" ] || continue
 
-        # Validate segment belongs to THIS run (check mtime vs run start time)
-        # run_id is YYYYMMDD_HHMMSS — convert to epoch for comparison
-        RUN_EPOCH=$(date -j -f "%Y%m%d_%H%M%S" "$RUN_ID" "+%s" 2>/dev/null || echo 0)
-        SEG_MTIME=$(stat -f %m "$seg" 2>/dev/null || echo 0)
-        if [ "$SEG_MTIME" -lt "$RUN_EPOCH" ]; then
-            echo "[watcher] skipping stale segment $seg (predates run $RUN_ID)"
-            echo "$seg" >> "$SEEN_FILE"
-            continue
-        fi
-
-        seg_name=$(basename "$seg" .mp4)
-        frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
-        frame_offset=${frame_offset:-0}
-
-        # Skip epilogue segments (frame_offset >= total frames = past the end of main render)
-        if [ "$TOTAL_FRAMES" -gt 0 ] && [ "$frame_offset" -ge "$TOTAL_FRAMES" ]; then
-            echo "[watcher] skipping epilogue segment $seg_name (frame $frame_offset >= $TOTAL_FRAMES)"
-            echo "$seg" >> "$SEEN_FILE"
-            continue
-        fi
-
-        # Percentage based on actual frame offset (accurate regardless of chunk size)
-        if [ "$TOTAL_FRAMES" -gt 0 ]; then
-            PCT=$(( frame_offset * 100 / TOTAL_FRAMES ))
-        else
-            PCT="?"
-        fi
-
-        # chunk_num assigned tentatively; only incremented on successful send
-        chunk_num=$(( chunk_count + 1 ))
-        preview="${PREVIEW_DIR}/preview_${RUN_ID}_chunk${chunk_num}.mp4"
-
-        if make_preview "$seg" "$preview"; then
-            NOW=$(date +%s)
-            ELAPSED=$(( NOW - LAST_TIME ))
-            META="${ELAPSED}s | $(du -m "$seg" | cut -f1)MB"
-
-            # Build params string from run_info
-            EXTRA=""
-            if [ -f "state/run_info.txt" ]; then
-                G=$(    grep "^gravity:"    state/run_info.txt | awk '{print $2}')
-                S=$(    grep "^softening:"  state/run_info.txt | awk '{print $2}')
-                SC=$(   grep "^speed_cap:"  state/run_info.txt | awk '{print $2}')
-                POP=$(  grep "^pop_target:" state/run_info.txt | awk '{print $2}')
-                BAND=$( grep "^pop_band:"   state/run_info.txt | awk '{print $2}')
-                RATE=$( grep "^rate_limit:" state/run_info.txt | awk '{print $2}')
-                WRAP_X=$(grep "^wrap_x:"    state/run_info.txt | awk '{print $2}')
-                WRAP_Y=$(grep "^wrap_y:"    state/run_info.txt | awk '{print $2}')
-                INITV=$(   grep "^init_vel:"   state/run_info.txt | awk '{print $2}')
-                VELSC=$(   grep "^vel_scale:"  state/run_info.txt | awk '{print $2}')
-                CMT=$(     grep "^commit:"     state/run_info.txt | awk '{print $2}')
-                DAMP_X=$(    grep "^dampen_x:"     state/run_info.txt | awk '{print $2}')
-                DAMP_Y=$(    grep "^dampen_y:"     state/run_info.txt | awk '{print $2}')
-                INITPOP=$(   grep "^init_pop:"     state/run_info.txt | awk '{print $2}')
-                RES=$(       grep "^resolution:"   state/run_info.txt | awk '{print $2}')
-                CIRCLES=$(   grep "^circles:"      state/run_info.txt | awk '{print $2}')
-                BOUNCE_X=$(  grep "^bounce_x:"     state/run_info.txt | awk '{print $2}')
-                BOUNCE_Y=$(  grep "^bounce_y:"     state/run_info.txt | awk '{print $2}')
-                VEL_DECAY=$( grep "^vel_decay:"    state/run_info.txt | awk '{print $2}')
-                VEL_NUDGE=$( grep "^vel_nudge:"    state/run_info.txt | awk '{print $2}')
-                VNR=$(       grep "^vel_nudge_rate:" state/run_info.txt | awk '{print $2}')
-                SECS=$(      grep "^seconds:"      state/run_info.txt | awk '{print $2}')
-                # Optional extras — only show non-zero/non-false values to keep message concise
-                OPT=""
-                [ "$BOUNCE_X" = "true" ] || [ "$BOUNCE_Y" = "true" ] && OPT="${OPT} bounce=${BOUNCE_X}/${BOUNCE_Y}"
-                [ -n "$VEL_DECAY" ] && [ "$VEL_DECAY" != "0" ] && OPT="${OPT} decay=${VEL_DECAY}"
-                [ -n "$VEL_NUDGE" ] && [ "$VEL_NUDGE" != "0" ] && OPT="${OPT} nudge=${VEL_NUDGE}@${VNR}"
-                EXTRA=" | \`${RUN_ID}\` ${CMT} ${SECS}s G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} circles=${CIRCLES} vel=${INITV}×${VELSC} wx=${WRAP_X} wy=${WRAP_Y} dx=${DAMP_X} dy=${DAMP_Y} grid=${RES}${OPT}"
+            # Validate segment belongs to THIS run (check mtime vs run start time)
+            # run_id is YYYYMMDD_HHMMSS — convert to epoch for comparison
+            RUN_EPOCH=$(date -j -f "%Y%m%d_%H%M%S" "$RUN_ID" "+%s" 2>/dev/null || echo 0)
+            SEG_MTIME=$(stat -f %m "$seg" 2>/dev/null || echo 0)
+            if [ "$SEG_MTIME" -lt "$RUN_EPOCH" ]; then
+                echo "[watcher] skipping stale segment $seg (predates run $RUN_ID)"
+                echo "$seg" >> "$SEEN_FILE"
+                continue
             fi
 
-            # Current state from render log (last stats line before chunk boundary)
-            STATE_LINE=$(grep "avg_spd" /tmp/gravity_render.log 2>/dev/null | tail -1)
-            CUR_POP=$(  echo "$STATE_LINE" | grep -oE 'pop=[0-9]+'     | cut -d= -f2)
-            CUR_SPD=$(  echo "$STATE_LINE" | grep -oE 'avg_spd=[0-9.]+' | cut -d= -f2)
-            CUR_P10=$(  echo "$STATE_LINE" | grep -oE 'p10=[0-9.]+'     | cut -d= -f2)
-            STATE_MSG=""
-            [ -n "$CUR_POP" ] && STATE_MSG="pop=${CUR_POP} avg_spd=${CUR_SPD} p10=${CUR_P10}"
+            seg_name=$(basename "$seg" .mp4)
+            frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
+            frame_offset=${frame_offset:-0}
 
-            MSG="chunk ${chunk_num} (${PCT}%) | ${META}${EXTRA}"
-            [ -n "$STATE_MSG" ] && MSG="${MSG}
+            # Skip epilogue segments (frame_offset >= total frames = past the end of main render)
+            if [ "$TOTAL_FRAMES" -gt 0 ] && [ "$frame_offset" -ge "$TOTAL_FRAMES" ]; then
+                echo "[watcher] skipping epilogue segment $seg_name (frame $frame_offset >= $TOTAL_FRAMES)"
+                echo "$seg" >> "$SEEN_FILE"
+                continue
+            fi
+
+            # Percentage based on actual frame offset (accurate regardless of chunk size)
+            if [ "$TOTAL_FRAMES" -gt 0 ]; then
+                PCT=$(( frame_offset * 100 / TOTAL_FRAMES ))
+            else
+                PCT="?"
+            fi
+
+            # chunk_num assigned tentatively; only incremented on successful send
+            chunk_num=$(( chunk_count + 1 ))
+            preview="${PREVIEW_DIR}/preview_${RUN_ID}_chunk${chunk_num}.mp4"
+
+            if make_preview "$seg" "$preview"; then
+                NOW=$(date +%s)
+                ELAPSED=$(( NOW - LAST_TIME ))
+                META="${ELAPSED}s | $(du -m "$seg" | cut -f1)MB"
+
+                # Build params string from run_info
+                EXTRA=""
+                if [ -f "state/run_info.txt" ]; then
+                    G=$(    grep "^gravity:"    state/run_info.txt | awk '{print $2}')
+                    S=$(    grep "^softening:"  state/run_info.txt | awk '{print $2}')
+                    SC=$(   grep "^speed_cap:"  state/run_info.txt | awk '{print $2}')
+                    POP=$(  grep "^pop_target:" state/run_info.txt | awk '{print $2}')
+                    BAND=$( grep "^pop_band:"   state/run_info.txt | awk '{print $2}')
+                    RATE=$( grep "^rate_limit:" state/run_info.txt | awk '{print $2}')
+                    WRAP_X=$(grep "^wrap_x:"    state/run_info.txt | awk '{print $2}')
+                    WRAP_Y=$(grep "^wrap_y:"    state/run_info.txt | awk '{print $2}')
+                    INITV=$(   grep "^init_vel:"   state/run_info.txt | awk '{print $2}')
+                    VELSC=$(   grep "^vel_scale:"  state/run_info.txt | awk '{print $2}')
+                    CMT=$(     grep "^commit:"     state/run_info.txt | awk '{print $2}')
+                    DAMP_X=$(    grep "^dampen_x:"     state/run_info.txt | awk '{print $2}')
+                    DAMP_Y=$(    grep "^dampen_y:"     state/run_info.txt | awk '{print $2}')
+                    INITPOP=$(   grep "^init_pop:"     state/run_info.txt | awk '{print $2}')
+                    RES=$(       grep "^resolution:"   state/run_info.txt | awk '{print $2}')
+                    CIRCLES=$(   grep "^circles:"      state/run_info.txt | awk '{print $2}')
+                    BOUNCE_X=$(  grep "^bounce_x:"     state/run_info.txt | awk '{print $2}')
+                    BOUNCE_Y=$(  grep "^bounce_y:"     state/run_info.txt | awk '{print $2}')
+                    VEL_DECAY=$( grep "^vel_decay:"    state/run_info.txt | awk '{print $2}')
+                    VEL_NUDGE=$( grep "^vel_nudge:"    state/run_info.txt | awk '{print $2}')
+                    VNR=$(       grep "^vel_nudge_rate:" state/run_info.txt | awk '{print $2}')
+                    SECS=$(      grep "^seconds:"      state/run_info.txt | awk '{print $2}')
+                    STAG_X=$(    grep "^stagger_x:"    state/run_info.txt | awk '{print $2}')
+                    STAG_Y=$(    grep "^stagger_y:"    state/run_info.txt | awk '{print $2}')
+                    # Optional extras — only show non-zero/non-false values to keep message concise
+                    OPT=""
+                    [ "$BOUNCE_X" = "true" ] || [ "$BOUNCE_Y" = "true" ] && OPT="${OPT} bounce=${BOUNCE_X}/${BOUNCE_Y}"
+                    [ -n "$VEL_DECAY" ] && [ "$VEL_DECAY" != "0" ] && OPT="${OPT} decay=${VEL_DECAY}"
+                    [ -n "$VEL_NUDGE" ] && [ "$VEL_NUDGE" != "0" ] && OPT="${OPT} nudge=${VEL_NUDGE}@${VNR}"
+                    [ -n "$STAG_X" ] && [ "$STAG_X" != "0" ] && OPT="${OPT} stag_x=${STAG_X}"
+                    [ -n "$STAG_Y" ] && [ "$STAG_Y" != "0" ] && OPT="${OPT} stag_y=${STAG_Y}"
+                    EXTRA=" | \`${RUN_ID}\` ${CMT} ${SECS}s G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} circles=${CIRCLES} vel=${INITV}×${VELSC} wx=${WRAP_X} wy=${WRAP_Y} dx=${DAMP_X} dy=${DAMP_Y} grid=${RES}${OPT}"
+                fi
+
+                # Current state from render log (last stats line before chunk boundary)
+                STATE_LINE=$(grep "avg_spd" /tmp/gravity_render.log 2>/dev/null | tail -1)
+                CUR_POP=$(  echo "$STATE_LINE" | grep -oE 'pop=[0-9]+'     | cut -d= -f2)
+                CUR_SPD=$(  echo "$STATE_LINE" | grep -oE 'avg_spd=[0-9.]+' | cut -d= -f2)
+                CUR_P10=$(  echo "$STATE_LINE" | grep -oE 'p10=[0-9.]+'     | cut -d= -f2)
+                STATE_MSG=""
+                [ -n "$CUR_POP" ] && STATE_MSG="pop=${CUR_POP} avg_spd=${CUR_SPD} p10=${CUR_P10}"
+
+                MSG="chunk ${chunk_num} (${PCT}%) | ${META}${EXTRA}"
+                [ -n "$STATE_MSG" ] && MSG="${MSG}
 ${STATE_MSG}"
 
-            if openclaw message send --channel discord \
-                -t "$DISCORD_CHANNEL" \
-                --media "$preview" \
-                -m "$MSG"; then
-                (( chunk_count++ )) || true
-                echo "[watcher] sent chunk $chunk_num ($META)"
-                echo "$seg" >> "$SEEN_FILE"
-                LAST_TIME=$NOW
-            else
-                echo "[watcher] send failed chunk $chunk_num, will retry"
+                if openclaw message send --channel discord \
+                    -t "$DISCORD_CHANNEL" \
+                    --media "$preview" \
+                    -m "$MSG"; then
+                    (( chunk_count++ )) || true
+                    echo "[watcher] sent chunk $chunk_num ($META)"
+                    echo "$seg" >> "$SEEN_FILE"
+                    LAST_TIME=$NOW
+                else
+                    echo "[watcher] send failed chunk $chunk_num, will retry"
+                fi
             fi
-        fi
-        rm -f "$preview"
-    done
+            rm -f "$preview"
+        done < <(find "$SEG_DIR" -name "seg_*.mp4" -print0 | sort -z)
+    fi
 
     sleep 5
 done

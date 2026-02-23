@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 
 BIN="/Users/matte/jeb/target/release/gravity"
 QUEUE_FILE="batch-queue.txt"
-SECONDS_EACH=${GRAVITY_SECONDS:-546}   # override with GRAVITY_SECONDS env var
+SECONDS_EACH="${GRAVITY_SECONDS:-546}"
 
 if [ ! -f "$QUEUE_FILE" ]; then
     echo "[batch] no queue file at $QUEUE_FILE — nothing to do"
@@ -21,8 +21,8 @@ if [ ! -f "$QUEUE_FILE" ]; then
 fi
 
 COMMIT=$(git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
-ALWAYS_ARGS="--tile-2x2"  # applied to every render regardless of queue entry
-echo "=== batch-renders.sh started | ${SECONDS_EACH}s per render | always: $ALWAYS_ARGS | commit=$COMMIT ==="
+ALWAYS_ARGS=( --tile-2x2 )  # applied to every render regardless of queue entry
+echo "=== batch-renders.sh started | ${SECONDS_EACH}s per render | always: ${ALWAYS_ARGS[*]} | commit=$COMMIT ==="
 echo "=== queue: $QUEUE_FILE ==="
 echo ""
 
@@ -46,7 +46,7 @@ check_disk() {
     if [ "$free_gb" -lt "$FREE_MIN_GB" ]; then
         echo "[batch] ⚠️  disk low: ${free_gb}GB free (threshold ${FREE_MIN_GB}GB) — pausing"
         openclaw message send --channel discord --target 1467063568712339561 \
-            --message "⚠️ **Batch paused — disk low**\n${free_gb}GB free, need >${FREE_MIN_GB}GB to continue. Delete some files in shared/gravity and run \`scripts/batch-renders.sh\` to resume." 2>/dev/null || true
+            --message "⚠️ **Batch paused — disk low** ${free_gb}GB free, need >${FREE_MIN_GB}GB to continue." 2>/dev/null || true
         exit 1
     fi
 }
@@ -57,8 +57,8 @@ while true; do
 
     label="${entry%%:*}"
     raw_args="${entry#*:}"
-    # shellcheck disable=SC2206
-    extra=($raw_args)
+    # Split raw_args into array — these are simple CLI flags with no spaces in values
+    IFS=' ' read -r -a extra <<< "$raw_args"
 
     SEED=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
     RUN_ID="$(date +%Y%m%d_%H%M%S)_${label}"
@@ -69,20 +69,15 @@ while true; do
     echo "──────────────────────────────────────────────────────"
 
     # ── Kill any existing non-headless render ──────────────────────────────
-    EXISTING=$(pgrep -f "gravity.*--seconds" 2>/dev/null | while read -r pid; do
-        ps -p "$pid" -o args= 2>/dev/null | grep -q "\-\-headless" || echo "$pid"
-    done || true)
-    if [ -n "$EXISTING" ]; then
-        echo "[batch] killing existing render(s): $EXISTING"
-        kill -9 $EXISTING 2>/dev/null || true
-        sleep 3
-    fi
+    while IFS= read -r pid; do
+        if ! ps -p "$pid" -o args= 2>/dev/null | grep -q "\-\-headless"; then
+            echo "[batch] killing existing render PID=$pid"
+            kill -9 "$pid" 2>/dev/null || true
+        fi
+    done < <(pgrep -f "gravity.*--seconds" 2>/dev/null || true)
+    sleep 3
 
     # ── Clean up leftover frames/segments from any killed renders ─────────
-    # Frames and segments should never persist after a render finishes.
-    # If a render was SIGKILL'd mid-chunk they'll be stranded here.
-    # cleanup-old-runs.sh handles this properly after each render, but also
-    # do a quick sweep here before starting so we never start full.
     LEFTOVER_FRAMES=$(find runs/ -path "*/frames/*.png" -type f 2>/dev/null | wc -l | tr -d ' ')
     if [ "$LEFTOVER_FRAMES" -gt 0 ]; then
         echo "[batch] cleaning $LEFTOVER_FRAMES leftover frame PNGs from previous run(s)..."
@@ -100,7 +95,7 @@ while true; do
     "$BIN" \
         --seed "$SEED" --run-id "$RUN_ID" --commit "$COMMIT" \
         --seconds "$SECONDS_EACH" --epilogue \
-        $ALWAYS_ARGS \
+        "${ALWAYS_ARGS[@]}" \
         "${extra[@]}" \
         > "/tmp/gravity_render_${label}.log" 2>&1 &
     RENDER_PID=$!
@@ -109,10 +104,10 @@ while true; do
     # ── Start watcher once run_info is ready ──────────────────────────────
     pkill -f "segment-watcher" 2>/dev/null || true
     sleep 1
-    for i in $(seq 25); do
+    for (( i=0; i<25; i++ )); do
         sleep 2
         [ -f "runs/${RUN_ID}/run_info.txt" ] && break
-        [ "$i" -eq 25 ] && echo "[batch] WARNING: run_info.txt not found after 50s"
+        [ "$i" -eq 24 ] && echo "[batch] WARNING: run_info.txt not found after 50s"
     done
     cp "runs/${RUN_ID}/run_info.txt" state/run_info.txt 2>/dev/null || true
 
