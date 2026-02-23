@@ -114,7 +114,7 @@ while true; do
     # Only launch segment watcher for long renders (>60s); short breadth runs
     # finish before the watcher can catch any segments.
     WATCHER_PID=""
-    if [ "$SECONDS_EACH" -gt 60 ]; then
+    if [ "$FRAMES" -gt 3600 ]; then  # >60s worth of frames
         nohup bash segment-watcher.sh > /tmp/watcher.log 2>&1 &
         WATCHER_PID=$!
         echo "[batch] watcher PID=$WATCHER_PID"
