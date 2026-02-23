@@ -3960,3 +3960,9 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
                         }
                     }
                 }
+
+// [recovery] edit target not found, appending:
+        let n = cells.len();
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
+              pop_band, rate_limit, birth_chance, death_chance,
+              conway_every, tick_count: 0, prev_live: vec![false; W() * H()],
