@@ -296,11 +296,8 @@ impl GameBoy {
         }
     }
 
-    /// Advance the timer hardware by one M-cycle (= 4 T-cycles).
+    /// Advance the timer hardware by one T-cycle.
     pub fn timer_cycle(&mut self) {
-        self.timer_tick();
-        self.timer_tick();
-        self.timer_tick();
         self.timer_tick();
     }
 

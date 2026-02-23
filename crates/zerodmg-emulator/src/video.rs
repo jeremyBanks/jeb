@@ -2,8 +2,9 @@ use super::GameBoy;
 
 use image::{GenericImage, GenericImageView};
 
-// seems to be the right value to meet the apparent framerate
-const CYCLES_PER_LINE: u64 = 114;
+// 456 T-cycles per scanline (correct DMG hardware value).
+// Previously 114 (≈456/4), which was calibrated against a 1MHz timing bug.
+const CYCLES_PER_LINE: u64 = 456;
 
 /// Game Boy video memory state
 pub struct VideoData {
