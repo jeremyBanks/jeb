@@ -22,7 +22,7 @@ fi
 
 COMMIT=$(git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
 ALWAYS_ARGS=()  # tile-2x2 is now auto-enabled when both axes wrap
-echo "=== batch-renders.sh started | ${FRAMES} frames per render | always: ${ALWAYS_ARGS[*]} | commit=$COMMIT ==="
+echo "=== batch-renders.sh started | ${FRAMES} frames per render | always: ${ALWAYS_ARGS[*]:-} | commit=$COMMIT ==="
 echo "=== queue: $QUEUE_FILE ==="
 echo ""
 
