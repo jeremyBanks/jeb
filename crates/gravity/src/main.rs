@@ -870,13 +870,22 @@ impl Sim {
         // Conway runs at a fixed rate regardless of cell speed.
         // Pop-band alone throttles births/deaths (cells can only be born up to pop_max,
         // killed down to pop_min). No speed-based shutoff.
-        let rate_limit = self.rate_limit;
         // Hard cutoff at band edges: inside the band Conway runs freely and population
         // floats naturally. We only block births when at pop_max, deaths when at pop_min.
-        let max_births = if n >= pop_max { 0 } else { rate_limit };
-        let max_deaths = if n <= pop_min { 0 } else { rate_limit };
-        // desired_births NOT truncated here — weighted selection happens post-deaths
-        desired_deaths.truncate(max_deaths);
+        let births_allowed = n < pop_max;
+        let deaths_allowed = n > pop_min;
+        
+        // If chance-based mode: filter by probability; otherwise use rate_limit
+        if let Some(death_chance) = self.death_chance {
+            if deaths_allowed {
+                desired_deaths.retain(|_| xorf32(&mut self.rng) < death_chance);
+            } else {
+                desired_deaths.clear();
+            }
+        } else {
+            let max_deaths = if deaths_allowed { self.rate_limit } else { 0 };
+            desired_deaths.truncate(max_deaths);
+        }
 
         let mut dying: std::collections::HashSet<usize> = desired_deaths.iter().cloned().collect();
 
