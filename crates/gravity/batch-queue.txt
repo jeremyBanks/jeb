@@ -28,21 +28,14 @@
 
 # ── PORTRAIT (160×256) — known-good configs, opposite aspect ratio ────────────
 # Square 256×256, nudge 11° up from right (11/360 ≈ 0.0306 turns CCW)
-nudge_sq_11r:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge 0.0306 --vel-nudge-rate 0.0625 --width 256 --height 256
 
-radout_portrait:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --width 160 --height 256
 
-veldecay_portrait:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-decay 0.9995 --width 160 --height 256
 
-threads_portrait:--gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --init-vel spin --wrap --width 160 --height 256
 
-bounce_portrait:--gravity 0.2 --softening 3 --speed-cap 4 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --init-vel spin --width 160 --height 256
 
-mushy_gravity:--gravity 0.25 --softening 12 --speed-cap 5 --pop-target 2048 --pop-band 256 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160 --tile-2x2
 
 # ── ASPECT RATIO EXPERIMENTS ─────────────────────────────────────────────────
 # Square — symmetric gravity, no preferred axis
-square_spin:--width 240 --height 240 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --vel-scale 1 --init-vel spin --wrap --dampen-y 0.0625 --vel-nudge-rate 0.03125 --tile-2x2
 
 # Ultra-wide letterbox — horizontal band dynamics, gravity squished vertically
 ultrawide_chaos:--width 384 --height 80 --gravity 0.25 --softening 3 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-y 0.125 --tile-2x2
@@ -242,3 +235,6 @@ veldecay_soft325:--gravity 0.165 --softening 3.25 --speed-cap 4.9 --pop-target 1
 threads_soft50:--gravity 0.15 --softening 5.0 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --init-vel spin --wrap --width 256 --height 160
 
 radout_soft45:--gravity 0.165 --softening 4.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel radial-out --wrap --dampen-x 0.015625 --dampen-y 0.0625 --width 256 --height 160
+
+# ── STAGGER COMPARISON ───────────────────────────────────────────────────────
+no_stagger_ref:--gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0625 --width 256 --height 160 --tile-2x2 --no-stagger
