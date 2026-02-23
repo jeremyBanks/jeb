@@ -2093,9 +2093,10 @@ fn main() {
     W_CELL.set(width).expect("W already set");
     H_CELL.set(height).expect("H already set");
 
-    let seconds: usize = parse_arg("--seconds")
+    let total_frames: usize = parse_arg("--frames")
         .and_then(|s| s.parse().ok())
-        .expect("Usage: gravity --seconds <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
+        .expect("Usage: gravity --frames <N> [--seed <N>] [--seed-density <1/N>] [--epilogue]");
+    let seconds = total_frames / FPS as usize;
     let do_epilogue = args.iter().any(|a| a == "--epilogue");
     let headless    = args.iter().any(|a| a == "--headless"); // skip rendering, stats only
     let no_audio    = headless || args.iter().any(|a| a == "--no-audio"); // skip audio synthesis
@@ -2142,7 +2143,7 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(128);
 
-    let total_frames = seconds * FPS as usize;
+    // total_frames already set from --frames arg
     let est_n_chunks = (total_frames + CHUNK_FRAMES - 1) / CHUNK_FRAMES; // estimate only; actual varies
 
     println!("gravity: {}s × {}fps = {} frames, ~{} chunks (dynamic sizing {}..{}s per chunk)",
@@ -2232,7 +2233,7 @@ fn main() {
     } else if seed_density_inv > 0 { W() * H() / seed_density_inv } else { 0 };
     let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
-        "run_id:        {run_id}\nseed:          {rng_seed}\nseconds:       {seconds}\n\
+        "run_id:        {run_id}\nseed:          {rng_seed}\nframes:        {total_frames}\nseconds:       {seconds}\n\
          commit:        {commit_id}\n\
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\nconway_every:  {conway_every}\n\

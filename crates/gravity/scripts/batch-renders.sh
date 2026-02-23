@@ -14,7 +14,6 @@ cd "$(dirname "$0")/.."
 BIN="/Users/matte/jeb/target/release/gravity"
 QUEUE_FILE="batch-queue.txt"
 FRAMES="${GRAVITY_FRAMES:-32768}"   # 64*64*8 = 32768 default
-SECONDS_EACH=$(( FRAMES / 60 ))    # binary takes seconds; 60fps
 
 if [ ! -f "$QUEUE_FILE" ]; then
     echo "[batch] no queue file at $QUEUE_FILE — nothing to do"
@@ -23,7 +22,7 @@ fi
 
 COMMIT=$(git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
 ALWAYS_ARGS=( --tile-2x2 )  # applied to every render regardless of queue entry
-echo "=== batch-renders.sh started | ${SECONDS_EACH}s per render | always: ${ALWAYS_ARGS[*]} | commit=$COMMIT ==="
+echo "=== batch-renders.sh started | ${FRAMES} frames per render | always: ${ALWAYS_ARGS[*]} | commit=$COMMIT ==="
 echo "=== queue: $QUEUE_FILE ==="
 echo ""
 
@@ -95,7 +94,7 @@ while true; do
 
     "$BIN" \
         --seed "$SEED" --run-id "$RUN_ID" --commit "$COMMIT" \
-        --seconds "$SECONDS_EACH" --epilogue \
+        --frames "$FRAMES" --epilogue \
         "${ALWAYS_ARGS[@]}" \
         "${extra[@]}" \
         > "/tmp/gravity_render_${label}.log" 2>&1 &
@@ -115,7 +114,7 @@ while true; do
     # Only launch segment watcher for long renders (>60s); short breadth runs
     # finish before the watcher can catch any segments.
     WATCHER_PID=""
-    if [ "$SECONDS_EACH" -gt 60 ]; then
+    if [ "$FRAMES" -gt 3600 ]; then  # >60s worth of frames
         nohup bash segment-watcher.sh > /tmp/watcher.log 2>&1 &
         WATCHER_PID=$!
         echo "[batch] watcher PID=$WATCHER_PID"
