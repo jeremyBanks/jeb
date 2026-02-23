@@ -3896,3 +3896,14 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
             else if ry < 0 || ry >= H() as i32 { return None; }
             Some((ry as usize, rx as usize))
         };
+
+// [recovery] edit target not found, appending:
+                // Stagger-aware distance to nearest chosen circle.
+                let nbr = chosen.iter()
+                    .map(|&(qx, qy)| {
+                        let raw_dx = px - qx;
+                        let raw_dy = py - qy;
+                        let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+                        (dx*dx + dy*dy).sqrt()
+                    })
+                    .fold(f32::INFINITY, f32::min);
