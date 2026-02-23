@@ -479,13 +479,12 @@ impl Sim {
                 let wall_x = if wrap_x { f32::INFINITY } else { px.min(W() as f32 - px) };
                 let wall_y = if wrap_y { f32::INFINITY } else { py.min(H() as f32 - py) };
                 let wall = wall_x.min(wall_y);
-                // Wrap-aware distance to nearest chosen circle.
+                // Stagger-aware distance to nearest chosen circle.
                 let nbr = chosen.iter()
                     .map(|&(qx, qy)| {
-                        let dx_r = (px - qx).abs();
-                        let dy_r = (py - qy).abs();
-                        let dx = if wrap_x { dx_r.min(W() as f32 - dx_r) } else { dx_r };
-                        let dy = if wrap_y { dy_r.min(H() as f32 - dy_r) } else { dy_r };
+                        let raw_dx = px - qx;
+                        let raw_dy = py - qy;
+                        let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
                         (dx*dx + dy*dy).sqrt()
                     })
                     .fold(f32::INFINITY, f32::min);

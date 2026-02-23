@@ -3,7 +3,6 @@
 # 65536 frames each
 
 # Landscape - stagger_y (default for W>H)
-threads_L1:--width 256 --height 160 --gravity 0.15 --softening 4 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.0625
 threads_L2:--width 272 --height 160 --gravity 0.148 --softening 4.1 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 66 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.06
 threads_L3:--width 240 --height 176 --gravity 0.152 --softening 3.9 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 62 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.065
 threads_L4:--width 288 --height 176 --gravity 0.145 --softening 4.2 --speed-cap 4 --pop-target 1536 --pop-band 192 --rate-limit 68 --circles 15 --vel-scale 2.0 --init-vel spin --wrap --dampen-y 0.058
