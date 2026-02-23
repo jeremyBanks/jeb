@@ -508,10 +508,35 @@ impl Sim {
                 }
             }
             // Flip circle centers vertically so CCW spin drifts right+up instead of right+down
-            // Use (H-1) - cy to keep centers in valid range [0, H-1]
-            let h_max = (H() - 1) as f32;
-            for (_, cy) in centres.iter_mut() {
-                *cy = h_max - *cy;
+            // Then wrap with stagger to ensure valid positions
+            let (w, h) = (W() as f32, H() as f32);
+            for (cx, cy) in centres.iter_mut() {
+                *cy = h - 1.0 - *cy;  // flip
+                // Wrap to valid range (applying stagger if crossing boundary)
+                while *cy < 0.0 {
+                    *cy += h;
+                    *cx += stagger_x;
+                }
+                while *cy >= h {
+                    *cy -= h;
+                    *cx -= stagger_x;
+                }
+                while *cx < 0.0 {
+                    *cx += w;
+                    *cy += stagger_y;
+                }
+                while *cx >= w {
+                    *cx -= w;
+                    *cy -= stagger_y;
+                }
+                // Final wrap for y in case stagger pushed it out
+                *cy = cy.rem_euclid(h);
+                *cx = cx.rem_euclid(w);
+            }
+            // Assert all centers are in bounds
+            for (i, (cx, cy)) in centres.iter().enumerate() {
+                assert!(*cx >= 0.0 && *cx < w, "circle {} cx={} out of bounds [0,{})", i, cx, w);
+                assert!(*cy >= 0.0 && *cy < h, "circle {} cy={} out of bounds [0,{})", i, cy, h);
             }
 
             // Fill each disk using distance-sorted grid walk with 50% coin flip.
