@@ -194,6 +194,8 @@ struct Sim {
     vel_decay: f32,  // per-frame multiplicative speed drain applied to every cell (0=off, e.g. 1/1024)
     vel_nudge: f32,       // target direction in turns (0=off); each frame steers velocity vel_nudge_rate of remaining angular gap
     vel_nudge_rate: f32,  // convergence rate per frame (default 1/32); 1/8 = 4× stronger
+    stagger_x: f32,       // X-shift when crossing Y boundary (top/bottom); default auto from dims
+    stagger_y: f32,       // Y-shift when crossing X boundary (left/right); default auto from dims
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
