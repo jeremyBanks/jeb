@@ -3704,7 +3704,7 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
     let ow = OUT_W() * 2;
     let oh = OUT_H() * 2;
     let status = if tile_2x2 {
-        let fc = build_tile_filter(OUT_W(), OUT_H(), stagger_x, stagger_y);
+        let fc = build_tile_filter(OUT_W() as usize, OUT_H() as usize, stagger_x, stagger_y);
         Command::new("ffmpeg")
             .args([
                 "-y",
