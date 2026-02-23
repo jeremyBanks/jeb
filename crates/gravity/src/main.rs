@@ -194,6 +194,8 @@ struct Sim {
     vel_decay: f32,  // per-frame multiplicative speed drain applied to every cell (0=off, e.g. 1/1024)
     vel_nudge: f32,       // target direction in turns (0=off); each frame steers velocity vel_nudge_rate of remaining angular gap
     vel_nudge_rate: f32,  // convergence rate per frame (default 1/32); 1/8 = 4× stronger
+    stagger_x: f32,       // X-shift when crossing Y boundary (top/bottom); default auto from dims
+    stagger_y: f32,       // Y-shift when crossing X boundary (left/right); default auto from dims
     conway_births: usize,  // cumulative Conway births
     conway_deaths: usize,  // cumulative Conway deaths
     next_id: u64,
@@ -304,19 +306,40 @@ fn qt_insert(nodes: &mut Vec<QNode>, idx: usize, body: usize, px: f32, py: f32, 
     }
 }
 
+/// Find the (dx, dy) to the nearest periodic image of a particle on a (possibly staggered) torus.
+/// stagger_y: Y-shift applied when crossing the X boundary (right→left wraps down by stagger_y).
+/// stagger_x: X-shift applied when crossing the Y boundary (bottom→top wraps right by stagger_x).
+/// Searches all 9 nearest lattice images (n,m ∈ {-1,0,1}) and returns the closest.
 #[inline]
-fn min_image(d: f32, dim: f32) -> f32 {
-    if d > dim * 0.5 { d - dim } else if d < -dim * 0.5 { d + dim } else { d }
+fn nearest_image_delta(raw_dx: f32, raw_dy: f32,
+                       stagger_x: f32, stagger_y: f32,
+                       wrap_x: bool, wrap_y: bool) -> (f32, f32) {
+    let (w, h) = (W() as f32, H() as f32);
+    let mut best_dx = raw_dx;
+    let mut best_dy = raw_dy;
+    let mut best_r2 = raw_dx * raw_dx + raw_dy * raw_dy;
+    for n in -1i32..=1 {
+        for m in -1i32..=1 {
+            if n == 0 && m == 0 { continue; }
+            if (n != 0 && !wrap_x) || (m != 0 && !wrap_y) { continue; }
+            // image reached by crossing X boundary n times, Y boundary m times
+            let cdx = raw_dx + n as f32 * w + m as f32 * stagger_x;
+            let cdy = raw_dy + n as f32 * stagger_y + m as f32 * h;
+            let r2 = cdx * cdx + cdy * cdy;
+            if r2 < best_r2 { best_r2 = r2; best_dx = cdx; best_dy = cdy; }
+        }
+    }
+    (best_dx, best_dy)
 }
 
 fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
-            px: f32, py: f32, g: f32, softening: f32, wrap_x: bool, wrap_y: bool) -> (f32, f32) {
+            px: f32, py: f32, g: f32, softening: f32,
+            wrap_x: bool, wrap_y: bool, stagger_x: f32, stagger_y: f32) -> (f32, f32) {
     let node = &nodes[node_idx];
     if node.body == -2 { return (0.0, 0.0); } // empty node
     let raw_dx = node.com_x - px;
     let raw_dy = node.com_y - py;
-    let dx = if wrap_x { min_image(raw_dx, W() as f32) } else { raw_dx };
-    let dy = if wrap_y { min_image(raw_dy, H() as f32) } else { raw_dy };
+    let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
     // Leaf: exact pairwise force (skip self)
     if node.body >= 0 {
         if node.body as usize == body { return (0.0, 0.0); }
@@ -340,7 +363,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
     let mut fy = 0.0f32;
     for &ch in &node.ch {
         if ch >= 0 {
-            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening, wrap_x, wrap_y);
+            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening, wrap_x, wrap_y, stagger_x, stagger_y);
             fx += cfx;
             fy += cfy;
         }
@@ -353,7 +376,9 @@ impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, conway_every: usize, seed_density_inv: usize, target_pop: usize,
            wrap_x: bool, wrap_y: bool, bounce_x: bool, bounce_y: bool, steer: bool,
-           dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32, init_vel: &str, circles: usize, vel_scale: f32) -> Self {
+           dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32,
+           stagger_x: f32, stagger_y: f32,
+           init_vel: &str, circles: usize, vel_scale: f32) -> Self {
         use std::f32::consts::PI;
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
@@ -597,7 +622,10 @@ impl Sim {
 
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
+              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()],
+              wrap_x, wrap_y, bounce_x, bounce_y, steer,
+              dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
+              stagger_x, stagger_y,
               conway_births: 0, conway_deaths: 0, next_id,
               region_stats: [RegionStats::default(); 9],
               region_voices: std::array::from_fn(|i| RegionVoice::new(
@@ -641,7 +669,8 @@ impl Sim {
                        _seed_density_inv: usize,
                        target_pop: usize, wrap_x: bool, wrap_y: bool,
                        bounce_x: bool, bounce_y: bool, steer: bool,
-                       dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32)
+                       dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32,
+                       stagger_x: f32, stagger_y: f32)
         -> Option<(Self, Vec<f32>, usize)>
     {
         let buf = fs::read(path).ok()?;
@@ -688,7 +717,9 @@ impl Sim {
         let order = (0..cells.len()).collect();
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit, conway_every,
-                        tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
+                        tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
+                        dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
+                        stagger_x, stagger_y,
                         conway_births: 0, conway_deaths: 0,
                         next_id,
                         region_stats: [RegionStats::default(); 9],
@@ -920,7 +951,7 @@ impl Sim {
         let gy_scale = (1.0 - self.dampen_y).clamp(0.0, 1.0);
         for i in 0..n {
             let (px, py) = (self.cells[i].px, self.cells[i].py);
-            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening, self.wrap_x, self.wrap_y);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening, self.wrap_x, self.wrap_y, self.stagger_x, self.stagger_y);
             self.cells[i].vx += gfx * gx_scale;
             self.cells[i].vy += gfy * gy_scale;
         }
@@ -1015,19 +1046,28 @@ impl Sim {
             let mut nvx = cvx;
             let mut nvy = cvy;
             // X axis
+            let mut stagger_ny_add = 0.0f32;
             if self.wrap_x {
+                if nx < 0.0              { stagger_ny_add -= self.stagger_y; }
+                else if nx >= W() as f32 { stagger_ny_add += self.stagger_y; }
                 nx = nx.rem_euclid(W() as f32);
             } else if self.bounce_x {
                 if nx < 0.0       { nx = -nx;                      nvx = -nvx; }
                 else if nx >= W() as f32 { nx = 2.0 * W() as f32 - nx; nvx = -nvx; }
             } else if nx < 0.0 || nx >= W() as f32 { continue; }
             // Y axis
+            let mut stagger_nx_add = 0.0f32;
             if self.wrap_y {
+                if ny < 0.0              { stagger_nx_add -= self.stagger_x; }
+                else if ny >= H() as f32 { stagger_nx_add += self.stagger_x; }
                 ny = ny.rem_euclid(H() as f32);
             } else if self.bounce_y {
                 if ny < 0.0       { ny = -ny;                      nvy = -nvy; }
                 else if ny >= H() as f32 { ny = 2.0 * H() as f32 - ny; nvy = -nvy; }
             } else if ny < 0.0 || ny >= H() as f32 { continue; }
+            // Apply stagger offsets after wrapping (order-independent; computed from pre-wrap state)
+            if stagger_ny_add != 0.0 { ny = (ny + stagger_ny_add).rem_euclid(H() as f32); }
+            if stagger_nx_add != 0.0 { nx = (nx + stagger_nx_add).rem_euclid(W() as f32); }
             // Apply any velocity changes from bounce before grid logic
             if nvx != cvx { self.cells[idx].vx = nvx; }
             if nvy != cvy { self.cells[idx].vy = nvy; }
@@ -1349,7 +1389,7 @@ impl Sim {
         for i in 0..n {
             if orig.positions.contains(&(self.cells[i].gx(), self.cells[i].gy())) { continue; }
             let (px, py) = (self.cells[i].px, self.cells[i].py);
-            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening, self.wrap_x, self.wrap_y);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening, self.wrap_x, self.wrap_y, self.stagger_x, self.stagger_y);
             self.cells[i].vx += gfx;
             self.cells[i].vy += gfy;
         }
@@ -1864,15 +1904,79 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize, tile_2x2: bool) {
-    // ffmpeg glob requires sorted files — they're zero-padded so glob order = numeric order
+/// Build the ffmpeg filter_complex string for 2×2 tiling with stagger-aware edge alignment.
+///
+/// On a staggered torus the four tiles aren't all identical copies — adjacent tiles must be
+/// rolled so that their edges match where the topology actually connects:
+///   TL (col=0,row=0): unrolled
+///   TR (col=1,row=0): y-rolled up by stagger_y   (right neighbour is shifted down by stagger_y)
+///   BL (col=0,row=1): x-rolled left by stagger_x (bottom neighbour is shifted right by stagger_x)
+///   BR (col=1,row=1): both rolls combined
+///
+/// When stagger is zero the filtergraph degenerates to the original simple 2×2 clone.
+fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> String {
+    let ow = w * 2;
+    let oh = h * 2;
+    // Round to nearest pixel; clamp so crops are valid (shouldn't be needed but be safe).
+    let dy = (stagger_y.round() as usize).min(h.saturating_sub(1));
+    let dx = (stagger_x.round() as usize).min(w.saturating_sub(1));
+
+    if dx == 0 && dy == 0 {
+        // No stagger — all four tiles are identical.
+        format!(
+            "[0:v]split=4[a][b][c][d];[a][b]hstack[top];[c][d]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else if dx == 0 {
+        // Only vertical stagger (landscape default: stagger_y = W-H).
+        // TL = BL = unrolled; TR = BR = y-rolled up by dy.
+        // y-roll-up by dy: lower dy rows become new top → [lower][upper] vstack.
+        let h_upper = h - dy;
+        format!(
+            "[0:v]split=4[tl][bl][ra][rb];\
+             [ra]crop={w}:{h_upper}:0:{dy}[yu];[rb]crop={w}:{dy}:0:0[yl];\
+             [yl][yu]vstack[rsrc];[rsrc]split=2[tr][br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else if dy == 0 {
+        // Only horizontal stagger (portrait default: stagger_x = H-W).
+        // TL = TR = unrolled; BL = BR = x-rolled left by dx.
+        // x-roll-left by dx: rightmost dx columns become new left → [right][left] hstack.
+        let w_right = w - dx;
+        format!(
+            "[0:v]split=4[tl][tr][ra][rb];\
+             [ra]crop={w_right}:{h}:{dx}:0[xr];[rb]crop={dx}:{h}:0:0[xl];\
+             [xr][xl]hstack[rsrc];[rsrc]split=2[bl][br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else {
+        // Both stagger non-zero: four distinct tiles.
+        // Build y-rolled source first, then x-roll it for BR; x-rolled source for BL.
+        let h_upper = h - dy;
+        let w_right = w - dx;
+        format!(
+            "[0:v]split=5[tl][yr_a][yr_b][xr_a][xr_b];\
+             [yr_a]crop={w}:{h_upper}:0:{dy}[yu];[yr_b]crop={w}:{dy}:0:0[yl];\
+             [yl][yu]vstack[ysrc];[ysrc]split=2[tr][br_y];\
+             [xr_a]crop={w_right}:{h}:{dx}:0[xr];[xr_b]crop={dx}:{h}:0:0[xl];\
+             [xr][xl]hstack[bl];\
+             [br_y]split=2[br_ya][br_yb];\
+             [br_ya]crop={w_right}:{h}:{dx}:0[brr];[br_yb]crop={dx}:{h}:0:0[brl];\
+             [brr][brl]hstack[br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    }
+}
+
+fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
+                tile_2x2: bool, stagger_x: f32, stagger_y: f32) {
     let ow = OUT_W() * 2;
     let oh = OUT_H() * 2;
     let status = if tile_2x2 {
-        // Tile the frame 2×2 then scale back to normal output size (each copy is half-size).
-        let fc = format!(
-            "[0:v]split=4[a][b][c][d];[a][b]hstack[top];[c][d]hstack[bot];[top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
-        );
+        let fc = build_tile_filter(OUT_W() as usize, OUT_H() as usize, stagger_x, stagger_y);
         Command::new("ffmpeg")
             .args([
                 "-y",
@@ -1991,6 +2095,19 @@ fn main() {
     let bounce_x  = args.iter().any(|a| a == "--bounce-x");
     let bounce_y  = args.iter().any(|a| a == "--bounce-y");
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
+    // Stagger: auto-default from canvas dimensions (only when wrapping is on), override with flags.
+    // stagger_y: Y-shift when crossing X boundary (landscape default: W-H when W>H).
+    // stagger_x: X-shift when crossing Y boundary (portrait default: H-W when H>W).
+    // --no-stagger disables auto; --stagger-x / --stagger-y override independently.
+    let no_stagger = args.iter().any(|a| a == "--no-stagger");
+    let auto_stagger_y = if (wrap_x || wrap_y) && W() > H() { (W() - H()) as f32 } else { 0.0 };
+    let auto_stagger_x = if (wrap_x || wrap_y) && H() > W() { (H() - W()) as f32 } else { 0.0 };
+    let stagger_x: f32 = if no_stagger { 0.0 } else {
+        parse_arg("--stagger-x").and_then(|s| s.parse().ok()).unwrap_or(auto_stagger_x)
+    };
+    let stagger_y: f32 = if no_stagger { 0.0 } else {
+        parse_arg("--stagger-y").and_then(|s| s.parse().ok()).unwrap_or(auto_stagger_y)
+    };
     let pos_rotation_enabled =  args.iter().any(|a| a == "--pos-color");     // default: off
     let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
     let tile_2x2             =  args.iter().any(|a| a == "--tile-2x2");      // default: off
@@ -2104,7 +2221,7 @@ fn main() {
          pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\nconway_every:  {conway_every}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
-         wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nvel_decay:     {vel_decay}\nvel_nudge:     {vel_nudge}\nvel_nudge_rate:{vel_nudge_rate}\nsteer:         {steer}\n\
+         wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\nstagger_x:     {stagger_x}\nstagger_y:     {stagger_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nvel_decay:     {vel_decay}\nvel_nudge:     {vel_nudge}\nvel_nudge_rate:{vel_nudge_rate}\nsteer:         {steer}\n\
          pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\ntile_2x2:      {tile_2x2}\n\
          resolution:    {}x{} → {}x{}\n",
         width, height, width * 2, height * 2
@@ -2122,7 +2239,7 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_frame) =
-        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate)
+        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
         .map(|(s, c, sf)| {
             println!("Resuming from checkpoint: frame {} / {}", sf, total_frames);
             (s, c, sf)
@@ -2133,7 +2250,7 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, &init_vel, circles, vel_scale);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W() * H() * 3];
             (s, c, 0)
         });
@@ -2239,7 +2356,7 @@ fn main() {
             let enc_t0 = std::time::Instant::now();
             let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
             let seg_tmp  = format!("{seg_path}.tmp");
-            encode_chunk(&frames_dir, &seg_tmp, local_frame, tile_2x2);
+            encode_chunk(&frames_dir, &seg_tmp, local_frame, tile_2x2, stagger_x, stagger_y);
             mux_audio_into_segment(&seg_tmp, &chunk_audio);
             fs::rename(&seg_tmp, &seg_path).expect("rename segment");
             enc_ms = enc_t0.elapsed().as_millis();
@@ -2282,7 +2399,7 @@ fn main() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
                         ep_seg_start + ep_frame - ep_chunk_frames.len());
                     let seg_tmp = format!("{seg_path}.tmp");
-                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2);
+                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2, stagger_x, stagger_y);
                     fs::rename(&seg_tmp, &seg_path).expect("rename epilogue segment");
                     writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
                     seg_list.flush().unwrap();
@@ -2330,7 +2447,7 @@ fn main() {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
                     let seg_tmp = format!("{seg_path}.tmp");
-                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2);
+                    encode_chunk(&frames_dir, &seg_tmp, ep_chunk_frames.len(), tile_2x2, stagger_x, stagger_y);
                     fs::rename(&seg_tmp, &seg_path).expect("rename epilogue segment");
                     writeln!(seg_list, "file 'segments/{}'", std::path::Path::new(&seg_path).file_name().unwrap().to_str().unwrap()).unwrap();
                     seg_list.flush().unwrap();
