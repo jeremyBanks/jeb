@@ -37,7 +37,22 @@ pop_queue() {
     return 0
 }
 
+FREE_MIN_GB=4  # pause batch if free space drops below this
+
+check_disk() {
+    local free_kb
+    free_kb=$(df / | awk 'NR==2 {print $4}')
+    local free_gb=$(( free_kb / 1024 / 1024 ))
+    if [ "$free_gb" -lt "$FREE_MIN_GB" ]; then
+        echo "[batch] ⚠️  disk low: ${free_gb}GB free (threshold ${FREE_MIN_GB}GB) — pausing"
+        openclaw message send --channel discord --target 1467063568712339561 \
+            --message "⚠️ **Batch paused — disk low**\n${free_gb}GB free, need >${FREE_MIN_GB}GB to continue. Delete some files in shared/gravity and run \`scripts/batch-renders.sh\` to resume." 2>/dev/null || true
+        exit 1
+    fi
+}
+
 while true; do
+    check_disk
     entry=$(pop_queue) || { echo "[batch] queue empty — done."; exit 0; }
 
     label="${entry%%:*}"
