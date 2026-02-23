@@ -3,7 +3,7 @@
 # Run-aware: reads run_id from state/run_info.txt at startup and validates
 # every segment against it. Self-terminates if the run changes (new render started).
 # Scopes seen-file to run_id so restarts never replay old segments.
-set -uo pipefail  # no -e: handle errors explicitly to avoid early exit
+set -euo pipefail
 cd "$(dirname "$0")"
 
 DISCORD_CHANNEL="1467063568712339561"
