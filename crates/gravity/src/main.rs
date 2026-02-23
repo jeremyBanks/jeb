@@ -3506,3 +3506,69 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, dp: 
 
 // [recovery] edit target not found, appending:
 
+
+// [recovery] edit target not found, appending:
+/// Find the (dx, dy) to the nearest periodic image of a particle on a (possibly staggered) torus.
+/// stagger_y: Y-shift applied when crossing the X boundary (right→left wraps down by stagger_y).
+/// stagger_x: X-shift applied when crossing the Y boundary (bottom→top wraps right by stagger_x).
+/// Searches all 9 nearest lattice images (n,m ∈ {-1,0,1}) and returns the closest.
+#[inline]
+fn nearest_image_delta(raw_dx: f32, raw_dy: f32,
+                       stagger_x: f32, stagger_y: f32,
+                       wrap_x: bool, wrap_y: bool) -> (f32, f32) {
+    let (w, h) = (W() as f32, H() as f32);
+    let mut best_dx = raw_dx;
+    let mut best_dy = raw_dy;
+    let mut best_r2 = raw_dx * raw_dx + raw_dy * raw_dy;
+    for n in -1i32..=1 {
+        for m in -1i32..=1 {
+            if n == 0 && m == 0 { continue; }
+            if (n != 0 && !wrap_x) || (m != 0 && !wrap_y) { continue; }
+            // image reached by crossing X boundary n times, Y boundary m times
+            let cdx = raw_dx + n as f32 * w + m as f32 * stagger_x;
+            let cdy = raw_dy + n as f32 * stagger_y + m as f32 * h;
+            let r2 = cdx * cdx + cdy * cdy;
+            if r2 < best_r2 { best_r2 = r2; best_dx = cdx; best_dy = cdy; }
+        }
+    }
+    (best_dx, best_dy)
+}
+
+fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
+            px: f32, py: f32, g: f32, softening: f32,
+            wrap_x: bool, wrap_y: bool, stagger_x: f32, stagger_y: f32) -> (f32, f32) {
+    let node = &nodes[node_idx];
+    if node.body == -2 { return (0.0, 0.0); } // empty node
+    let raw_dx = node.com_x - px;
+    let raw_dy = node.com_y - py;
+    let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+    // Leaf: exact pairwise force (skip self)
+    if node.body >= 0 {
+        if node.body as usize == body { return (0.0, 0.0); }
+        let r2 = dx*dx + dy*dy + softening*softening;
+        let r  = r2.sqrt();
+        let f  = g * node.mass / r2;
+        return (f * dx / r, f * dy / r);
+    }
+    // Internal: Barnes-Hut criterion uses actual (un-softened) distance
+    let r2_actual = dx*dx + dy*dy;
+    let d = r2_actual.sqrt();
+    if d > 0.0 && node.width() / d < BH_THETA {
+        // Far enough: treat as single point mass
+        let r2 = r2_actual + softening*softening;
+        let r  = r2.sqrt();
+        let f  = g * node.mass / r2;
+        return (f * dx / r, f * dy / r);
+    }
+    // Too close or at same position: recurse into children
+    let mut fx = 0.0f32;
+    let mut fy = 0.0f32;
+    for &ch in &node.ch {
+        if ch >= 0 {
+            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening, wrap_x, wrap_y, stagger_x, stagger_y);
+            fx += cfx;
+            fy += cfy;
+        }
+    }
+    (fx, fy)
+}
