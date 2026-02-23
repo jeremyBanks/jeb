@@ -3782,12 +3782,12 @@ fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> Stri
     } else if dx == 0 {
         // Only vertical stagger (landscape default: stagger_y = W-H).
         // TL = BL = unrolled; TR = BR = y-rolled up by dy.
-        // y-roll-up by dy: lower dy rows become new top → [lower][upper] vstack.
+        // y-roll-up by dy: rows dy..H-1 become new top, rows 0..dy-1 go to bottom.
         let h_upper = h - dy;
         format!(
             "[0:v]split=4[tl][bl][ra][rb];\
              [ra]crop={w}:{h_upper}:0:{dy}[yu];[rb]crop={w}:{dy}:0:0[yl];\
-             [yl][yu]vstack[rsrc];[rsrc]split=2[tr][br];\
+             [yu][yl]vstack[rsrc];[rsrc]split=2[tr][br];\
              [tl][tr]hstack[top];[bl][br]hstack[bot];\
              [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
         )
