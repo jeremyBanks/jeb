@@ -3816,8 +3816,21 @@ fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> Stri
              [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
         )
     } else {
-        // Both stagger non-zero: not supported (should be caught at arg parsing)
-        panic!("build_tile_filter called with both stagger_x and stagger_y non-zero");
+        // Both stagger non-zero: four distinct tiles.
+        // TL = original, TR = y-rolled, BL = x-rolled, BR = y-rolled then x-rolled
+        let h_upper = h - dy;
+        let w_right = w - dx;
+        // Build y-rolled version (for TR), x-rolled version (for BL),
+        // then y-roll followed by x-roll (for BR).
+        format!(
+            "[0:v]split=4[tl][src_y][src_x][src_yx];\
+             [src_y]crop={w}:{h_upper}:0:{dy}[y_u];[src_y]crop={w}:{dy}:0:0[y_l];[y_u][y_l]vstack[tr];\
+             [src_x]crop={w_right}:{h}:{dx}:0[x_r];[src_x]crop={dx}:{h}:0:0[x_l];[x_r][x_l]hstack[bl];\
+             [src_yx]crop={w}:{h_upper}:0:{dy}[yx_u];[src_yx]crop={w}:{dy}:0:0[yx_l];[yx_u][yx_l]vstack[yx_y];\
+             [yx_y]crop={w_right}:{h}:{dx}:0[yx_r];[yx_y]crop={dx}:{h}:0:0[yx_l2];[yx_r][yx_l2]hstack[br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
     }
 }
 
