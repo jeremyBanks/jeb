@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-SHARED_DIR="${GRAVITY_SHARED_DIR:-/Users/matte/.openclaw/workspace/shared/gravity}"
+SHARED_DIR="${GRAVITY_SHARED_DIR:-/Volumes/My Shared Files/shared/}"
 mkdir -p "$SHARED_DIR"
 
 RUNS_DIR="runs"
