@@ -2055,12 +2055,22 @@ fn delete_frames(frames_dir: &str) {
     }
 }
 
-fn concat_segments(segments_file: &str, output: &str) {
+fn concat_segments(segments_file: &str, output: &str, tile_2x2: bool) {
+    // Upscale factor: segments are already tiled (2×2) or raw.
+    // Tiled segments are W*2 × H*2; raw segments are W × H.
+    // Final output: 8× pixel scale for detail (capped at reasonable size).
+    let seg_w = if tile_2x2 { W() * 2 } else { W() };
+    let seg_h = if tile_2x2 { H() * 2 } else { H() };
+    // Scale up so the shorter side is ~1280, maintaining aspect ratio with NN.
+    let factor = (1280.0 / seg_w.min(seg_h) as f64).max(1.0).floor() as usize;
+    let ow = seg_w * factor;
+    let oh = seg_h * factor;
+    let scale = format!("scale={}:{}:flags=neighbor", ow, oh);
     // Re-encode video with NN upscale; copy audio stream from muxed segments
     let status = Command::new("ffmpeg")
         .args([
             "-y", "-f", "concat", "-safe", "0", "-i", segments_file,
-            "-vf", "scale=2048:1280:flags=neighbor",
+            "-vf", &scale,
             "-c:v", "libx264", "-crf", "12", "-preset", "fast",
             "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "128k",
@@ -2482,7 +2492,7 @@ fn main() {
     // Final concat
     let total_segs = fs::read_to_string(&segments_file).unwrap_or_default().lines().count();
     println!("\nConcatenating {total_segs} segments → {output_file}");
-    concat_segments(&segments_file, &output_file);
+    concat_segments(&segments_file, &output_file, tile_2x2);
 
     let size = fs::metadata(&output_file).map(|m| m.len()).unwrap_or(0);
     println!("Done! {output_file} ({:.1} MB)", size as f64 / 1_048_576.0);
