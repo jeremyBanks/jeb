@@ -165,7 +165,7 @@ while true; do
                     BOUNCE_Y=$(  grep "^bounce_y:"     state/run_info.txt | awk '{print $2}')
                     VEL_DECAY=$( grep "^vel_decay:"    state/run_info.txt | awk '{print $2}')
                     VEL_NUDGE=$( grep "^vel_nudge:"    state/run_info.txt | awk '{print $2}')
-                    VNR=$(       grep "^vel_nudge_rate:" state/run_info.txt | awk '{print $2}')
+                    VNR=$(       grep "^vel_nudge_rate:" state/run_info.txt | sed 's/.*://' | awk '{print $1}')
                     SECS=$(      grep "^seconds:"      state/run_info.txt | awk '{print $2}')
                     STAG_X=$(    grep "^stagger_x:"    state/run_info.txt | awk '{print $2}')
                     STAG_Y=$(    grep "^stagger_y:"    state/run_info.txt | awk '{print $2}')
