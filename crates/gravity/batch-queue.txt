@@ -38,6 +38,8 @@
 # Square — symmetric gravity, no preferred axis
 
 # Ultra-wide letterbox — horizontal band dynamics, gravity squished vertically
+square_spin_light_damp:--width 240 --height 240 --gravity 0.165 --softening 3.5 --speed-cap 4.9 --pop-target 1536 --pop-band 192 --rate-limit 64 --circles 1 --init-vel spin --wrap --dampen-y 0.0078125 --tile-2x2
+
 ultrawide_chaos:--width 384 --height 80 --gravity 0.25 --softening 3 --speed-cap 5 --pop-target 1024 --pop-band 128 --rate-limit 64 --circles 1 --vel-scale 2 --init-vel radial-out --wrap --dampen-y 0.125 --tile-2x2
 
 # Tall portrait — vertical column collapse, gravity pulls down a narrow strip
