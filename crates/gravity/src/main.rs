@@ -3811,7 +3811,7 @@ fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> Stri
         format!(
             "[0:v]split=5[tl][yr_a][yr_b][xr_a][xr_b];\
              [yr_a]crop={w}:{h_upper}:0:{dy}[yu];[yr_b]crop={w}:{dy}:0:0[yl];\
-             [yl][yu]vstack[ysrc];[ysrc]split=2[tr][br_y];\
+             [yu][yl]vstack[ysrc];[ysrc]split=2[tr][br_y];\
              [xr_a]crop={w_right}:{h}:{dx}:0[xr];[xr_b]crop={dx}:{h}:0:0[xl];\
              [xr][xl]hstack[bl];\
              [br_y]split=2[br_ya][br_yb];\
