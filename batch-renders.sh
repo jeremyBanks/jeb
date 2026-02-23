@@ -94,7 +94,7 @@ while true; do
 
     "$BIN" \
         --seed "$SEED" --run-id "$RUN_ID" --commit "$COMMIT" \
-        --seconds "$SECONDS_EACH" --epilogue \
+        --frames "$FRAMES" --epilogue \
         "${ALWAYS_ARGS[@]}" \
         "${extra[@]}" \
         > "/tmp/gravity_render_${label}.log" 2>&1 &
