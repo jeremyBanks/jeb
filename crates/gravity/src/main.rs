@@ -1594,6 +1594,19 @@ fn main() {
     let bounce_x  = args.iter().any(|a| a == "--bounce-x");
     let bounce_y  = args.iter().any(|a| a == "--bounce-y");
     let steer  = args.iter().any(|a| a == "--steer");   // default: off
+    // Stagger: auto-default from canvas dimensions (only when wrapping is on), override with flags.
+    // stagger_y: Y-shift when crossing X boundary (landscape default: W-H when W>H).
+    // stagger_x: X-shift when crossing Y boundary (portrait default: H-W when H>W).
+    // --no-stagger disables auto; --stagger-x / --stagger-y override independently.
+    let no_stagger = args.iter().any(|a| a == "--no-stagger");
+    let auto_stagger_y = if (wrap_x || wrap_y) && W() > H() { (W() - H()) as f32 } else { 0.0 };
+    let auto_stagger_x = if (wrap_x || wrap_y) && H() > W() { (H() - W()) as f32 } else { 0.0 };
+    let stagger_x: f32 = if no_stagger { 0.0 } else {
+        parse_arg("--stagger-x").and_then(|s| s.parse().ok()).unwrap_or(auto_stagger_x)
+    };
+    let stagger_y: f32 = if no_stagger { 0.0 } else {
+        parse_arg("--stagger-y").and_then(|s| s.parse().ok()).unwrap_or(auto_stagger_y)
+    };
     let pos_rotation_enabled =  args.iter().any(|a| a == "--pos-color");     // default: off
     let pos_rotation_output  =  args.iter().any(|a| a == "--pos-color-out"); // default: off
     let tile_2x2             =  args.iter().any(|a| a == "--tile-2x2");      // default: off
