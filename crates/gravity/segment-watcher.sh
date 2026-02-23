@@ -181,9 +181,9 @@ while true; do
 
                 # Current state from render log (last stats line before chunk boundary)
                 STATE_LINE=$(grep "avg_spd" /tmp/gravity_render.log 2>/dev/null | tail -1 || true)
-                CUR_POP=$(  echo "$STATE_LINE" | grep -oE 'pop=[0-9]+'     | cut -d= -f2)
-                CUR_SPD=$(  echo "$STATE_LINE" | grep -oE 'avg_spd=[0-9.]+' | cut -d= -f2)
-                CUR_P10=$(  echo "$STATE_LINE" | grep -oE 'p10=[0-9.]+'     | cut -d= -f2)
+                CUR_POP=$(  echo "$STATE_LINE" | grep -oE 'pop=[0-9]+'     2>/dev/null | cut -d= -f2 || true)
+                CUR_SPD=$(  echo "$STATE_LINE" | grep -oE 'avg_spd=[0-9.]+' 2>/dev/null | cut -d= -f2 || true)
+                CUR_P10=$(  echo "$STATE_LINE" | grep -oE 'p10=[0-9.]+'     2>/dev/null | cut -d= -f2 || true)
                 STATE_MSG=""
                 [ -n "$CUR_POP" ] && STATE_MSG="pop=${CUR_POP} avg_spd=${CUR_SPD} p10=${CUR_P10}"
 
