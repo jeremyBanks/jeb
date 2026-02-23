@@ -3991,7 +3991,7 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
 
 // [recovery] edit target not found, appending:
     let (mut sim, mut canvas, start_frame) =
-        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
+        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
         .map(|(s, c, sf)| {
             println!("Resuming from checkpoint: frame {} / {}", sf, total_frames);
             (s, c, sf)
