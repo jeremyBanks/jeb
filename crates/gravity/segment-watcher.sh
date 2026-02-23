@@ -83,7 +83,8 @@ make_preview() {
         [a4]atrim=start=${c0}:duration=${CLIP_FULL},asetpts=PTS-STARTPTS[acf];
         [a5]atrim=start=${c1}:duration=${slow_audio_dur},asetpts=PTS-STARTPTS[acs];
         [vaf][aaf][vas][aas][vbf][abf][vbs][abs][vcf][acf][vcs][acs]concat=n=6:v=1:a=1[vout][aout]
-    " -map "[vout]" -map "[aout]" -c:v libx264 -crf 22 -preset fast -c:a aac -b:a 128k "$out" 2>/tmp/watcher_ffmpeg.log
+    " -map "[vout]" -map "[aout]" -c:v libx264 -crf 22 -preset fast -c:a aac -b:a 128k "$out" 2>/tmp/watcher_ffmpeg.log || true
+    [ -f "$out" ]  # return success only if output file exists
 }
 
 # ── main loop ───────────────────────────────────────────────────────────────
