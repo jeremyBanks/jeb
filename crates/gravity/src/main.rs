@@ -1791,10 +1791,6 @@ fn main() {
     }
     let birth_chance: Option<f32> = parse_arg("--birth-chance").and_then(|s| parse_chance(&s));
     let death_chance: Option<f32> = parse_arg("--death-chance").and_then(|s| parse_chance(&s));
-    
-    let conway_every: usize = parse_arg("--conway-every")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(1); // default: every tick
 
     // --init-vel MODE: initial velocity field for seeded cells.
     //   swirl     (default) — asymmetric quadrant bias, net angular momentum
