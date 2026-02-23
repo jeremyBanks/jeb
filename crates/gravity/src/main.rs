@@ -238,7 +238,6 @@ struct Sim {
     rate_limit: usize,
     birth_chance: Option<f32>,  // if set, each birth candidate has this probability (replaces rate_limit for births)
     death_chance: Option<f32>,  // if set, each death candidate has this probability (replaces rate_limit for deaths)
-    conway_every: usize, // fire Conway every N ticks (1 = every tick, 4 = every 4th tick)
     tick_count: usize,
     prev_live: Vec<bool>,
     wrap_x: bool,  // toroidal wrapping on x-axis (horizontal)
