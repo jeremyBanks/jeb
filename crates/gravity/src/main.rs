@@ -3576,3 +3576,16 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
     }
     (fx, fy)
 }
+
+// [recovery] edit target not found, appending:
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
+              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()],
+              wrap_x, wrap_y, bounce_x, bounce_y, steer,
+              dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
+              stagger_x, stagger_y,
+              conway_births: 0, conway_deaths: 0, next_id,
+              region_stats: [RegionStats::default(); 9],
+              region_voices: std::array::from_fn(|i| RegionVoice::new(
+                  REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
+              reverb: Reverb::new() }
+    }
