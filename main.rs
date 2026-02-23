@@ -92,7 +92,7 @@ impl RegionVoice {
         &output_file_local
     };
     if std::path::Path::new(final_video).exists() {
-        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        let preview_path = format!("/Users/matte/.openclaw/workspace/shared/gravity/preview_{}.mp4", run_id);
         // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
         let dur_secs = seconds as f64;
         let mid = dur_secs / 2.0;
@@ -303,7 +303,7 @@ impl QNode {
         &output_file_local
     };
     if std::path::Path::new(final_video).exists() {
-        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        let preview_path = format!("/Users/matte/.openclaw/workspace/shared/gravity/preview_{}.mp4", run_id);
         // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
         let dur_secs = seconds as f64;
         let mid = dur_secs / 2.0;
@@ -416,7 +416,7 @@ fn qt_insert(nodes: &mut Vec<QNode>, idx: usize, body: usize, px: f32, py: f32, 
         &output_file_local
     };
     if std::path::Path::new(final_video).exists() {
-        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        let preview_path = format!("/Users/matte/.openclaw/workspace/shared/gravity/preview_{}.mp4", run_id);
         // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
         let dur_secs = seconds as f64;
         let mid = dur_secs / 2.0;
@@ -1609,7 +1609,7 @@ fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, pale
         &output_file_local
     };
     if std::path::Path::new(final_video).exists() {
-        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        let preview_path = format!("/Users/matte/.openclaw/workspace/shared/gravity/preview_{}.mp4", run_id);
         // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
         let dur_secs = seconds as f64;
         let mid = dur_secs / 2.0;
@@ -1775,7 +1775,7 @@ fn delete_frames(frames_dir: &str) {
         &output_file_local
     };
     if std::path::Path::new(final_video).exists() {
-        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        let preview_path = format!("/Users/matte/.openclaw/workspace/shared/gravity/preview_{}.mp4", run_id);
         // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
         let dur_secs = seconds as f64;
         let mid = dur_secs / 2.0;
@@ -2273,7 +2273,7 @@ fn main() {
         &output_file_local
     };
     if std::path::Path::new(final_video).exists() {
-        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        let preview_path = format!("/Users/matte/.openclaw/workspace/shared/gravity/preview_{}.mp4", run_id);
         // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
         let dur_secs = seconds as f64;
         let mid = dur_secs / 2.0;
