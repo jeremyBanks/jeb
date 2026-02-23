@@ -3617,3 +3617,115 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
             // Apply stagger offsets after wrapping (order-independent; computed from pre-wrap state)
             if stagger_ny_add != 0.0 { ny = (ny + stagger_ny_add).rem_euclid(H() as f32); }
             if stagger_nx_add != 0.0 { nx = (nx + stagger_nx_add).rem_euclid(W() as f32); }
+
+// [recovery] edit target not found, appending:
+/// Build the ffmpeg filter_complex string for 2×2 tiling with stagger-aware edge alignment.
+///
+/// On a staggered torus the four tiles aren't all identical copies — adjacent tiles must be
+/// rolled so that their edges match where the topology actually connects:
+///   TL (col=0,row=0): unrolled
+///   TR (col=1,row=0): y-rolled up by stagger_y   (right neighbour is shifted down by stagger_y)
+///   BL (col=0,row=1): x-rolled left by stagger_x (bottom neighbour is shifted right by stagger_x)
+///   BR (col=1,row=1): both rolls combined
+///
+/// When stagger is zero the filtergraph degenerates to the original simple 2×2 clone.
+fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> String {
+    let ow = w * 2;
+    let oh = h * 2;
+    // Round to nearest pixel; clamp so crops are valid (shouldn't be needed but be safe).
+    let dy = (stagger_y.round() as usize).min(h.saturating_sub(1));
+    let dx = (stagger_x.round() as usize).min(w.saturating_sub(1));
+
+    if dx == 0 && dy == 0 {
+        // No stagger — all four tiles are identical.
+        format!(
+            "[0:v]split=4[a][b][c][d];[a][b]hstack[top];[c][d]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else if dx == 0 {
+        // Only vertical stagger (landscape default: stagger_y = W-H).
+        // TL = BL = unrolled; TR = BR = y-rolled up by dy.
+        // y-roll-up by dy: lower dy rows become new top → [lower][upper] vstack.
+        let h_upper = h - dy;
+        format!(
+            "[0:v]split=4[tl][bl][ra][rb];\
+             [ra]crop={w}:{h_upper}:0:{dy}[yu];[rb]crop={w}:{dy}:0:0[yl];\
+             [yl][yu]vstack[rsrc];[rsrc]split=2[tr][br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else if dy == 0 {
+        // Only horizontal stagger (portrait default: stagger_x = H-W).
+        // TL = TR = unrolled; BL = BR = x-rolled left by dx.
+        // x-roll-left by dx: rightmost dx columns become new left → [right][left] hstack.
+        let w_right = w - dx;
+        format!(
+            "[0:v]split=4[tl][tr][ra][rb];\
+             [ra]crop={w_right}:{h}:{dx}:0[xr];[rb]crop={dx}:{h}:0:0[xl];\
+             [xr][xl]hstack[rsrc];[rsrc]split=2[bl][br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else {
+        // Both stagger non-zero: four distinct tiles.
+        // Build y-rolled source first, then x-roll it for BR; x-rolled source for BL.
+        let h_upper = h - dy;
+        let w_right = w - dx;
+        format!(
+            "[0:v]split=5[tl][yr_a][yr_b][xr_a][xr_b];\
+             [yr_a]crop={w}:{h_upper}:0:{dy}[yu];[yr_b]crop={w}:{dy}:0:0[yl];\
+             [yl][yu]vstack[ysrc];[ysrc]split=2[tr][br_y];\
+             [xr_a]crop={w_right}:{h}:{dx}:0[xr];[xr_b]crop={dx}:{h}:0:0[xl];\
+             [xr][xl]hstack[bl];\
+             [br_y]split=2[br_ya][br_yb];\
+             [br_ya]crop={w_right}:{h}:{dx}:0[brr];[br_yb]crop={dx}:{h}:0:0[brl];\
+             [brr][brl]hstack[br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    }
+}
+
+fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
+                tile_2x2: bool, stagger_x: f32, stagger_y: f32) {
+    let ow = OUT_W() * 2;
+    let oh = OUT_H() * 2;
+    let status = if tile_2x2 {
+        let fc = build_tile_filter(OUT_W(), OUT_H(), stagger_x, stagger_y);
+        Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate", &FPS.to_string(),
+                "-pattern_type", "glob",
+                "-i", &format!("{frames_dir}/*.png"),
+                "-filter_complex", &fc,
+                "-map", "[out]",
+                "-c:v", "libx264",
+                "-crf", &CRF.to_string(),
+                "-pix_fmt", "yuv420p",
+                "-f", "mp4",
+                seg_path,
+            ])
+            .status()
+            .expect("ffmpeg failed")
+    } else {
+        let scale = format!("scale={ow}:{oh}:flags=neighbor");
+        Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate", &FPS.to_string(),
+                "-pattern_type", "glob",
+                "-i", &format!("{frames_dir}/*.png"),
+                "-vf", &scale,
+                "-c:v", "libx264",
+                "-crf", &CRF.to_string(),
+                "-pix_fmt", "yuv420p",
+                "-f", "mp4",
+                seg_path,
+            ])
+            .status()
+            .expect("ffmpeg failed")
+    };
+    assert!(status.success(), "ffmpeg exited non-zero for {seg_path}");
+    println!("  encoded {n_frames} frames → {seg_path}");
+}
