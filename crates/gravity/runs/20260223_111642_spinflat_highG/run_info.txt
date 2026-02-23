@@ -1,0 +1,34 @@
+run_id=20260223_111642_spinflat_highG
+run_id:        20260223_111642_spinflat_highG
+seed:          853339778
+frames:        32768
+seconds:       546
+commit:        ac725bc78424
+gravity:       0.09375
+softening:     3.75
+speed_cap:     2
+pop_target:    1024
+pop_band:      128
+rate_limit:    16
+conway_every:  1
+seed_density:  1/128
+init_pop:      320
+init_vel:      spin-flat
+circles:       none
+vel_scale:     1
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+stagger_x:     0
+stagger_y:     80
+dampen_x:      0
+dampen_y:      0
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    256x160 → 512x320

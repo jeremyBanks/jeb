@@ -8,7 +8,6 @@ speed_cap:     4
 pop_target:    1536
 pop_band:      1472
 rate_limit:    4
-conway_every:  4
 seed_density:  1/128
 init_pop:      1536
 init_vel:      spin

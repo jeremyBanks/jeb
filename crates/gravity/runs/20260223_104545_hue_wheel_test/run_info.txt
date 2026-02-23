@@ -1,9 +1,9 @@
-run_id=seed44
-run_id:        seed44
-seed:          44
-frames:        480
-seconds:       8
-commit:        unknown
+run_id=20260223_104545_hue_wheel_test
+run_id:        20260223_104545_hue_wheel_test
+seed:          3279865137
+frames:        16384
+seconds:       273
+commit:        ac725bc78424
 gravity:       0.16
 softening:     3.5
 speed_cap:     4.5
@@ -20,8 +20,8 @@ wrap_x:        true
 wrap_y:        true
 bounce_x:      false
 bounce_y:      false
-stagger_x:     0
-stagger_y:     96
+stagger_x:     96
+stagger_y:     0
 dampen_x:      0
 dampen_y:      0.06
 vel_decay:     0

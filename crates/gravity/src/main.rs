@@ -183,7 +183,6 @@ struct Sim {
     rate_limit: usize,
     birth_chance: Option<f32>,  // if set, each birth candidate has this probability (replaces rate_limit for births)
     death_chance: Option<f32>,  // if set, each death candidate has this probability (replaces rate_limit for deaths)
-    conway_every: usize, // fire Conway every N ticks (1 = every tick, 4 = every 4th tick)
     tick_count: usize,
     prev_live: Vec<bool>,
     wrap_x: bool,  // toroidal wrapping on x-axis (horizontal)
@@ -377,7 +376,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
            rate_limit: usize, birth_chance: Option<f32>, death_chance: Option<f32>,
-           conway_every: usize, seed_density_inv: usize, target_pop: usize,
+           seed_density_inv: usize, target_pop: usize,
            wrap_x: bool, wrap_y: bool, bounce_x: bool, bounce_y: bool, steer: bool,
            dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32,
            stagger_x: f32, stagger_y: f32,
@@ -661,7 +660,7 @@ impl Sim {
         let n = cells.len();
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
               pop_band, rate_limit, birth_chance, death_chance,
-              conway_every, tick_count: 0, prev_live: vec![false; W() * H()],
+              tick_count: 0, prev_live: vec![false; W() * H()],
               wrap_x, wrap_y, bounce_x, bounce_y, steer,
               dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
               stagger_x, stagger_y,
@@ -705,7 +704,7 @@ impl Sim {
 
     fn load_checkpoint(path: &str, g: f32, softening: f32, speed_cap: f32,
                        pop_band: f32, rate_limit: usize, birth_chance: Option<f32>, death_chance: Option<f32>,
-                       conway_every: usize, _seed_density_inv: usize,
+                       _seed_density_inv: usize,
                        target_pop: usize, wrap_x: bool, wrap_y: bool,
                        bounce_x: bool, bounce_y: bool, steer: bool,
                        dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32,
@@ -756,7 +755,7 @@ impl Sim {
         let order = (0..cells.len()).collect();
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
                         start_pop: target_pop, pop_band, rate_limit, birth_chance, death_chance,
-                        conway_every, tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
+                        tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
                         dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
                         stagger_x, stagger_y,
                         conway_births: 0, conway_deaths: 0,
@@ -1185,9 +1184,7 @@ impl Sim {
     }
 
     fn tick(&mut self) {
-        if self.tick_count % self.conway_every == 0 {
-            self.conway_step();
-        }
+        self.conway_step();
         self.gravity_step();
         self.tick_count += 1;
     }
@@ -2256,10 +2253,6 @@ fn main() {
     }
     let birth_chance: Option<f32> = parse_arg("--birth-chance").and_then(|s| parse_chance(&s));
     let death_chance: Option<f32> = parse_arg("--death-chance").and_then(|s| parse_chance(&s));
-    
-    let conway_every: usize = parse_arg("--conway-every")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(1); // default: every tick
 
     // --init-vel MODE: initial velocity field for seeded cells.
     //   swirl     (default) — asymmetric quadrant bias, net angular momentum
@@ -2315,7 +2308,7 @@ fn main() {
         "run_id:        {run_id}\nseed:          {rng_seed}\nframes:        {total_frames}\nseconds:       {seconds}\n\
          commit:        {commit_id}\n\
          gravity:       {g}\nsoftening:     {softening}\nspeed_cap:     {speed_cap}\n\
-         pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\nconway_every:  {conway_every}\n\
+         pop_target:    {target_pop}\npop_band:      {pop_band}\nrate_limit:    {rate_limit}\n\
          seed_density:  1/{seed_density_inv}\ninit_pop:      {init_pop}\ninit_vel:      {init_vel}\n\
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\nstagger_x:     {stagger_x}\nstagger_y:     {stagger_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nvel_decay:     {vel_decay}\nvel_nudge:     {vel_nudge}\nvel_nudge_rate:{vel_nudge_rate}\nsteer:         {steer}\n\
@@ -2336,7 +2329,7 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_frame) =
-        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
+        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
         .map(|(s, c, sf)| {
             println!("Resuming from checkpoint: frame {} / {}", sf, total_frames);
             (s, c, sf)
@@ -2347,7 +2340,7 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W() * H() * 3];
             (s, c, 0)
         });
