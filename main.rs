@@ -520,7 +520,8 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
 
 impl Sim {
     fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
-           rate_limit: usize, conway_every: usize, seed_density_inv: usize, target_pop: usize,
+           rate_limit: usize, birth_chance: Option<f32>, death_chance: Option<f32>,
+           conway_every: usize, seed_density_inv: usize, target_pop: usize,
            wrap_x: bool, wrap_y: bool, bounce_x: bool, bounce_y: bool, steer: bool,
            dampen_x: f32, dampen_y: f32, vel_decay: f32, vel_nudge: f32, vel_nudge_rate: f32,
            stagger_x: f32, stagger_y: f32,
