@@ -4002,7 +4002,7 @@ fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
             let c = vec![0.0f32; W() * H() * 3];
             (s, c, 0)
         });
