@@ -3592,3 +3592,28 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
                   REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
               reverb: Reverb::new() }
     }
+
+// [recovery] edit target not found, appending:
+            // X axis
+            let mut stagger_ny_add = 0.0f32;
+            if self.wrap_x {
+                if nx < 0.0              { stagger_ny_add -= self.stagger_y; }
+                else if nx >= W() as f32 { stagger_ny_add += self.stagger_y; }
+                nx = nx.rem_euclid(W() as f32);
+            } else if self.bounce_x {
+                if nx < 0.0       { nx = -nx;                      nvx = -nvx; }
+                else if nx >= W() as f32 { nx = 2.0 * W() as f32 - nx; nvx = -nvx; }
+            } else if nx < 0.0 || nx >= W() as f32 { continue; }
+            // Y axis
+            let mut stagger_nx_add = 0.0f32;
+            if self.wrap_y {
+                if ny < 0.0              { stagger_nx_add -= self.stagger_x; }
+                else if ny >= H() as f32 { stagger_nx_add += self.stagger_x; }
+                ny = ny.rem_euclid(H() as f32);
+            } else if self.bounce_y {
+                if ny < 0.0       { ny = -ny;                      nvy = -nvy; }
+                else if ny >= H() as f32 { ny = 2.0 * H() as f32 - ny; nvy = -nvy; }
+            } else if ny < 0.0 || ny >= H() as f32 { continue; }
+            // Apply stagger offsets after wrapping (order-independent; computed from pre-wrap state)
+            if stagger_ny_add != 0.0 { ny = (ny + stagger_ny_add).rem_euclid(H() as f32); }
+            if stagger_nx_add != 0.0 { nx = (nx + stagger_nx_add).rem_euclid(W() as f32); }
