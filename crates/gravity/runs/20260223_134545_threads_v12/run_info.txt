@@ -1,0 +1,33 @@
+run_id=20260223_134545_threads_v12
+run_id:        20260223_134545_threads_v12
+seed:          1692030484
+frames:        32768
+seconds:       546
+commit:        ac725bc78424
+gravity:       0.145
+softening:     4.1
+speed_cap:     4.2
+pop_target:    800
+pop_band:      224
+rate_limit:    60
+seed_density:  1/128
+init_pop:      800
+init_vel:      spin
+circles:       17
+vel_scale:     1.9
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+stagger_x:     0
+stagger_y:     24
+dampen_x:      0
+dampen_y:      0.065
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    224x224 → 448x448
