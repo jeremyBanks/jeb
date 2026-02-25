@@ -151,7 +151,7 @@ pub struct GridConfig {
 
 impl GridConfig {
     pub fn new(width: usize, height: usize) -> Self {
-        let stagger_x = if width > height && width % 2 == 0 {
+        let stagger_x = if width > height && width.is_multiple_of(2) {
             (width / 2) as i32
         } else {
             0
