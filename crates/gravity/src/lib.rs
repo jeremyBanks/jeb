@@ -352,7 +352,7 @@ impl Partli {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::SeedableRng;
+    use rand::{Rng, SeedableRng};
     use rand_chacha::ChaCha8Rng;
 
     /// Test that wrap is idempotent
