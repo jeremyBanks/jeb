@@ -3,7 +3,7 @@
 //! This crate implements the Partli simulation as specified in DESIGN.md,
 //! with a focus on verifying invariants through property-based testing.
 
-use rand::Rng;
+
 
 /// 2D vector for positions and velocities
 #[derive(Debug, Clone, Copy, PartialEq)]
