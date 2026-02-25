@@ -43,7 +43,23 @@
 
 
 
-/// 2D vector for positions and velocities
+/// A 2D vector for positions and velocities.
+///
+/// Implements common vector operations: addition, subtraction, scalar multiplication.
+/// Used for both particle positions (in grid coordinates) and velocities.
+///
+/// # Example
+///
+/// ```rust
+/// use partli::Vec2;
+///
+/// let v1 = Vec2::new(3.0, 4.0);
+/// assert!((v1.magnitude() - 5.0).abs() < 1e-10);
+///
+/// let v2 = Vec2::new(1.0, 1.0);
+/// let sum = v1 + v2;
+/// assert_eq!(sum, Vec2::new(4.0, 5.0));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec2 {
     pub x: f64,
