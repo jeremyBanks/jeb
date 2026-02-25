@@ -99,3 +99,66 @@ pub fn u8_set_bit(x: &mut u8, offset: u8, value: bool) {
         *x &= !mask;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::proptest::prelude::*;
+
+    proptest! {
+        /// Roundtrip: u8s -> u16 -> u8s
+        #[test]
+        fn u8s_roundtrip(a: u8, b: u8) {
+            let combined = u8s_to_u16(a, b);
+            let (a2, b2) = u16_to_u8s(combined);
+            prop_assert_eq!(a, a2);
+            prop_assert_eq!(b, b2);
+        }
+
+        /// Roundtrip: u16 -> u8s -> u16
+        #[test]
+        fn u16_roundtrip(x: u16) {
+            let (a, b) = u16_to_u8s(x);
+            let x2 = u8s_to_u16(a, b);
+            prop_assert_eq!(x, x2);
+        }
+
+        /// Get-Set roundtrip: setting a bit then getting it returns the set value
+        #[test]
+        fn bit_set_get_roundtrip(initial: u8, offset in 0u8..8, value: bool) {
+            let mut x = initial;
+            u8_set_bit(&mut x, offset, value);
+            prop_assert_eq!(u8_get_bit(x, offset), value);
+        }
+
+        /// Setting a bit only affects that bit
+        #[test]
+        fn bit_set_isolation(initial: u8, offset in 0u8..8, value: bool) {
+            let mut x = initial;
+            u8_set_bit(&mut x, offset, value);
+            
+            // Check all other bits are unchanged
+            for other in 0u8..8 {
+                if other != offset {
+                    prop_assert_eq!(
+                        u8_get_bit(x, other),
+                        u8_get_bit(initial, other),
+                        "bit {} changed when setting bit {}", other, offset
+                    );
+                }
+            }
+        }
+
+        /// Setting a bit twice to the same value is idempotent
+        #[test]
+        fn bit_set_idempotent(initial: u8, offset in 0u8..8, value: bool) {
+            let mut x1 = initial;
+            u8_set_bit(&mut x1, offset, value);
+            
+            let mut x2 = x1;
+            u8_set_bit(&mut x2, offset, value);
+            
+            prop_assert_eq!(x1, x2);
+        }
+    }
+}
