@@ -1,9 +1,63 @@
-//! Partli: A Particle-Life Cellular Automaton
+//! # Partli: A Particle-Life Cellular Automaton
 //!
-//! This crate implements the Partli simulation as specified in DESIGN.md,
-//! with a focus on verifying invariants through property-based testing.
+//! Partli combines Conway's Game of Life with particle gravity simulation.
+//! Each live cell contains a particle with continuous position and velocity.
+//! Conway rules govern birth and death; gravity creates emergent physical behavior.
+//!
+//! ## Key Invariants
+//!
+//! - **Momentum Conservation**: Total momentum is conserved through births and deaths
+//! - **One Particle Per Cell**: At most one particle occupies each grid cell
+//! - **Toroidal Wrapping**: Grid edges wrap with optional stagger offset
+//!
+//! ## Quick Example
+//!
+//! ```rust
+//! use partli::{GridConfig, Partli, Vec2};
+//!
+//! // Create a 10x10 grid
+//! let config = GridConfig::new(10, 10);
+//! let mut sim = Partli::new(config);
+//!
+//! // Check initial state
+//! assert_eq!(sim.population(), 0);
+//! assert_eq!(sim.total_momentum(), Vec2::zero());
+//!
+//! // Birth a particle at cell (5, 5)
+//! sim.birth_particle(5, 5);
+//! assert_eq!(sim.population(), 1);
+//! ```
+//!
+//! ## Design
+//!
+//! See `DESIGN.md` in this crate for the complete specification, including:
+//! - Coordinate system and topology
+//! - Tick processing phases (Conway, Gravity, Movement, Color)
+//! - Parameter reference table
+//! - Edge cases and invariants
+//!
+//! ## Testing
+//!
+//! This crate includes property-based tests verifying the momentum invariant
+//! across random birth/death sequences. Run with `cargo test`.
 
-/// 2D vector for positions and velocities
+/// A 2D vector for positions and velocities.
+///
+/// Implements common vector operations: addition, subtraction, scalar multiplication.
+/// Used for both particle positions (in grid coordinates) and velocities.
+///
+/// # Example
+///
+/// ```rust
+/// use partli::Vec2;
+///
+/// let v1 = Vec2::new(3.0, 4.0);
+/// assert!((v1.magnitude() - 5.0).abs() < 1e-10);
+///
+/// let v2 = Vec2::new(1.0, 1.0);
+/// let sum = v1 + v2;
+/// assert_eq!(sum, Vec2::new(4.0, 5.0));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec2 {
     pub x: f64,
