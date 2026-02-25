@@ -1,5 +1,12 @@
+[package]
+name = "partli"
+version = "0.1.0"
+edition = "2021"
+description = "Partli: A Particle-Life Cellular Automaton"
+license = "MIT"
 
-// [recovery] edit target not found, appending:
 [dependencies]
-png = "0.17"
-ctrlc = { version = "3", features = ["termination"] }
+rand = "0.8"
+
+[dev-dependencies]
+rand_chacha = "0.3"
