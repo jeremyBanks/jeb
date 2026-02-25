@@ -68,7 +68,7 @@ This fork (`mattemoon/jeb`) includes the following additions and changes from th
 - **Upstream tracking** - Regular merges from `upstream/jeb/jeb` to stay current
 - **`save` metadata** - Automated commit metadata using git-snapshot conventions
 
-All upstream commits are preserved; this fork is 987 commits ahead, 0 behind.
+All upstream commits are preserved; this fork is 1525 commits ahead, 0 behind.
 
 ---
 
