@@ -32,9 +32,18 @@ echo "Hello World" | cargo run -p jeb --bin jeb -- stdin to-hex stdout
 | `parse-hex` | ✓ Works | Hex string → bytes |
 | `to-binary` | ✓ Works | Bytes → binary string (0/1) |
 | `parse-binary` | ✓ Works | Binary string → bytes |
+| `to-base64` | ✓ Works | Bytes → base64 string |
+| `parse-base64` | ✓ Works | Base64 string → bytes (whitespace-tolerant) |
 | `encode-z85` | ✓ Works | Z85 encode (via z855 crate) |
 | `decode-z85` | ✓ Works | Z85 decode |
 | `encode-jeb85` | ✓ Works | Same as encode-z85 currently |
+
+### JSON
+| Command | Status | Description |
+|---------|--------|-------------|
+| `parse-json` | ✓ Works | Parse JSON text into Value |
+| `to-json` | ✓ Works | Serialize Value to compact JSON |
+| `to-json-pretty` | ✓ Works | Serialize Value to pretty JSON |
 
 ### Splitting/Chunking
 | Command | Status | Description |
@@ -78,9 +87,7 @@ echo "Hello World" | cargo run -p jeb --bin jeb -- stdin to-hex stdout
 Based on `history-pit/_.md/20251129-fa3339-69404869-slop-CONCEPTUAL-MODEL.md`:
 
 ### Not Yet Implemented
-- `parse-json` / `to-json` — JSON parsing/serialization
 - `parse-xml` / `to-xml` — XML support
-- `from-base64` / `to-base64` — Base64 encoding
 - `sort` — Sort items
 - `chain` — Concatenate multiple streams
 - `merge` — Interleave streams by ordering
