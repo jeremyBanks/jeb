@@ -107,6 +107,8 @@ pub async fn inner_main() -> Result<(), Panic> {
             "parse-json" => parse_json(state).await?,
             "to-json" => to_json(state).await?,
             "to-json-pretty" => to_json_pretty(state).await?,
+            "to-base64" => to_base64(state).await?,
+            "parse-base64" => parse_base64(state).await?,
             "split-whitespace" => split_whitespace(state).await?,
             "--all" => {
                 _default_mode = "all";
@@ -592,6 +594,52 @@ async fn to_json_pretty(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
                 // Not valid JSON, pass through unchanged
                 result.push(bytes);
             }
+        }
+    }
+    Ok(result)
+}
+
+async fn to_base64(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    use futures::StreamExt;
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_stream::bytes_source(byte_vecs);
+    let transformed = jeb_stream::to_base64(source);
+    let items: Vec<_> = transformed.collect().await;
+    let mut result = Vec::new();
+    for item_result in items {
+        match item_result {
+            Ok(jeb_stream::Item::Text(text)) => {
+                result.push(Bytes::from(text.as_bytes().to_vec()));
+            }
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
+                result.push(Bytes::from(bytes.to_vec()));
+            }
+            Ok(_) => {}
+            #[allow(unreachable_code)]
+            Err(e) => return Err(e.into()),
+        }
+    }
+    Ok(result)
+}
+
+async fn parse_base64(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    use futures::StreamExt;
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_stream::bytes_source(byte_vecs);
+    let transformed = jeb_stream::parse_base64(source);
+    let items: Vec<_> = transformed.collect().await;
+    let mut result = Vec::new();
+    for item_result in items {
+        match item_result {
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
+                result.push(Bytes::from(bytes.to_vec()));
+            }
+            Ok(jeb_stream::Item::Text(text)) => {
+                result.push(Bytes::from(text.as_bytes().to_vec()));
+            }
+            Ok(_) => {}
+            #[allow(unreachable_code)]
+            Err(e) => return Err(e.into()),
         }
     }
     Ok(result)
