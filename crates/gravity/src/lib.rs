@@ -323,8 +323,27 @@ impl Partli {
         self.cells.iter().filter(|c| c.alive).count()
     }
 
-    /// Execute a single birth with momentum conservation
-    /// Returns true if birth succeeded
+    /// Execute a single birth with momentum conservation.
+    /// 
+    /// # Momentum Conservation Proof
+    /// 
+    /// Let n = number of neighbors, each with velocity vᵢ.
+    /// Total momentum before: M = Σᵢ vᵢ
+    /// 
+    /// Each neighbor loses fraction 1/(n+1) of its velocity:
+    ///   vᵢ' = vᵢ - vᵢ/(n+1) = vᵢ × n/(n+1)
+    /// 
+    /// The newborn receives the sum of taken velocities:
+    ///   v_new = Σᵢ vᵢ/(n+1) = M/(n+1)
+    /// 
+    /// Total momentum after:
+    ///   M' = Σᵢ vᵢ' + v_new
+    ///      = Σᵢ vᵢ × n/(n+1) + M/(n+1)
+    ///      = M × n/(n+1) + M/(n+1)
+    ///      = M × (n + 1)/(n+1)
+    ///      = M  ∎
+    /// 
+    /// Returns true if birth succeeded.
     pub fn birth_particle(&mut self, cx: usize, cy: usize) -> bool {
         let idx = self.config.cell_index(cx, cy);
         if self.cells[idx].alive {
@@ -371,8 +390,26 @@ impl Partli {
         true
     }
 
-    /// Execute a single death with momentum conservation
-    /// Returns true if death succeeded
+    /// Execute a single death with momentum conservation.
+    /// 
+    /// # Momentum Conservation Proof
+    /// 
+    /// Let the dying particle have velocity v_d and n neighbors with velocities vᵢ.
+    /// Total momentum before: M = v_d + Σᵢ vᵢ
+    /// 
+    /// The dying particle's velocity is divided equally among neighbors:
+    ///   vᵢ' = vᵢ + v_d/n
+    /// 
+    /// Total momentum after (dying particle contributes 0):
+    ///   M' = Σᵢ vᵢ' = Σᵢ (vᵢ + v_d/n) = Σᵢ vᵢ + n × v_d/n = Σᵢ vᵢ + v_d = M  ∎
+    /// 
+    /// # Edge Case: UD=false with 0 neighbors
+    /// 
+    /// If unconserved_deaths is false and the particle has no neighbors,
+    /// death is cancelled (returns false). This prevents momentum loss when
+    /// there's no one to inherit the velocity.
+    /// 
+    /// Returns true if death succeeded.
     pub fn kill_particle(&mut self, cx: usize, cy: usize, unconserved_deaths: bool) -> bool {
         let idx = self.config.cell_index(cx, cy);
         if !self.cells[idx].alive {
