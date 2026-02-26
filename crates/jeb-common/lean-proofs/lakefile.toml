@@ -1,0 +1,10 @@
+name = "B1032Proof"
+version = "0.1.0"
+defaultTargets = ["b1032proof"]
+
+[[lean_lib]]
+name = "B1032Proof"
+
+[[lean_exe]]
+name = "b1032proof"
+root = "Main"

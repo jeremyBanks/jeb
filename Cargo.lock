@@ -4361,6 +4361,7 @@ name = "zerodmg-utils"
 version = "0.0.0-dev-2026-01-25.7901"
 dependencies = [
  "image 0.23.14",
+ "proptest",
 ]
 
 [[package]]
