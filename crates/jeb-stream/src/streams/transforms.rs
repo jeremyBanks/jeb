@@ -753,3 +753,104 @@ where
         }
     }
 }
+
+/// Transforms a stream of Items by parsing JSON text/bytes into Values.
+///
+/// Handles both `Item::Text` and `Item::Bytes`, parsing each as JSON.
+/// Successfully parsed items become `Item::Value`. Parse errors are yielded
+/// as stream errors.
+#[cfg(feature = "json")]
+pub fn parse_json<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            match serde_json::from_str::<jeb_value::Value>(text.as_ref()) {
+                                Ok(value) => yield Ok(Item::Value(value)),
+                                Err(_) => yield Err("invalid JSON"),
+                            }
+                        }
+                        Item::Bytes(bytes) => {
+                            match serde_json::from_slice::<jeb_value::Value>(bytes.as_ref()) {
+                                Ok(value) => yield Ok(Item::Value(value)),
+                                Err(_) => yield Err("invalid JSON"),
+                            }
+                        }
+                        Item::Value(value) => {
+                            // Already a value, pass through
+                            yield Ok(Item::Value(value));
+                        }
+                    }
+                }
+                Err(e) => yield Err(e),
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by serializing Values to JSON text.
+///
+/// `Item::Value` items are serialized to JSON. `Item::Text` and `Item::Bytes`
+/// are passed through unchanged (they're already text/binary).
+#[cfg(feature = "json")]
+pub fn to_json<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Value(value) => {
+                            match serde_json::to_string(&value) {
+                                Ok(json) => yield Ok(Item::Text(json.into())),
+                                Err(_) => yield Err("JSON serialization failed"),
+                            }
+                        }
+                        // Text and Bytes pass through - they're already in serialized form
+                        other => yield Ok(other),
+                    }
+                }
+                Err(e) => yield Err(e),
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by serializing Values to pretty-printed JSON.
+#[cfg(feature = "json")]
+pub fn to_json_pretty<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Value(value) => {
+                            match serde_json::to_string_pretty(&value) {
+                                Ok(json) => yield Ok(Item::Text(json.into())),
+                                Err(_) => yield Err("JSON serialization failed"),
+                            }
+                        }
+                        other => yield Ok(other),
+                    }
+                }
+                Err(e) => yield Err(e),
+            }
+        }
+    }
+}

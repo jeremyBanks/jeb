@@ -104,6 +104,9 @@ pub async fn inner_main() -> Result<(), Panic> {
             "to-hex" => to_hex(state).await?,
             "parse-binary" => parse_binary(state).await?,
             "to-binary" => to_binary(state).await?,
+            "parse-json" => parse_json(state).await?,
+            "to-json" => to_json(state).await?,
+            "to-json-pretty" => to_json_pretty(state).await?,
             "split-whitespace" => split_whitespace(state).await?,
             "--all" => {
                 _default_mode = "all";
@@ -517,6 +520,78 @@ async fn to_binary(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
             Ok(_) => {}
             #[allow(unreachable_code)]
             Err(e) => return Err(e.into()),
+        }
+    }
+    Ok(result)
+}
+
+async fn parse_json(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    use futures::StreamExt;
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_stream::bytes_source(byte_vecs);
+    let transformed = jeb_stream::parse_json(source);
+    let items: Vec<_> = transformed.collect().await;
+    let mut result = Vec::new();
+    for item_result in items {
+        match item_result {
+            Ok(jeb_stream::Item::Value(value)) => {
+                // For now, serialize back to JSON bytes for the CLI
+                // In the future, we might want to keep Values in a different state
+                let json = serde_json::to_string(&value)?;
+                result.push(Bytes::from(json.into_bytes()));
+            }
+            Ok(jeb_stream::Item::Text(text)) => {
+                result.push(Bytes::from(text.as_bytes().to_vec()));
+            }
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
+                result.push(Bytes::from(bytes.to_vec()));
+            }
+            #[allow(unreachable_code)]
+            Err(e) => return Err(e.into()),
+        }
+    }
+    Ok(result)
+}
+
+async fn to_json(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    use futures::StreamExt;
+    let byte_vecs: Vec<Vec<u8>> = state.into_iter().map(|b| b.to_vec()).collect();
+    let source = jeb_stream::bytes_source(byte_vecs);
+    let transformed = jeb_stream::to_json(source);
+    let items: Vec<_> = transformed.collect().await;
+    let mut result = Vec::new();
+    for item_result in items {
+        match item_result {
+            Ok(jeb_stream::Item::Text(text)) => {
+                result.push(Bytes::from(text.as_bytes().to_vec()));
+            }
+            Ok(jeb_stream::Item::Bytes(bytes)) => {
+                result.push(Bytes::from(bytes.to_vec()));
+            }
+            Ok(jeb_stream::Item::Value(value)) => {
+                let json = serde_json::to_string(&value)?;
+                result.push(Bytes::from(json.into_bytes()));
+            }
+            #[allow(unreachable_code)]
+            Err(e) => return Err(e.into()),
+        }
+    }
+    Ok(result)
+}
+
+async fn to_json_pretty(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    // Parse as JSON and re-serialize with pretty printing
+    let mut result = Vec::new();
+    for bytes in state {
+        match serde_json::from_slice::<jeb_value::Value>(&bytes) {
+            Ok(value) => {
+                let json = serde_json::to_string_pretty(&value)?;
+                result.push(Bytes::from(json.into_bytes()));
+            }
+            Err(_) => {
+                // Not valid JSON, pass through unchanged
+                result.push(bytes);
+            }
         }
     }
     Ok(result)

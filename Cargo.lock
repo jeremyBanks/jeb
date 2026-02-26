@@ -1904,6 +1904,7 @@ dependencies = [
  "macro_rules_attribute",
  "parking_lot",
  "serde",
+ "serde_json",
  "static_assertions",
  "tokio",
  "tokio-stream",
