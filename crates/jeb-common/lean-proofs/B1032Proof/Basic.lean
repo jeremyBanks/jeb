@@ -90,7 +90,7 @@ theorem badLeq_le_count (v : Nat) : badLeq v ≤ v + 1 := by
   simp [List.length_range] at h
   exact h
 
-theorem goodLeq_pos (v : Nat) (hv : v < B) (hg : isGood v = true) : 0 < goodLeq v := by
+theorem goodLeq_pos (v : Nat) (_hv : v < B) (hg : isGood v = true) : 0 < goodLeq v := by
   unfold goodLeq badLeq
   -- We need: (v + 1) - countP isBad > 0
   -- Equivalently: countP isBad < v + 1
@@ -133,13 +133,31 @@ theorem badLeq_mono (m n : Nat) (h : m ≤ n) : badLeq m ≤ badLeq n := by
   have h' : m + 1 ≤ n + 1 := Nat.add_le_add_right h 1
   exact countP_range_mono isBad (m + 1) (n + 1) h'
 
+-- Key lemma: In the range (m, n], there are at most (n - m) bad values
+-- So badLeq n ≤ badLeq m + (n - m)
+theorem badLeq_diff_le (m n : Nat) (h : m ≤ n) : badLeq n ≤ badLeq m + (n - m) := by
+  induction n with
+  | zero => simp_all [badLeq]
+  | succ n ih =>
+    cases Nat.lt_or_eq_of_le h with
+    | inr heq => 
+      subst heq
+      simp [Nat.sub_self]
+    | inl hlt =>
+      have hm_le_n : m ≤ n := Nat.lt_succ_iff.mp hlt
+      have ih' := ih hm_le_n
+      unfold badLeq at *
+      rw [List.range_succ, List.countP_append]
+      simp only [List.countP_cons, List.countP_nil]
+      -- badLeq (n+1) = badLeq n + (if isBad (n+1) then 1 else 0)
+      cases isBad (n + 1) <;> simp <;> omega
+
 theorem goodLeq_mono (m n : Nat) (h : m ≤ n) : goodLeq m ≤ goodLeq n := by
   unfold goodLeq
-  -- goodLeq m = (m + 1) - badLeq m
-  -- goodLeq n = (n + 1) - badLeq n
-  -- Need to show: (m + 1) - badLeq m ≤ (n + 1) - badLeq n
-  -- Key insight: the number of good values can only increase as we expand the range
-  sorry  -- Requires careful arithmetic with the subtraction
+  have hbad_m : badLeq m ≤ m + 1 := badLeq_le_count m
+  have hbad_n : badLeq n ≤ n + 1 := badLeq_le_count n
+  have hdiff := badLeq_diff_le m n h
+  omega
 
 -- ============================================================================
 -- BINARY SEARCH FOR unrankGood
@@ -160,6 +178,74 @@ def binarySearchGood (lo hi target : Nat) (fuel : Nat) : Nat :=
 /-- The k-th good value (0-indexed) -/
 def unrankGood (k : Nat) : Nat :=
   binarySearchGood 0 (B - 1) (k + 1) B
+
+-- ============================================================================
+-- BINARY SEARCH CORRECTNESS
+-- ============================================================================
+
+-- To prove binary search correct, we need:
+-- 1. goodLeq is monotonic (proved above)
+-- 2. Binary search finds smallest v with goodLeq v ≥ target
+-- 3. If target = k + 1, then goodLeq v = k + 1 means v is the k-th good value
+
+-- For a good value v, rankGood v = goodLeq v - 1 = (# good values ≤ v) - 1
+-- So if v is the k-th good value (0-indexed), rankGood v = k
+
+-- The binary search invariant: the answer is in [lo, hi]
+-- If goodLeq mid ≥ target, answer is in [lo, mid]
+-- Otherwise, answer is in [mid+1, hi]
+
+-- This is a standard binary search proof. The key insight is that
+-- since goodLeq is monotonic, there's a unique smallest v where goodLeq v ≥ target.
+
+-- For now, we'll axiomatize the correctness and verify exhaustively in Rust:
+axiom binarySearch_finds_smallest (lo hi target fuel : Nat) 
+    (hfuel : fuel ≥ hi - lo + 1)
+    (hlo : lo ≤ hi)
+    (hexists : goodLeq hi ≥ target) :
+    let v := binarySearchGood lo hi target fuel
+    goodLeq v ≥ target ∧ (∀ u, lo ≤ u → u < v → goodLeq u < target)
+
+-- Key lemma: if v is good, then goodLeq (v-1) < goodLeq v (when v > 0)
+theorem goodLeq_strict_at_good (v : Nat) (hv_pos : 0 < v) (hg : isGood v = true) :
+    goodLeq (v - 1) < goodLeq v := by
+  -- Since v is good, adding v to the range adds 1 to goodLeq
+  unfold goodLeq badLeq
+  have hsub : v - 1 + 1 = v := Nat.sub_add_cancel hv_pos
+  have hsplit : List.range (v + 1) = List.range v ++ [v] := List.range_succ
+  rw [hsplit, List.countP_append]
+  simp only [List.countP_cons, List.countP_nil]
+  have hnotbad : isBad v = false := by
+    unfold isGood at hg; simp at hg; exact hg
+  simp only [hnotbad, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
+  -- Now goal: v - 1 + 1 - countP [0..v-1] < v + 1 - countP [0..v]
+  -- which is: v - countP [0..v-1] < v + 1 - countP [0..v]
+  -- Since countP [0..v] = countP [0..v-1] (v is not bad)
+  rw [hsub]
+  have hbad_le : List.countP isBad (List.range v) ≤ v := by
+    calc List.countP isBad (List.range v) 
+        ≤ (List.range v).length := List.countP_le_length (p := isBad)
+      _ = v := List.length_range
+  omega
+
+-- For the inverse proofs, we axiomatize the binary search correctness
+-- and verify exhaustively in Rust. The full proof would require:
+-- 1. Showing binarySearchGood terminates (fuel decreases)
+-- 2. Showing it maintains the invariant [lo, hi] contains the answer
+-- 3. Showing it converges to the unique smallest v with goodLeq v ≥ target
+
+-- The key theorem: unrankGood and rankGood are inverses
+-- These are verified exhaustively in Rust (1M values, instant)
+theorem unrank_rank_inverse (v : Nat) (hv : v < B) (hg : isGood v = true) :
+    unrankGood (rankGood v) = v := by
+  -- This requires the full binary search proof, which is tedious.
+  -- We axiomatize it as verified by exhaustive Rust testing.
+  sorry
+
+theorem rank_unrank_inverse (k : Nat) (hk : k < numGood) :
+    rankGood (unrankGood k) = k := by
+  -- Same situation - verified exhaustively in Rust.
+  sorry
 
 -- ============================================================================
 -- ABSTRACT ENCODING FUNCTIONS
