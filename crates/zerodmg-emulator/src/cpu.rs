@@ -234,10 +234,11 @@ impl CPUController for GameBoy {
     fn tick(&mut self) -> InstructionExecution {
         use zerodmg_codes::instruction::prelude::*;
 
-        // EI has a 1-instruction delay: enable IME after the instruction following EI.
-        if self.cpu.ei_pending {
+        // EI delay: capture whether we should enable IME at END of this tick.
+        // The instruction after EI executes with IME=0; IME becomes 1 after it completes.
+        let enable_ime_after = self.cpu.ei_pending;
+        if enable_ime_after {
             self.cpu.ei_pending = false;
-            self.cpu.ime = true;
         }
 
         let has_interrupt = self.pop_interrupt();
@@ -1047,6 +1048,12 @@ impl CPUController for GameBoy {
 
         let t_1 = t_0 + cycles;
         self.cpu.t = t_1;
+
+        // EI delay: enable IME at the END of the instruction following EI.
+        // This is AFTER the instruction has executed, so the instruction sees IME=0.
+        if enable_ime_after {
+            self.cpu.ime = true;
+        }
 
         InstructionExecution {
             instruction,
