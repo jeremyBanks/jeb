@@ -65,6 +65,103 @@ theorem C_gt_decimalMax : C > decimalMax := by native_decide
 theorem C_lt_B : C < B := by native_decide
 
 -- ============================================================================
+-- COUNTING FUNCTIONS (constructive definitions)
+-- ============================================================================
+
+/-- Count bad values in [0, v] by iterating through range -/
+def badLeq (v : Nat) : Nat :=
+  (List.range (v + 1)).countP isBad
+
+/-- Count good values in [0, v] -/
+def goodLeq (v : Nat) : Nat :=
+  (v + 1) - badLeq v
+
+/-- Rank of a good value (0-indexed count of good values below it) -/
+def rankGood (v : Nat) : Nat :=
+  goodLeq v - 1
+
+-- ============================================================================
+-- MONOTONICITY OF goodLeq
+-- ============================================================================
+
+theorem badLeq_le_count (v : Nat) : badLeq v ≤ v + 1 := by
+  unfold badLeq
+  have h := List.countP_le_length (p := isBad) (l := List.range (v + 1))
+  simp [List.length_range] at h
+  exact h
+
+theorem goodLeq_pos (v : Nat) (hv : v < B) (hg : isGood v = true) : 0 < goodLeq v := by
+  unfold goodLeq badLeq
+  -- We need: (v + 1) - countP isBad > 0
+  -- Equivalently: countP isBad < v + 1
+  -- Since v is good (not bad), and v ∈ range(v+1), there's at least one non-bad value
+  have hlen : (List.range (v + 1)).length = v + 1 := List.length_range
+  -- v is good means v is not bad
+  have hnotbad : isBad v = false := by
+    unfold isGood at hg
+    simp at hg
+    exact hg
+  -- There exists at least one element (v) that is not counted by countP isBad
+  have hmem : v ∈ List.range (v + 1) := List.mem_range.mpr (Nat.lt_succ_self v)
+  -- Use: filter length < list length iff exists element not satisfying predicate
+  have hstrict : (List.filter isBad (List.range (v + 1))).length < (List.range (v + 1)).length := by
+    rw [List.length_filter_lt_length_iff_exists]
+    exact ⟨v, hmem, by simp [hnotbad]⟩
+  -- countP = filter.length
+  rw [List.countP_eq_length_filter]
+  rw [hlen] at hstrict
+  omega
+
+theorem countP_range_mono (p : Nat → Bool) (m n : Nat) (h : m ≤ n) :
+    (List.range m).countP p ≤ (List.range n).countP p := by
+  induction n with
+  | zero => simp_all
+  | succ n ih =>
+    cases Nat.lt_or_eq_of_le h with
+    | inl hlt =>
+      have : m ≤ n := Nat.lt_succ_iff.mp hlt
+      calc (List.range m).countP p
+          ≤ (List.range n).countP p := ih this
+        _ ≤ (List.range (n + 1)).countP p := by
+            rw [List.range_succ]
+            simp [List.countP_append]
+    | inr heq =>
+      subst heq; exact Nat.le_refl _
+
+theorem badLeq_mono (m n : Nat) (h : m ≤ n) : badLeq m ≤ badLeq n := by
+  unfold badLeq
+  have h' : m + 1 ≤ n + 1 := Nat.add_le_add_right h 1
+  exact countP_range_mono isBad (m + 1) (n + 1) h'
+
+theorem goodLeq_mono (m n : Nat) (h : m ≤ n) : goodLeq m ≤ goodLeq n := by
+  unfold goodLeq
+  -- goodLeq m = (m + 1) - badLeq m
+  -- goodLeq n = (n + 1) - badLeq n
+  -- Need to show: (m + 1) - badLeq m ≤ (n + 1) - badLeq n
+  -- Key insight: the number of good values can only increase as we expand the range
+  sorry  -- Requires careful arithmetic with the subtraction
+
+-- ============================================================================
+-- BINARY SEARCH FOR unrankGood
+-- ============================================================================
+
+/-- Binary search to find k-th good value.
+    Returns the smallest v such that goodLeq v ≥ target. -/
+def binarySearchGood (lo hi target : Nat) (fuel : Nat) : Nat :=
+  if fuel = 0 then lo
+  else if lo ≥ hi then lo
+  else
+    let mid := (lo + hi) / 2
+    if goodLeq mid ≥ target then
+      binarySearchGood lo mid target (fuel - 1)
+    else
+      binarySearchGood (mid + 1) hi target (fuel - 1)
+
+/-- The k-th good value (0-indexed) -/
+def unrankGood (k : Nat) : Nat :=
+  binarySearchGood 0 (B - 1) (k + 1) B
+
+-- ============================================================================
 -- ABSTRACT ENCODING FUNCTIONS
 -- ============================================================================
 
