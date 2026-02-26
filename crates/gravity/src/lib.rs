@@ -325,8 +325,27 @@ impl Partli {
         self.cells.iter().filter(|c| c.alive).count()
     }
 
-    /// Execute a single birth with momentum conservation
-    /// Returns true if birth succeeded
+    /// Execute a single birth with momentum conservation.
+    /// 
+    /// # Momentum Conservation Proof
+    /// 
+    /// Let n = number of neighbors, each with velocity vᵢ.
+    /// Total momentum before: M = Σᵢ vᵢ
+    /// 
+    /// Each neighbor loses fraction 1/(n+1) of its velocity:
+    ///   vᵢ' = vᵢ - vᵢ/(n+1) = vᵢ × n/(n+1)
+    /// 
+    /// The newborn receives the sum of taken velocities:
+    ///   v_new = Σᵢ vᵢ/(n+1) = M/(n+1)
+    /// 
+    /// Total momentum after:
+    ///   M' = Σᵢ vᵢ' + v_new
+    ///      = Σᵢ vᵢ × n/(n+1) + M/(n+1)
+    ///      = M × n/(n+1) + M/(n+1)
+    ///      = M × (n + 1)/(n+1)
+    ///      = M  ∎
+    /// 
+    /// Returns true if birth succeeded.
     pub fn birth_particle(&mut self, cx: usize, cy: usize) -> bool {
         let idx = self.config.cell_index(cx, cy);
         if self.cells[idx].alive {
