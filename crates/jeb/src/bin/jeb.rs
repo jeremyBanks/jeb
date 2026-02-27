@@ -109,6 +109,11 @@ pub async fn inner_main() -> Result<(), Panic> {
             "to-json-pretty" => to_json_pretty(state).await?,
             "to-base64" => to_base64(state).await?,
             "parse-base64" => parse_base64(state).await?,
+            "sort" => sort_items(state)?,
+            "sort-reverse" => sort_items_reverse(state)?,
+            "unique" => unique_items(state)?,
+            "count" => count_items(state)?,
+            "length" => length_items(state)?,
             "split-whitespace" => split_whitespace(state).await?,
             "--all" => {
                 _default_mode = "all";
@@ -645,3 +650,39 @@ async fn parse_base64(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     Ok(result)
 }
 
+
+fn sort_items(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    state.sort();
+    Ok(state)
+}
+
+fn sort_items_reverse(mut state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    state.sort();
+    state.reverse();
+    Ok(state)
+}
+
+fn unique_items(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::new();
+    for item in state {
+        if seen.insert(item.clone()) {
+            result.push(item);
+        }
+    }
+    Ok(result)
+}
+
+fn count_items(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let count = state.len().to_string();
+    Ok(vec![Bytes::from(count.into_bytes())])
+}
+
+fn length_items(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
+    let mut result = Vec::new();
+    for item in state {
+        let len = item.len().to_string();
+        result.push(Bytes::from(len.into_bytes()));
+    }
+    Ok(result)
+}
