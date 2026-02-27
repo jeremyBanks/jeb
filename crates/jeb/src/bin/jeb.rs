@@ -644,3 +644,4 @@ async fn parse_base64(state: Vec<Bytes>) -> Result<Vec<Bytes>, Panic> {
     }
     Ok(result)
 }
+
