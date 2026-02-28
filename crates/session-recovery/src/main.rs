@@ -176,11 +176,10 @@ fn extract_operations(
             None => continue,
         };
 
-        let timestamp = entry
-            .timestamp
-            .as_deref()
-            .and_then(parse_timestamp)
-            .unwrap_or_else(Utc::now);
+        let timestamp = match entry.timestamp.as_deref().and_then(parse_timestamp) {
+            Some(ts) => ts,
+            None => continue, // Skip entries without valid timestamps for determinism
+        };
 
         for block in content_arr {
             let call: ToolCall = match serde_json::from_value(block.clone()) {
@@ -315,18 +314,13 @@ fn replay_operations(
     let empty_tree = repo.find_tree(empty_tree_id)?;
 
     // Create initial commit
+    // For determinism: author AND committer are both derived from model
+    // This ensures identical commit hashes when re-run
     let (author_name, author_email) = model_to_author(primary_model);
-    let git_time = Time::new(first_timestamp.timestamp(), 0);
+    let git_time = Time::new(first_timestamp.timestamp(), 0); // UTC offset = 0
     let author = Signature::new(author_name, author_email, &git_time)?;
-
-    let config = repo.config()?;
-    let committer_name = config
-        .get_string("user.name")
-        .unwrap_or_else(|_| "OpenClaw Reconstructor".to_string());
-    let committer_email = config
-        .get_string("user.email")
-        .unwrap_or_else(|_| "reconstruct@openclaw.local".to_string());
-    let committer = Signature::new(&committer_name, &committer_email, &git_time)?;
+    // Committer = Author for determinism (not from git config)
+    let committer = Signature::new(author_name, author_email, &git_time)?;
 
     let initial_message = format!(
         "Initial commit (session start)\n\nReconstructed from OpenClaw session log\nSession started: {}\nPrimary model: {}",
@@ -394,10 +388,11 @@ fn replay_operations(
         let new_tree = repo.find_tree(new_tree_id)?;
 
         // Create commit
+        // For determinism: author AND committer both from model, same timestamp
         let (author_name, author_email) = model_to_author(&op.model);
-        let git_time = Time::new(op.timestamp.timestamp(), 0);
+        let git_time = Time::new(op.timestamp.timestamp(), 0); // UTC offset = 0
         let author = Signature::new(author_name, author_email, &git_time)?;
-        let committer = Signature::new(&committer_name, &committer_email, &git_time)?;
+        let committer = Signature::new(author_name, author_email, &git_time)?;
 
         let op_name = match &op.op_type {
             OpType::Write { .. } => "write",
@@ -463,7 +458,10 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let first_ts = first_timestamp.unwrap_or_else(Utc::now);
+    let first_ts = match first_timestamp {
+        Some(ts) => ts,
+        None => anyhow::bail!("No valid timestamp found in session log — cannot create deterministic commits"),
+    };
     eprintln!("First timestamp: {}", first_ts);
     eprintln!("Primary model: {}", primary_model);
 
@@ -490,11 +488,13 @@ fn main() -> Result<()> {
     let repo = Repository::open(&repo_path)
         .with_context(|| format!("Failed to open repository: {}", repo_path.display()))?;
 
+    // Branch name: use explicit name, or derive deterministically from session filename
     let branch_name = args.branch.unwrap_or_else(|| {
-        format!(
-            "recovered-{}",
-            chrono::Utc::now().format("%Y%m%d-%H%M%S")
-        )
+        let session_stem = args.session
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown");
+        format!("recovered-{}", session_stem)
     });
 
     eprintln!("Creating branch: {}", branch_name);
