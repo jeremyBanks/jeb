@@ -84,11 +84,66 @@ impl RegionVoice {
             pitch_bend: 0.0, filter_coeff: FILTER_WARM,
         }
     }
+
+    // Send a preview of the final video to Discord
+    let final_video = if std::path::Path::new(&output_file_shared).exists() {
+        &output_file_shared
+    } else {
+        &output_file_local
+    };
+    if std::path::Path::new(final_video).exists() {
+        let preview_dir = "/Users/matte/.openclaw/workspace/shared/gravity";
+        let _ = fs::create_dir_all(preview_dir);
+        let preview_path = format!("{}/preview_{}.mp4", preview_dir, run_id);
+        // Extract 3 clips (start/mid/end), slow the middle, compose a ~15s preview
+        let dur_secs = seconds as f64;
+        let mid = dur_secs / 2.0;
+        let end_start = (dur_secs - 3.0).max(0.0);
+        let preview_filter = format!(
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
+             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
+             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
+             [va][vb][vc]concat=n=3:v=1:a=0[raw];\
+             [raw]scale=512:-2:flags=neighbor[vout]"
+        );
+        let preview_ok = Command::new("ffmpeg")
+            .args([
+                "-y", "-i", final_video,
+                "-filter_complex", &preview_filter,
+                "-map", "[vout]",
+                "-an",
+                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                &preview_path,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if preview_ok {
+            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
+            let msg = format!(
+                "✅ **{}** complete | {}MB | {}s\n`{}`",
+                run_id, size_mb, seconds, 
+                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
+            );
+            let _ = Command::new("openclaw")
+                .args([
+                    "message", "send",
+                    "--channel", "discord",
+                    "-t", "1467063568712339561",
+                    "--media", &preview_path,
+                    "-m", &msg,
+                ])
+                .status();
+            let _ = fs::remove_file(&preview_path);
+        }
+    }
 }
 
 struct Cell {
-    px: f32,   // continuous world position, x ∈ [0, W())
-    py: f32,   // continuous world position, y ∈ [0, H())
+    px: f32,   // continuous world position, x ∈ [0, W)
+    py: f32,   // continuous world position, y ∈ [0, H)
     vx: f32,
     vy: f32,
     prev_speed: f32,
@@ -96,12 +151,12 @@ struct Cell {
     moved: bool,  // true if cell changed grid square this tick
 }
 impl Cell {
-    #[inline] fn gx(&self) -> usize { (self.px.floor() as i32).rem_euclid(W() as i32) as usize }
-    #[inline] fn gy(&self) -> usize { (self.py.floor() as i32).rem_euclid(H() as i32) as usize }
+    #[inline] fn gx(&self) -> usize { (self.px.floor() as i32).rem_euclid(W as i32) as usize }
+    #[inline] fn gy(&self) -> usize { (self.py.floor() as i32).rem_euclid(H as i32) as usize }
     #[inline] fn in_bounds(&self) -> bool {
         let x = self.px.floor() as i32;
         let y = self.py.floor() as i32;
-        x >= 0 && x < W() as i32 && y >= 0 && y < H() as i32
+        x >= 0 && x < W as i32 && y >= 0 && y < H as i32
     }
 }
 
@@ -214,7 +269,7 @@ struct OriginalState {
 }
 
 // ── Barnes-Hut quadtree for O(n log n) gravity ────────────────────────────
-const BH_THETA: f32 = 0.1; // opening-angle criterion: width/dist < theta → use point-mass
+const BH_THETA: f32 = 0.5; // opening-angle criterion: width/dist < theta → use point-mass
 
 #[derive(Clone)]
 struct QNode {
@@ -307,40 +362,19 @@ fn qt_insert(nodes: &mut Vec<QNode>, idx: usize, body: usize, px: f32, py: f32, 
     }
 }
 
-/// Find the (dx, dy) to the nearest periodic image of a particle on a (possibly staggered) torus.
-/// stagger_y: Y-shift applied when crossing the X boundary (right→left wraps down by stagger_y).
-/// stagger_x: X-shift applied when crossing the Y boundary (bottom→top wraps right by stagger_x).
-/// Searches all 9 nearest lattice images (n,m ∈ {-1,0,1}) and returns the closest.
 #[inline]
-fn nearest_image_delta(raw_dx: f32, raw_dy: f32,
-                       stagger_x: f32, stagger_y: f32,
-                       wrap_x: bool, wrap_y: bool) -> (f32, f32) {
-    let (w, h) = (W() as f32, H() as f32);
-    let mut best_dx = raw_dx;
-    let mut best_dy = raw_dy;
-    let mut best_r2 = raw_dx * raw_dx + raw_dy * raw_dy;
-    for n in -1i32..=1 {
-        for m in -1i32..=1 {
-            if n == 0 && m == 0 { continue; }
-            if (n != 0 && !wrap_x) || (m != 0 && !wrap_y) { continue; }
-            // image reached by crossing X boundary n times, Y boundary m times
-            let cdx = raw_dx + n as f32 * w + m as f32 * stagger_x;
-            let cdy = raw_dy + n as f32 * stagger_y + m as f32 * h;
-            let r2 = cdx * cdx + cdy * cdy;
-            if r2 < best_r2 { best_r2 = r2; best_dx = cdx; best_dy = cdy; }
-        }
-    }
-    (best_dx, best_dy)
+fn min_image(d: f32, dim: f32) -> f32 {
+    if d > dim * 0.5 { d - dim } else if d < -dim * 0.5 { d + dim } else { d }
 }
 
 fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
-            px: f32, py: f32, g: f32, softening: f32,
-            wrap_x: bool, wrap_y: bool, stagger_x: f32, stagger_y: f32) -> (f32, f32) {
+            px: f32, py: f32, g: f32, softening: f32, wrap_x: bool, wrap_y: bool) -> (f32, f32) {
     let node = &nodes[node_idx];
     if node.body == -2 { return (0.0, 0.0); } // empty node
     let raw_dx = node.com_x - px;
     let raw_dy = node.com_y - py;
-    let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+    let dx = if wrap_x { min_image(raw_dx, W as f32) } else { raw_dx };
+    let dy = if wrap_y { min_image(raw_dy, H as f32) } else { raw_dy };
     // Leaf: exact pairwise force (skip self)
     if node.body >= 0 {
         if node.body as usize == body { return (0.0, 0.0); }
@@ -364,7 +398,7 @@ fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
     let mut fy = 0.0f32;
     for &ch in &node.ch {
         if ch >= 0 {
-            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening, wrap_x, wrap_y, stagger_x, stagger_y);
+            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening, wrap_x, wrap_y);
             fx += cfx;
             fy += cfy;
         }
@@ -385,20 +419,20 @@ impl Sim {
         let mut rng = rng_seed;
         let mut next_id: u64 = 1;
         let mut cells: Vec<Cell> = Vec::new();
-        let mut occupied = vec![false; W() * H()];
+        let mut occupied = vec![false; W * H];
 
         // Helper: compute velocity for a seeded cell at grid (xi, yi).
-        let cx_global = W() as f32 / 2.0;
-        let cy_global = H() as f32 / 2.0;
-        let aspect = W() as f32 / H() as f32; // e.g. 256/160 = 1.6
+        let cx_global = W as f32 / 2.0;
+        let cy_global = H as f32 / 2.0;
+        let aspect = W as f32 / H as f32; // e.g. 256/160 = 1.6
         let make_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
             let (vx, vy) = match init_vel {
                 "swirl" => {
-                    if xi < W() / 2 && yi < H() / 2 {
+                    if xi < W / 2 && yi < H / 2 {
                         (xorf32(rng) * 0.75 - 0.25, (xorf32(rng) - 0.5) * 0.25)
-                    } else if xi >= W() / 2 && yi >= H() / 2 {
+                    } else if xi >= W / 2 && yi >= H / 2 {
                         (xorf32(rng) * 0.75 - 0.5,  (xorf32(rng) - 0.5) * 0.25)
-                    } else if xi >= W() / 2 {
+                    } else if xi >= W / 2 {
                         ((xorf32(rng) - 0.5) * 0.25, (xorf32(rng) - 0.5) * 0.25)
                     } else {
                         ((xorf32(rng) - 0.5) * 0.25, xorf32(rng) * 0.25)
@@ -454,15 +488,14 @@ impl Sim {
             let base_cells  = (target_pop / circles).max(1);
             let extra_circles = target_pop % circles; // first N circles get base+1
             let radius = ((2.0 * base_cells as f32 / PI).sqrt()).max(4.0)
-                          .min((W().min(H()) as f32) * 0.45 / (circles as f32).sqrt());
+                          .min((W.min(H) as f32) * 0.45 / (circles as f32).sqrt());
             let margin = radius + 1.0;
 
-            // Candidate grid: full valid-cell range when wrapped, margin-inset when not.
-            // x_max is W()-1 (not W()) on wrapped axes — cell positions are 0..W()-1.
+            // Candidate grid: full axis range when wrapped, margin-inset when not.
             let x_min = if wrap_x { 0.0 } else { margin };
-            let x_max = if wrap_x { (W() - 1) as f32 } else { W() as f32 - margin };
+            let x_max = if wrap_x { W as f32 } else { W as f32 - margin };
             let y_min = if wrap_y { 0.0 } else { margin };
-            let y_max = if wrap_y { (H() - 1) as f32 } else { H() as f32 - margin };
+            let y_max = if wrap_y { H as f32 } else { H as f32 - margin };
             let mut candidates: Vec<(f32, f32)> = Vec::new();
             let mut cx = x_min;
             while cx <= x_max {
@@ -478,15 +511,16 @@ impl Sim {
             // (walls only count for non-wrapped axes). Tie-break toward canvas centre.
             let score = |px: f32, py: f32, chosen: &[(f32, f32)]| -> f32 {
                 // Wall clearance only applies on non-wrapped axes.
-                let wall_x = if wrap_x { f32::INFINITY } else { px.min(W() as f32 - px) };
-                let wall_y = if wrap_y { f32::INFINITY } else { py.min(H() as f32 - py) };
+                let wall_x = if wrap_x { f32::INFINITY } else { px.min(W as f32 - px) };
+                let wall_y = if wrap_y { f32::INFINITY } else { py.min(H as f32 - py) };
                 let wall = wall_x.min(wall_y);
-                // Stagger-aware distance to nearest chosen circle.
+                // Wrap-aware distance to nearest chosen circle.
                 let nbr = chosen.iter()
                     .map(|&(qx, qy)| {
-                        let raw_dx = px - qx;
-                        let raw_dy = py - qy;
-                        let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+                        let dx_r = (px - qx).abs();
+                        let dy_r = (py - qy).abs();
+                        let dx = if wrap_x { dx_r.min(W as f32 - dx_r) } else { dx_r };
+                        let dy = if wrap_y { dy_r.min(H as f32 - dy_r) } else { dy_r };
                         (dx*dx + dy*dy).sqrt()
                     })
                     .fold(f32::INFINITY, f32::min);
@@ -551,27 +585,21 @@ impl Sim {
                 let cells_this_circle = base_cells + if ci < extra_circles { 1 } else { 0 };
 
                 // Collect integer grid points within a search radius (1.5× for buffer).
-                // Use stagger-aware distance so circles near edges wrap correctly.
                 let r_search = radius * 1.5;
                 let r_sq     = r_search * r_search;
+                let r_ceil   = r_search.ceil() as isize;
                 let mut pts: Vec<(usize, usize, f32)> = Vec::new();
-                for yi in 0..H() {
-                    for xi in 0..W() {
-                        if occupied[yi * W() + xi] { continue; }
-                        // Simple wrap-aware distance (no stagger) for circle filling.
-                        // Stagger affects physics but not visual circle shape.
-                        let raw_dx = xi as f32 + 0.5 - disk_cx;
-                        let raw_dy = yi as f32 + 0.5 - disk_cy;
-                        let dx = if wrap_x {
-                            let d = raw_dx.abs();
-                            d.min(W() as f32 - d) * raw_dx.signum()
-                        } else { raw_dx };
-                        let dy = if wrap_y {
-                            let d = raw_dy.abs();
-                            d.min(H() as f32 - d) * raw_dy.signum()
-                        } else { raw_dy };
-                        let d2 = dx * dx + dy * dy;
-                        if d2 <= r_sq {
+                for dy in -r_ceil..=r_ceil {
+                    for dx in -r_ceil..=r_ceil {
+                        let d2 = (dx as f32).powi(2) + (dy as f32).powi(2);
+                        if d2 > r_sq { continue; }
+                        let xi_i = disk_cx as isize + dx;
+                        let yi_i = disk_cy as isize + dy;
+                        if xi_i < 0 || xi_i >= W as isize { continue; }
+                        if yi_i < 0 || yi_i >= H as isize { continue; }
+                        let xi = xi_i as usize;
+                        let yi = yi_i as usize;
+                        if !occupied[yi * W + xi] {
                             pts.push((xi, yi, d2));
                         }
                     }
@@ -581,40 +609,17 @@ impl Sim {
 
                 let mut placed = 0usize;
 
-                // For spin modes, compute velocity relative to THIS circle's centre
-                // (disk_cx/disk_cy), not the global canvas centre.  Calling make_vel
-                // for spin would use cx_global and give wrong tangential directions for
-                // off-centre circles.
-                let disk_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
-                    match init_vel {
-                        "spin" | "spin-ccw" | "spin-flat" => {
-                            let dx = xi as f32 + 0.5 - disk_cx;
-                            let dy = yi as f32 + 0.5 - disk_cy;
-                            let r = (dx*dx + dy*dy).sqrt().max(1.0);
-                            let scale = (r / radius).min(1.0) * 0.5;
-                            let nx = (xorf32(rng)-0.5)*0.1;
-                            let ny = (xorf32(rng)-0.5)*0.1;
-                            match init_vel {
-                                "spin"      => (-dy/r * scale + nx,  dx/r * scale + ny),
-                                "spin-ccw"  => ( dy/r * scale + nx, -dx/r * scale + ny),
-                                _/* flat */ => (-dy/r * scale + nx, (dx/r * scale + ny) * 0.09375),
-                            }
-                        }
-                        _ => make_vel(xi, yi, rng),
-                    }
-                };
-
                 // Primary pass: 50% coin flip at each point in distance order.
                 for &(xi, yi, _) in &pts {
                     if placed >= cells_this_circle { break; }
-                    if occupied[yi * W() + xi] { continue; }
+                    if occupied[yi * W + xi] { continue; }
                     if xoru64(&mut rng) & 1 == 0 { continue; } // 50% skip
-                    let (vx, vy) = disk_vel(xi, yi, &mut rng);
+                    let (vx, vy) = make_vel(xi, yi, &mut rng);
                     let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                     cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                       prev_speed: 0.0, id: next_id, moved: false });
                     next_id += 1;
-                    occupied[yi * W() + xi] = true;
+                    occupied[yi * W + xi] = true;
                     placed += 1;
                 }
 
@@ -622,13 +627,13 @@ impl Sim {
                 if placed < cells_this_circle {
                     for &(xi, yi, _) in &pts {
                         if placed >= cells_this_circle { break; }
-                        if occupied[yi * W() + xi] { continue; }
-                        let (vx, vy) = disk_vel(xi, yi, &mut rng);
+                        if occupied[yi * W + xi] { continue; }
+                        let (vx, vy) = make_vel(xi, yi, &mut rng);
                         let (vx, vy) = (vx * vel_scale, vy * vel_scale);
                         cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
                                           prev_speed: 0.0, id: next_id, moved: false });
                         next_id += 1;
-                        occupied[yi * W() + xi] = true;
+                        occupied[yi * W + xi] = true;
                         placed += 1;
                     }
                 }
@@ -636,39 +641,33 @@ impl Sim {
         } else {
         // ── Default: random scatter (original behaviour) ─────────────────────
         let seed_count = if seed_density_inv > 0 {
-            (W() * H()) / seed_density_inv
+            (W * H) / seed_density_inv
         } else { 0 };
         let mut seeded = 0;
-        for _ in 0..W() * H() * 4 {
+        for _ in 0..W * H * 4 {
             if seeded >= seed_count { break; }
-            let xi = (xoru64(&mut rng) as usize) % W();
-            let yi = (xoru64(&mut rng) as usize) % H();
-            let idx = yi * W() + xi;
+            let xi = (xoru64(&mut rng) as usize) % W;
+            let yi = (xoru64(&mut rng) as usize) % H;
+            let idx = yi * W + xi;
             if !occupied[idx] {
-                let (vx, vy) = make_vel(xi, yi, &mut rng);
-                let (vx, vy) = (vx * vel_scale, vy * vel_scale);
-                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
-                                  prev_speed: 0.0, id: next_id, moved: false });
+                // Small random initial velocity: speed ~ U[0, 1% of speed_cap], random direction
+                let spd   = xorf32(&mut rng) * speed_cap * 0.01;
+                let angle = xorf32(&mut rng) * 2.0 * std::f32::consts::PI;
+                let vx    = angle.cos() * spd;
+                let vy    = angle.sin() * spd;
+                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0, id: next_id, moved: false });
                 next_id += 1;
                 occupied[idx] = true;
                 seeded += 1;
             }
         }
-        } // end else (random scatter)
         shuffle_vec(&mut cells, &mut rng);
 
         let n = cells.len();
+        let target_pop = W * H / 32;
         Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
-              pop_band, rate_limit, birth_chance, death_chance,
-              tick_count: 0, prev_live: vec![false; W() * H()],
-              wrap_x, wrap_y, bounce_x, bounce_y, steer,
-              dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
-              stagger_x, stagger_y,
-              conway_births: 0, conway_deaths: 0, next_id,
-              region_stats: [RegionStats::default(); 9],
-              region_voices: std::array::from_fn(|i| RegionVoice::new(
-                  REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
-              reverb: Reverb::new() }
+              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W * H], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y,
+              conway_births: 0, conway_deaths: 0, next_id, voice_pool: HashMap::new() }
     }
 
     // ── Checkpoint save/load ───────────────────────────────────────────────
@@ -736,34 +735,31 @@ impl Sim {
             cells.push(Cell { px, py, vx, vy, prev_speed: ps, id, moved: false });
         }
 
-        let mut prev_live = vec![false; W() * H()];
+        let mut prev_live = vec![false; W * H];
         for b in prev_live.iter_mut() {
             *b = buf[pos] != 0; pos += 1;
         }
 
-        let mut canvas = vec![0.0f32; W() * H() * 3];
+        let mut canvas = vec![0.0f32; W * H * 3];
         for v in canvas.iter_mut() {
             *v = read_f32!();
         }
 
         // Rebuild prev_live from cell positions so first painted frame does correct 50% snap
         // (if we used the saved prev_live, a SIGTERM mid-tick could leave it stale)
-        let mut prev_live_rebuilt = vec![false; W() * H()];
+        let mut prev_live_rebuilt = vec![false; W * H];
         for c in &cells {
-            prev_live_rebuilt[c.gy() * W() + c.gx()] = true;
+            prev_live_rebuilt[c.gy() * W + c.gx()] = true;
         }
         let order = (0..cells.len()).collect();
+        let target_pop = W * H / 32;
         let sim = Sim { cells, order, rng, g, softening, speed_cap,
-                        start_pop: target_pop, pop_band, rate_limit, birth_chance, death_chance,
+                        start_pop: target_pop, pop_band, rate_limit, conway_every,
                         tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
                         dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
                         stagger_x, stagger_y,
                         conway_births: 0, conway_deaths: 0,
-                        next_id,
-                        region_stats: [RegionStats::default(); 9],
-                        region_voices: std::array::from_fn(|i| RegionVoice::new(
-                            REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
-                        reverb: Reverb::new() };
+                        next_id, voice_pool: HashMap::new() };
         Some((sim, canvas, resume_frame))
     }
 
@@ -814,44 +810,26 @@ impl Sim {
         let pop_min = self.start_pop.saturating_sub(self.pop_band as usize);
         let pop_max = self.start_pop + self.pop_band as usize;
 
-        let mut grid = vec![usize::MAX; W() * H()];
+        let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W() + c.gx()] = i;
+            grid[c.y as usize % H * W + c.x as usize % W] = i;
         }
 
         let neighbour_offsets: [(i32, i32); 8] = [
             (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
         ];
-        let (wrap_x, wrap_y) = (self.wrap_x, self.wrap_y);
-        let stag_x = self.stagger_x.round() as i32;
-        let stag_y = self.stagger_y.round() as i32;
-        // Resolve a neighbour offset to a grid index, respecting per-axis wrap + stagger.
-        // When crossing the X boundary, apply stagger_y to Y (and vice versa).
-        let resolve_nbr = |gy: usize, gx: usize, dy: i32, dx: i32| -> Option<(usize, usize)> {
-            let mut ry = gy as i32 + dy;
-            let mut rx = gx as i32 + dx;
-            // Detect boundary crossings and apply stagger offsets
-            if wrap_x {
-                if rx < 0        { ry -= stag_y; }
-                else if rx >= W() as i32 { ry += stag_y; }
-                rx = rx.rem_euclid(W() as i32);
-            } else if rx < 0 || rx >= W() as i32 { return None; }
-            if wrap_y {
-                if ry < 0        { rx -= stag_x; }
-                else if ry >= H() as i32 { rx += stag_x; }
-                ry = ry.rem_euclid(H() as i32);
-            } else if ry < 0 || ry >= H() as i32 { return None; }
-            // After stagger, re-wrap both axes (stagger offset may push out of bounds)
-            if wrap_x { rx = rx.rem_euclid(W() as i32); }
-            else if rx < 0 || rx >= W() as i32 { return None; }
-            if wrap_y { ry = ry.rem_euclid(H() as i32); }
-            else if ry < 0 || ry >= H() as i32 { return None; }
-            Some((ry as usize, rx as usize))
-        };
+        let wrap = self.wrap;
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
-                let idx = grid[ny * W() + nx];
+                let ry = gy as i32 + dy;
+                let rx = gx as i32 + dx;
+                let (ny, nx) = if wrap {
+                    (ry.rem_euclid(H as i32) as usize, rx.rem_euclid(W as i32) as usize)
+                } else {
+                    if ry < 0 || ry >= H as i32 || rx < 0 || rx >= W as i32 { return None; }
+                    (ry as usize, rx as usize)
+                };
+                let idx = grid[ny * W + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect()
         };
@@ -860,8 +838,8 @@ impl Sim {
         let mut desired_deaths: Vec<usize> = Vec::new();
 
         for (i, c) in self.cells.iter().enumerate() {
-            let gx = c.gx();
-            let gy = c.gy();
+            let gx = c.x as usize % W;
+            let gy = c.y as usize % H;
             let nbrs = live_neighbours(gy, gx);
             let count = nbrs.len();
             if count != 2 && count != 3 {
@@ -871,12 +849,12 @@ impl Sim {
 
         let mut candidates = std::collections::HashSet::new();
         for c in &self.cells {
-            let gx = c.gx();
-            let gy = c.gy();
+            let gx = c.x as usize % W;
+            let gy = c.y as usize % H;
             for &(dy, dx) in &neighbour_offsets {
-                if let Some((ny, nx)) = resolve_nbr(gy, gx, dy, dx) {
-                    if grid[ny * W() + nx] == usize::MAX { candidates.insert((ny, nx)); }
-                }
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
             }
         }
         for (gy, gx) in candidates {
@@ -912,8 +890,8 @@ impl Sim {
 
         for &di in &dying {
             let (dvx, dvy) = (self.cells[di].vx, self.cells[di].vy);
-            let gx = self.cells[di].gx();
-            let gy = self.cells[di].gy();
+            let gx = self.cells[di].x as usize % W;
+            let gy = self.cells[di].y as usize % H;
             let receivers: Vec<usize> = live_neighbours(gy, gx).into_iter()
                 .filter(|&ni| !dying.contains(&ni)).collect();
             if !receivers.is_empty() {
@@ -930,62 +908,38 @@ impl Sim {
         self.conway_deaths += death_indices.len();
         for i in death_indices { self.cells.swap_remove(i); }
 
-        let mut grid2 = vec![usize::MAX; W() * H()];
+        let mut grid2 = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid2[c.gy() * W() + c.gx()] = i;
+            grid2[c.y as usize % H * W + c.x as usize % W] = i;
         }
 
-        // Birth selection: if chance-based, filter by probability; otherwise shuffle and take max_births.
+        // Uniform birth selection: shuffle candidates, take first max_births.
         let mut birth_indices: Vec<usize> = desired_births.iter()
             .enumerate()
             .filter_map(|(i, (gy, gx, _))| {
-                if grid2[gy * W() + gx] != usize::MAX { return None; }
+                if grid2[gy * W + gx] != usize::MAX { return None; }
                 Some(i)
             })
             .collect();
-        
-        let birth_limit = if let Some(birth_chance) = self.birth_chance {
-            if births_allowed {
-                // Filter by probability
-                birth_indices.retain(|_| xorf32(&mut self.rng) < birth_chance);
-                birth_indices.len() // take all that passed the probability filter
-            } else {
-                0
-            }
-        } else {
-            shuffle_vec(&mut birth_indices, &mut self.rng);
-            if births_allowed { self.rate_limit } else { 0 }
-        };
+        shuffle_vec(&mut birth_indices, &mut self.rng);
 
-        for bi in birth_indices.into_iter().take(birth_limit) {
+        for bi in birth_indices.into_iter().take(max_births) {
             let (gy, gx, _) = desired_births[bi];
-            if grid2[gy * W() + gx] != usize::MAX { continue; } // double-check: may have been filled
+            if grid2[gy * W + gx] != usize::MAX { continue; } // double-check: may have been filled
             let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
-                let idx = grid2[ny * W() + nx];
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid2[ny * W + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
             if live_nbrs.is_empty() { continue; }
-            let (vx, vy) = if self.wrap_x || self.wrap_y {
-                // Wrap mode: inherit avg neighbour velocity for interesting dynamics
-                let n_nbrs = live_nbrs.len() as f32;
-                let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
-                let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
-                (vx, vy)
-            } else {
-                // No-wrap: born at rest — gravity provides velocity organically.
-                // Inheriting neighbour velocity near walls continuously injects wall-facing
-                // momentum faster than gravity can correct it.
-                (0.0_f32, 0.0_f32)
-            };
+            let n_nbrs = live_nbrs.len() as f32;
+            let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
+            let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
             let birth_spd = (vx * vx + vy * vy).sqrt();
             let new_idx = self.cells.len();
-            let id = self.next_id; self.next_id += 1;
-            let (bpx, bpy) = (gx as f32 + 0.5, gy as f32 + 0.5);
-            self.cells.push(Cell { px: bpx, py: bpy, vx, vy, prev_speed: birth_spd, id, moved: false });
-            // (no per-event audio in new direction-bucket system)
-            grid2[gy * W() + gx] = new_idx;
-            self.conway_births += 1;
+            self.cells.push(Cell { x: gx as f32 + 0.5, y: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd });
+            grid2[gy * W + gx] = new_idx;
         }
 
         self.order = (0..self.cells.len()).collect();
@@ -997,39 +951,23 @@ impl Sim {
         for c in &mut self.cells { c.moved = false; }
         let n = self.cells.len();
 
-        // Build quadtree with a SQUARE root centered on the grid center.
-        // The grid is W()×H() = 192×120 (non-square). A non-square root means
-        // node.width() = max(x_range, y_range) always equals the x dimension,
-        // making the BH opening criterion systematically less accurate for y forces.
-        // A square root at size max(W(),H()) makes every sub-node square, so the
-        // criterion is identical for x and y — no directional bias.
+        // Build quadtree over the toroidal domain (use cell centres for continuous physics)
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
-        {
-            let half = 128.0_f32; // 256×256 square, power-of-2 subdivisions
-            let cx = W() as f32 * 0.5; // 96
-            let cy = H() as f32 * 0.5; // 60
-            // Root: [-32, 224] × [-68, 188] — 256×256, centred on grid centre
-            nodes.push(QNode::empty(cx - half, cy - half, cx + half, cy + half));
-        }
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
         for i in 0..n {
-            let (px, py) = (self.cells[i].px, self.cells[i].py);
+            let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
             qt_insert(&mut nodes, 0, i, px, py, 0);
         }
 
         // Compute gravitational force on each particle via tree traversal
-        // Axis gravity scale: (1 - dampen) fraction of normal force on each axis.
-        // Clamped to [0,1] so dampen>=1 means no gravity on that axis (not reversed).
-        let gx_scale = (1.0 - self.dampen_x).clamp(0.0, 1.0);
-        let gy_scale = (1.0 - self.dampen_y).clamp(0.0, 1.0);
         for i in 0..n {
-            let (px, py) = (self.cells[i].px, self.cells[i].py);
-            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening, self.wrap_x, self.wrap_y, self.stagger_x, self.stagger_y);
-            self.cells[i].vx += gfx * gx_scale;
-            self.cells[i].vy += gfy * gy_scale;
+            let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening);
+            self.cells[i].vx += gfx;
+            self.cells[i].vy += gfy;
         }
 
         for c in &mut self.cells {
-            // Isotropic speed cap (unchanged)
             let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
             let effective_cap = c.prev_speed.max(self.speed_cap);
             if spd > effective_cap {
@@ -1038,148 +976,111 @@ impl Sim {
             }
             let hard_ceil = self.speed_cap * 2.0;
             c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
-            // Per-axis speed cap: dampen axis gets a proportionally lower ceiling
-            let vx_cap = self.speed_cap * gx_scale;
-            let vy_cap = self.speed_cap * gy_scale;
-            c.vx = c.vx.clamp(-vx_cap, vx_cap);
-            c.vy = c.vy.clamp(-vy_cap, vy_cap);
         }
 
-        // Momentum damping: remove dampen_x/dampen_y fraction of COM velocity each tick.
-        // e.g. dampen_y=0.125 removes 12.5% of avg vertical velocity per tick.
-        if (self.dampen_x > 0.0 || self.dampen_y > 0.0) && !self.cells.is_empty() {
-            let n = self.cells.len() as f32;
-            let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
-            let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
-            for c in &mut self.cells {
-                c.vx -= avg_vx * self.dampen_x;
-                c.vy -= avg_vy * self.dampen_y;
-            }
-        }
 
-        // Per-frame velocity decay: multiplicative drain on every cell's speed.
-        // e.g. vel_decay=1/1024 removes ~0.1% of speed each frame.
-        if self.vel_decay > 0.0 {
-            let retain = 1.0 - self.vel_decay;
-            for c in &mut self.cells {
-                c.vx *= retain;
-                c.vy *= retain;
-            }
-        }
 
-        // Per-frame velocity nudge: steer each cell's velocity 1/32 of the way toward
-        // the target direction (vel_nudge in turns). Uses shortest-path arc so cells
-        // always rotate the small way around. Zero-velocity cells are skipped.
-        // e.g. vel_nudge = -11/360 → "11° above right" target; convergence half-life ≈ 22 frames.
-        if self.vel_nudge != 0.0 {
-            let target_h = self.vel_nudge * std::f32::consts::TAU;  // turns → radians
-            let rate = self.vel_nudge_rate;
-            for c in &mut self.cells {
-                let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
-                if spd < 1e-6 { continue; }
-                let cur_h = c.vy.atan2(c.vx);
-                // Shortest-path angular difference, wrapped to (−π, π]
-                let mut dh = target_h - cur_h;
-                while dh >  std::f32::consts::PI { dh -= std::f32::consts::TAU; }
-                while dh < -std::f32::consts::PI { dh += std::f32::consts::TAU; }
-                let theta = dh * rate;
-                let (sin_t, cos_t) = theta.sin_cos();
-                let nvx = c.vx * cos_t - c.vy * sin_t;
-                let nvy = c.vx * sin_t + c.vy * cos_t;
-                c.vx = nvx;
-                c.vy = nvy;
-            }
-        }
-
-        // Movement: float positions, collision by grid square.
-        // Process in shuffled order. Each cell computes its target float position (px+vx, py+vy).
-        // If the target grid square is free: move (update both float pos and grid).
-        // If occupied or same square: stay put entirely — no float accumulation.
-        // In no-wrap mode: if target would be out of bounds, stay put — gravity must pull back.
-        let mut grid = vec![usize::MAX; W() * H()];
+        let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W() + c.gx()] = i;
+            grid[c.gy() * W + c.gx()] = i;
         }
+
+        // Save pre-move positions for steer correction
+        let old_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| (c.x, c.y)).collect();
+
+        // Target integer position.
+        // Wrap mode: toroidal (rem_euclid). No-wrap mode: stay put if target is out of bounds.
+        // IMPORTANT: use round(), not truncation (cast). Truncation biases movement toward
+        // -x/-y: vx∈(-1,0) always moves left, vx∈(0,1) never moves right → top-left drift.
+        let target_pos: Vec<(usize, usize)> = self.cells.iter().map(|c| {
+            let raw_x = c.x as f32 + c.vx;
+            let raw_y = c.y as f32 + c.vy;
+            if self.wrap {
+                let tx = (raw_x.round() as i32).rem_euclid(W as i32) as usize;
+                let ty = (raw_y.round() as i32).rem_euclid(H as i32) as usize;
+                (tx, ty)
+            } else {
+                // Out of bounds → don't move (same rule as occupied cell)
+                let rx = raw_x.round();
+                let ry = raw_y.round();
+                if rx < 0.0 || rx >= W as f32 || ry < 0.0 || ry >= H as f32 {
+                    (c.x, c.y)
+                } else {
+                    (rx as usize, ry as usize)
+                }
+            }
+        }).collect();
+
         let n = self.order.len();
         for i in (1..n).rev() {
             let j = (xoru64(&mut self.rng) as usize) % (i + 1);
             self.order.swap(i, j);
         }
+
+        let mut reservation: Vec<usize> = vec![usize::MAX; W * H];
+        let mut moved = vec![false; n];
+
         for &idx in &self.order {
-            // Capture pre-move state for audio stats (avoid borrow conflict later)
-            let (cvx, cvy, cpx, cpy) = {
-                let c = &self.cells[idx]; (c.vx, c.vy, c.px, c.py)
-            };
-            let old_gx = ((cpx.floor() as i32).rem_euclid(W() as i32)) as usize;
-            let old_gy = ((cpy.floor() as i32).rem_euclid(H() as i32)) as usize;
-            // Resolve position per axis: wrap / bounce / hard-wall
-            let mut nx = cpx + cvx;
-            let mut ny = cpy + cvy;
-            let mut nvx = cvx;
-            let mut nvy = cvy;
-            // X axis
-            let mut stagger_ny_add = 0.0f32;
-            if self.wrap_x {
-                if nx < 0.0              { stagger_ny_add -= self.stagger_y; }
-                else if nx >= W() as f32 { stagger_ny_add += self.stagger_y; }
-                nx = nx.rem_euclid(W() as f32);
-            } else if self.bounce_x {
-                if nx < 0.0       { nx = -nx;                      nvx = -nvx; }
-                else if nx >= W() as f32 { nx = 2.0 * W() as f32 - nx; nvx = -nvx; }
-            } else if nx < 0.0 || nx >= W() as f32 { continue; }
-            // Y axis
-            let mut stagger_nx_add = 0.0f32;
-            if self.wrap_y {
-                if ny < 0.0              { stagger_nx_add -= self.stagger_x; }
-                else if ny >= H() as f32 { stagger_nx_add += self.stagger_x; }
-                ny = ny.rem_euclid(H() as f32);
-            } else if self.bounce_y {
-                if ny < 0.0       { ny = -ny;                      nvy = -nvy; }
-                else if ny >= H() as f32 { ny = 2.0 * H() as f32 - ny; nvy = -nvy; }
-            } else if ny < 0.0 || ny >= H() as f32 { continue; }
-            // Apply stagger offsets after wrapping (order-independent; computed from pre-wrap state)
-            if stagger_ny_add != 0.0 { ny = (ny + stagger_ny_add).rem_euclid(H() as f32); }
-            if stagger_nx_add != 0.0 { nx = (nx + stagger_nx_add).rem_euclid(W() as f32); }
-            // Apply any velocity changes from bounce before grid logic
-            if nvx != cvx { self.cells[idx].vx = nvx; }
-            if nvy != cvy { self.cells[idx].vy = nvy; }
-            let (new_px, new_py) = (nx, ny);
-            let tgx = (new_px.floor() as i32).rem_euclid(W() as i32) as usize;
-            let tgy = (new_py.floor() as i32).rem_euclid(H() as i32) as usize;
-            let crossing = tgx != old_gx || tgy != old_gy;
-            let moved_cross;
-            if !crossing {
-                // Same grid square — update float position freely
-                self.cells[idx].px = new_px;
-                self.cells[idx].py = new_py;
-                moved_cross = false;
-            } else if grid[tgy * W() + tgx] == usize::MAX {
-                // Target square free — move
-                grid[old_gy * W() + old_gx] = usize::MAX;
-                grid[tgy * W() + tgx] = idx;
-                self.cells[idx].px = new_px;
-                self.cells[idx].py = new_py;
-                self.cells[idx].moved = true;
-                moved_cross = true;
+            let (tx, ty) = target_pos[idx];
+            let old_x = self.cells[idx].x;
+            let old_y = self.cells[idx].y;
+
+            if tx == old_x && ty == old_y {
+                moved[idx] = true;
+                continue;
+            }
+
+            if grid[ty * W + tx] == usize::MAX {
+                grid[old_y * W + old_x] = usize::MAX;
+                grid[ty * W + tx] = idx;
+                self.cells[idx].x = tx;
+                self.cells[idx].y = ty;
+                moved[idx] = true;
+
+                let mut freed = old_y * W + old_x;
+                loop {
+                    let waiter = reservation[freed];
+                    if waiter == usize::MAX { break; }
+                    reservation[freed] = usize::MAX;
+                    let (wtx, wty) = target_pos[waiter];
+                    let wox = self.cells[waiter].x;
+                    let woy = self.cells[waiter].y;
+                    grid[woy * W + wox] = usize::MAX;
+                    grid[wty * W + wtx] = waiter;
+                    self.cells[waiter].x = wtx;
+                    self.cells[waiter].y = wty;
+                    moved[waiter] = true;
+                    freed = woy * W + wox;
+                }
             } else {
-                // Target occupied — stay put
-                moved_cross = false;
+                let key = ty * W + tx;
+                if reservation[key] == usize::MAX { reservation[key] = idx; }
             }
         }
 
-        // ── Audio: accumulate spatial region stats (all cells, post-move) ──────
-        // Divide canvas into 3×3 regions. Each cell contributes to its region's
-        // population count, total speed, and CoG sum.
-        for c in &self.cells {
-            let col = ((c.px / W() as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
-            let row = ((c.py / H() as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
-            let ri = row * 3 + col;
-            let speed = (c.vx * c.vx + c.vy * c.vy).sqrt();
-            let rs = &mut self.region_stats[ri];
-            rs.cell_count += 1.0;
-            rs.speed_sum  += speed;
-            rs.cog_x_sum  += c.px;
-            rs.cog_y_sum  += c.py;
+        // Steer correction: counter-rotate velocity by the angular error introduced by
+        // discrete grid movement. If the grid forced a cell 20° clockwise of its intended
+        // direction, rotate the velocity 20° counter-clockwise to compensate.
+        if self.steer {
+            for idx in 0..n {
+                if !moved[idx] { continue; }
+                let (ox, oy) = old_pos[idx];
+                let (nx, ny) = (self.cells[idx].x, self.cells[idx].y);
+                if nx == ox && ny == oy { continue; } // stayed in same square, no error
+                // Actual displacement (with min-image for wrap, direct for no-wrap)
+                let adx = if self.wrap { min_image(nx as f32 - ox as f32, W as f32) }
+                           else { nx as f32 - ox as f32 };
+                let ady = if self.wrap { min_image(ny as f32 - oy as f32, H as f32) }
+                           else { ny as f32 - oy as f32 };
+                let spd = (self.cells[idx].vx.powi(2) + self.cells[idx].vy.powi(2)).sqrt();
+                if spd == 0.0 { continue; }
+                let intended = self.cells[idx].vy.atan2(self.cells[idx].vx);
+                let actual   = ady.atan2(adx);
+                let error    = actual - intended; // how much the grid rotated us
+                let corrected = intended - error; // rotate back by the same amount
+                self.cells[idx].vx = corrected.cos() * spd;
+                self.cells[idx].vy = corrected.sin() * spd;
+            }
         }
     }
 
@@ -1211,16 +1112,16 @@ impl Sim {
         let revive_chance = 0.375 * t;
 
         // Build current live set
-        let mut grid = vec![usize::MAX; W() * H()];
+        let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W() + c.gx()] = i;
+            grid[c.y as usize % H * W + c.x as usize % W] = i;
         }
 
         // Per-cell nudges: every non-original live cell has kill_chance of dying,
         // every dead original cell has revive_chance of being born.
         // Collect indices to kill (high to low for swap_remove stability)
         let mut to_kill: Vec<usize> = self.cells.iter().enumerate()
-            .filter(|(_, c)| !orig.positions.contains(&(c.gx(), c.gy())))
+            .filter(|(_, c)| !orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
             .filter(|_| xorf32(&mut self.rng) < kill_chance)
             .map(|(i, _)| i)
             .collect();
@@ -1228,23 +1129,22 @@ impl Sim {
         for i in to_kill { self.cells.swap_remove(i); }
 
         // Rebuild grid after kills
-        let mut grid2 = vec![usize::MAX; W() * H()];
+        let mut grid2 = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid2[c.gy() * W() + c.gx()] = i;
+            grid2[c.y as usize % H * W + c.x as usize % W] = i;
         }
 
         // Every dead original cell has revive_chance of being born
         for &(ox, oy) in &orig.positions {
-            if grid2[oy * W() + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
-                let id = self.next_id; self.next_id += 1;
-                self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
-                                       vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
+            if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                self.cells.push(Cell { x: ox as f32 + 0.5, y: oy as f32 + 0.5,
+                                       vx: 0.0, vy: 0.0, prev_speed: 0.0 });
             }
         }
 
         // Lerp velocities of live-original cells 3.125% closer to their original velocity each tick (4× slower)
         for c in &mut self.cells {
-            let pos = (c.gx(), c.gy());
+            let pos = (c.x as usize % W, c.y as usize % H);
             if let Some(&(tvx, tvy)) = orig.velocities.get(&pos) {
                 c.vx += (tvx - c.vx) * 0.03125; // 3.125%/tick = 12.5%/tick ÷ 4
                 c.vy += (tvy - c.vy) * 0.03125;
@@ -1257,7 +1157,7 @@ impl Sim {
         // Check convergence: positions match — velocity phase handled separately
         if self.cells.len() == orig.count {
             let live: std::collections::HashSet<(usize,usize)> = self.cells.iter()
-                .map(|c| (c.gx(), c.gy()))
+                .map(|c| (c.x as usize % W, c.y as usize % H))
                 .collect();
             if live == orig.positions {
                 return true;
@@ -1288,34 +1188,33 @@ impl Sim {
         let kill_chance   = 0.75  * vel_scale;
         let revive_chance = 0.375 * vel_scale;
         {
-            let mut grid = vec![usize::MAX; W() * H()];
+            let mut grid = vec![usize::MAX; W * H];
             for (i, c) in self.cells.iter().enumerate() {
-                grid[c.gy() * W() + c.gx()] = i;
+                grid[c.y as usize % H * W + c.x as usize % W] = i;
             }
             let mut to_kill: Vec<usize> = self.cells.iter().enumerate()
-                .filter(|(_, c)| !orig.positions.contains(&(c.gx(), c.gy())))
+                .filter(|(_, c)| !orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
                 .filter(|_| xorf32(&mut self.rng) < kill_chance)
                 .map(|(i, _)| i)
                 .collect();
             to_kill.sort_unstable_by(|a, b| b.cmp(a));
             for i in to_kill { self.cells.swap_remove(i); }
 
-            let mut grid2 = vec![usize::MAX; W() * H()];
+            let mut grid2 = vec![usize::MAX; W * H];
             for (i, c) in self.cells.iter().enumerate() {
-                grid2[c.gy() * W() + c.gx()] = i;
+                grid2[c.y as usize % H * W + c.x as usize % W] = i;
             }
             for &(ox, oy) in &orig.positions {
-                if grid2[oy * W() + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
-                    let id = self.next_id; self.next_id += 1;
-                    self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
-                                           vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
+                if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                    self.cells.push(Cell { x: ox as f32 + 0.5, y: oy as f32 + 0.5,
+                                           vx: 0.0, vy: 0.0, prev_speed: 0.0 });
                 }
             }
         }
 
         // Snapshot pre-gravity squared error for each cell
         let pre_err_sq: Vec<f32> = self.cells.iter().map(|c| {
-            let pos = (c.gx(), c.gy());
+            let pos = (c.x as usize % W, c.y as usize % H);
             let (tvx, tvy) = orig.velocities.get(&pos).copied().unwrap_or((0.0, 0.0));
             (c.vx - tvx).powi(2) + (c.vy - tvy).powi(2)
         }).collect();
@@ -1324,7 +1223,7 @@ impl Sim {
 
         // Clamp + lerp: error from target can only stay the same or shrink
         for (i, c) in self.cells.iter_mut().enumerate() {
-            let pos = (c.gx(), c.gy());
+            let pos = (c.x as usize % W, c.y as usize % H);
             let (tvx, tvy) = orig.velocities.get(&pos).copied().unwrap_or((0.0, 0.0));
             let dvx = c.vx - tvx;
             let dvy = c.vy - tvy;
@@ -1345,18 +1244,18 @@ impl Sim {
     }
 
     fn epilogue_conway_deaths_only(&mut self, max_deaths: usize) {
-        let mut grid = vec![usize::MAX; W() * H()];
+        let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W() + c.gx()] = i;
+            grid[c.y as usize % H * W + c.x as usize % W] = i;
         }
         let neighbour_offsets: [(i32, i32); 8] = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)];
         let mut deaths: Vec<usize> = Vec::new();
         for (i, c) in self.cells.iter().enumerate() {
-            let gx = c.gx(); let gy = c.gy();
+            let gx = c.x as usize % W; let gy = c.y as usize % H;
             let cnt = neighbour_offsets.iter().filter(|&&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H() as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W() as i32)) as usize;
-                grid[ny * W() + nx] != usize::MAX
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                grid[ny * W + nx] != usize::MAX
             }).count();
             if cnt != 2 && cnt != 3 { deaths.push(i); }
         }
@@ -1373,36 +1272,36 @@ impl Sim {
         // Simplified Conway step with fixed max births/deaths (no pop_band logic)
         shuffle_vec(&mut self.cells, &mut self.rng);
         let n = self.cells.len();
-        let mut grid = vec![usize::MAX; W() * H()];
+        let mut grid = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid[c.gy() * W() + c.gx()] = i;
+            grid[c.y as usize % H * W + c.x as usize % W] = i;
         }
         let neighbour_offsets: [(i32, i32); 8] = [
             (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
         ];
         let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
             neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H() as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W() as i32)) as usize;
-                let idx = grid[ny * W() + nx];
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid[ny * W + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect()
         };
         let mut deaths: Vec<usize> = Vec::new();
         let mut births: Vec<(usize, usize, Vec<usize>)> = Vec::new();
         for (i, c) in self.cells.iter().enumerate() {
-            let gx = c.gx(); let gy = c.gy();
+            let gx = c.x as usize % W; let gy = c.y as usize % H;
             let nbrs = live_neighbours(gy, gx);
             let cnt = nbrs.len();
             if cnt != 2 && cnt != 3 && !nbrs.is_empty() { deaths.push(i); }
         }
         let mut candidates = std::collections::HashSet::new();
         for c in &self.cells {
-            let gx = c.gx(); let gy = c.gy();
+            let gx = c.x as usize % W; let gy = c.y as usize % H;
             for &(dy, dx) in &neighbour_offsets {
-                let ny = ((gy as i32 + dy).rem_euclid(H() as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W() as i32)) as usize;
-                if grid[ny * W() + nx] == usize::MAX { candidates.insert((ny, nx)); }
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
             }
         }
         for (gy, gx) in candidates {
@@ -1419,16 +1318,16 @@ impl Sim {
         let mut di: Vec<usize> = dying.iter().cloned().collect();
         di.sort_unstable_by(|a, b| b.cmp(a));
         for i in di { self.cells.swap_remove(i); }
-        let mut grid2 = vec![usize::MAX; W() * H()];
+        let mut grid2 = vec![usize::MAX; W * H];
         for (i, c) in self.cells.iter().enumerate() {
-            grid2[c.gy() * W() + c.gx()] = i;
+            grid2[c.y as usize % H * W + c.x as usize % W] = i;
         }
         for (gy, gx, _) in births {
-            if grid2[gy * W() + gx] != usize::MAX { continue; }
+            if grid2[gy * W + gx] != usize::MAX { continue; }
             let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
-                let ny = ((gy as i32 + dy).rem_euclid(H() as i32)) as usize;
-                let nx = ((gx as i32 + dx).rem_euclid(W() as i32)) as usize;
-                let idx = grid2[ny * W() + nx];
+                let ny = ((gy as i32 + dy).rem_euclid(H as i32)) as usize;
+                let nx = ((gx as i32 + dx).rem_euclid(W as i32)) as usize;
+                let idx = grid2[ny * W + nx];
                 if idx != usize::MAX { Some(idx) } else { None }
             }).collect();
             if live_nbrs.is_empty() { continue; }
@@ -1437,33 +1336,31 @@ impl Sim {
             let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
             let new_idx = self.cells.len();
             let spd = (vx*vx+vy*vy).sqrt();
-            let id = self.next_id; self.next_id += 1;
-            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd, id, moved: false });
-            grid2[gy * W() + gx] = new_idx;
+            self.cells.push(Cell { x: gx as f32+0.5, y: gy as f32+0.5, vx, vy, prev_speed: spd });
+            grid2[gy * W + gx] = new_idx;
         }
         self.order = (0..self.cells.len()).collect();
     }
 
     // Gravity step where original-position cells don't move (but still exert gravity)
-    fn gravity_step_epilogue(&mut self, orig: &OriginalState, g_scale: f32) {
+    fn gravity_step_epilogue(&mut self, orig: &OriginalState) {
         let n = self.cells.len();
-        // Barnes-Hut for epilogue: forces only, no movement — positions stay integer-discrete.
-        // Original-position cells are frozen (no force applied); non-originals get force
-        // but movement is handled by the kill/revive nudges, not direct position update.
+        // Barnes-Hut tree for epilogue gravity (original particles are "fixed" — no force applied)
         let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
-        nodes.push(QNode::empty(0.0, 0.0, W() as f32, H() as f32));
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
         for i in 0..n {
-            let (px, py) = (self.cells[i].px, self.cells[i].py);
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
             qt_insert(&mut nodes, 0, i, px, py, 0);
         }
         for i in 0..n {
-            if orig.positions.contains(&(self.cells[i].gx(), self.cells[i].gy())) { continue; }
-            let (px, py) = (self.cells[i].px, self.cells[i].py);
-            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening, self.wrap_x, self.wrap_y, self.stagger_x, self.stagger_y);
-            self.cells[i].vx += gfx;
-            self.cells[i].vy += gfy;
+            let is_orig = orig.positions.contains(&(self.cells[i].x as usize % W, self.cells[i].y as usize % H));
+            if is_orig { continue; } // original particles are fixed, skip force
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            let (fx, fy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening);
+            self.cells[i].vx += fx;
+            self.cells[i].vy += fy;
         }
-        // Cap speeds (velocity still evolves, even though positions don't move this phase)
+        // Cap speeds, then only move non-original cells
         for c in &mut self.cells {
             let spd = (c.vx*c.vx+c.vy*c.vy).sqrt();
             let cap = c.prev_speed.max(self.speed_cap);
@@ -1471,141 +1368,49 @@ impl Sim {
             let hard_ceil = self.speed_cap * 2.0;
             c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
         }
+        // Move only non-original cells
+        for c in &mut self.cells {
+            let xi = c.x as usize % W; let yi = c.y as usize % H;
+            if !orig.positions.contains(&(xi, yi)) {
+                c.x = (c.x + c.vx).rem_euclid(W as f32);
+                c.y = (c.y + c.vy).rem_euclid(H as f32);
+            }
+        }
         self.order = (0..self.cells.len()).collect();
     }
 
-    // ── Audio synthesis ────────────────────────────────────────────────────
-    // Called once per video frame. Appends SAMPLES_PER_FRAME f32 samples to chunk_audio.
-    // Only cells that moved (changed grid square) this tick sustain a voice.
-    // Stationary/blocked cells let their voice release.
-    fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
-        use std::f32::consts::PI;
-
-        // ── 1. Derive targets from accumulated region stats ────────────────
-        // Region dimensions in world units
-        let rw = W() as f32 / 3.0; // width of one region column
-        let rh = H() as f32 / 3.0; // height of one region row
-
-        for (ri, v) in self.region_voices.iter_mut().enumerate() {
-            let rs = &self.region_stats[ri];
-            let col = (ri % 3) as f32;
-            let row = (ri / 3) as f32;
-
-            // Amplitude target: population × avg_speed, normalised
-            let amp_target = if rs.cell_count > 0.0 {
-                let avg_speed = rs.speed_sum / rs.cell_count;
-                // Scale: ~100 cells × speed 2.0 → amplitude 1.0
-                (rs.cell_count * avg_speed / 200.0).min(2.0)
-            } else {
-                0.0
-            };
-            v.amplitude += (amp_target - v.amplitude) * SLEW_AMP;
-
-            // CoG — normalised within the region [0..1], defaulting to centre when empty
-            let (cog_x_target, cog_y_target) = if rs.cell_count > 0.0 {
-                let cx = (rs.cog_x_sum / rs.cell_count - col * rw) / rw;
-                let cy = (rs.cog_y_sum / rs.cell_count - row * rh) / rh;
-                (cx.clamp(0.0, 1.0), cy.clamp(0.0, 1.0))
-            } else {
-                (0.5, 0.5) // drift toward centre when idle
-            };
-            v.cog_x += (cog_x_target - v.cog_x) * SLEW_COG;
-            v.cog_y += (cog_y_target - v.cog_y) * SLEW_COG;
-
-            // Pitch bend: CoG-x drives ±PITCH_BEND_MAX cents
-            let bend_target = (v.cog_x - 0.5) * 2.0 * PITCH_BEND_MAX;
-            v.pitch_bend += (bend_target - v.pitch_bend) * SLEW_BEND;
-
-            // Filter: CoG-y drives warmth — top of region (cog_y→0) = bright, bottom = warm
-            let filter_target = FILTER_BRIGHT + (FILTER_WARM - FILTER_BRIGHT) * v.cog_y;
-            v.filter_coeff += (filter_target - v.filter_coeff) * SLEW_FILTER;
-        }
-
-        // ── 2. Synthesise SAMPLES_PER_FRAME stereo pairs ──────────────────
-        for _ in 0..SAMPLES_PER_FRAME {
-            let mut sum_l     = 0.0f32;
-            let mut sum_r     = 0.0f32;
-            let mut reverb_in = 0.0f32;
-
-            for v in self.region_voices.iter_mut() {
-                // Hard gate: silence very quiet voices to prevent droning
-                if v.amplitude < 1e-4 { continue; }
-
-                // Pitch with CoG-x bend
-                let freq = v.base_freq * 2.0f32.powf(v.pitch_bend / 1200.0);
-                v.phase = (v.phase + freq / SAMPLE_RATE as f32).rem_euclid(1.0);
-
-                // Sine wave through dynamic LP filter (CoG-y driven warmth)
-                let raw = (v.phase * 2.0 * PI).sin();
-                v.filter_state += v.filter_coeff * (raw - v.filter_state);
-
-                let s = v.filter_state * v.amplitude * AUDIO_AMP_SCALE;
-
-                // Equal-power pan (fixed per column)
-                let pan_angle = (v.pan + 1.0) * 0.5 * PI * 0.5;
-                sum_l     += s * pan_angle.cos();
-                sum_r     += s * pan_angle.sin();
-                reverb_in += s * v.reverb_send;
-            }
-
-            // Mid-side reverb
-            let wet  = self.reverb.process(reverb_in.tanh() * 0.7);
-            let side = (sum_l - sum_r) * 0.5;
-            chunk_audio.push((wet + side).tanh()); // L
-            chunk_audio.push((wet - side).tanh()); // R
-        }
-
-        // ── 3. Clear stats for next frame ──────────────────────────────────
-        self.region_stats = [RegionStats::default(); 9];
-    }
-
     fn paint_frame(&mut self, canvas: &mut Vec<f32>, palette: &DirectionalPalette) {
-        // Canvas stores Oklab (L, a, b) as f32 per channel.
-        // Fade only L (brightness): multiplicative + constant drain so L always reaches 0.
-        // a and b (chroma) are left intact — they become invisible as L→0.
-        const FADE_SLOW: f32 = 0.999068; // 0.999534² — doubled fade speed
-        // Epsilon ensures L hits 0 within ~28s at 60fps (not stuck at grey asymptote).
-        // At FADE_SLOW, without epsilon, a cell starting at L=0.75 would asymptote to ~0.32.
-        const FADE_EPSILON: f32 = 0.0003;
-        for py in 0..H() {
-            for px in 0..W() {
-                let i = (py * W() + px) * 3;
-                if self.prev_live[py * W() + px] {
-                    // Was alive last tick, now gone — fast brightness drop (trail burst)
-                    canvas[i] = (canvas[i] * 0.5).max(0.0);
-                    // a, b unchanged
+        for py in 0..H {
+            for px in 0..W {
+                let i = (py * W + px) * 3;
+                if self.prev_live[py * W + px] {
+                    canvas[i]     *= 0.5;
+                    canvas[i + 1] *= 0.5;
+                    canvas[i + 2] *= 0.5;
                 } else {
-                    // Normal background fade — only L drained
-                    canvas[i] = (canvas[i] * FADE_SLOW - FADE_EPSILON).max(0.0);
-                    // a, b unchanged
+                    canvas[i]     *= 0.999534; // fade rate (doubled from 0.999767)
+                    canvas[i + 1] *= 0.999534;
+                    canvas[i + 2] *= 0.999534;
                 }
             }
         }
         self.prev_live.fill(false);
         for c in &self.cells {
-            let xi = c.gx();
-            let yi = c.gy();
-            // Stuck cells dimmed by 1/8 of their value (×0.875), not to 1/8.
-            let (cvx, cvy) = if c.moved { (c.vx, c.vy) } else { (c.vx * 0.875, c.vy * 0.875) };
-            let (l, a, b) = velocity_color_oklab(cvx, cvy, c.px, c.py, self.speed_cap, palette);
-            let i = (yi * W() + xi) * 3;
-            canvas[i]     = l;
-            canvas[i + 1] = a;
-            canvas[i + 2] = b;
-            self.prev_live[yi * W() + xi] = true;
+            let xi = c.x as usize % W;
+            let yi = c.y as usize % H;
+            let (r, g, b) = velocity_color(c.vx, c.vy, self.speed_cap);
+            let i = (yi * W + xi) * 3;
+            canvas[i]     = r as f32;
+            canvas[i + 1] = g as f32;
+            canvas[i + 2] = b as f32;
+            self.prev_live[yi * W + xi] = true;
         }
     }
 
     fn save_png(canvas: &[f32], path: &str) {
-        // Convert Oklab (L, a, b) → sRGB u8 only at output time.
-        let pixels: Vec<u8> = canvas.chunks_exact(3)
-            .flat_map(|px| {
-                let (r, g, b) = oklab_to_srgb(px[0], px[1], px[2]);
-                [r, g, b]
-            })
-            .collect();
+        let pixels: Vec<u8> = canvas.iter().map(|&v| v.clamp(0.0, 255.0) as u8).collect();
         let file = fs::File::create(path).unwrap();
-        let mut enc = png::Encoder::new(BufWriter::new(file), W() as u32, H() as u32);
+        let mut enc = png::Encoder::new(BufWriter::new(file), W as u32, H as u32);
         enc.set_color(png::ColorType::Rgb);
         enc.set_depth(png::BitDepth::Eight);
         let mut writer = enc.write_header().unwrap();
@@ -1613,73 +1418,20 @@ impl Sim {
     }
 
     fn stats(&self) -> String {
-        let total = self.cells.len() as f32;
-        if total == 0.0 {
-            return "pop=0 births=0 deaths=0 avg_spd=0 max=0 p10=0 spread=0 blk=0/0 com=(0,0)".into();
-        }
-        let in_bounds: Vec<&Cell> = if self.wrap_x && self.wrap_y {
-            self.cells.iter().collect()
-        } else {
-            self.cells.iter().filter(|c| c.in_bounds()).collect()
-        };
-        let pop = in_bounds.len();
-        let n = total;
-        let cx = self.cells.iter().map(|c| c.px).sum::<f32>() / n;
-        let cy = self.cells.iter().map(|c| c.py).sum::<f32>() / n;
+        let n = self.cells.len() as f32;
+        let avg_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).sum::<f32>() / n;
+        let max_spd = self.cells.iter().map(|c| (c.vx*c.vx+c.vy*c.vy).sqrt()).fold(0.0f32, f32::max);
+        let cx = self.cells.iter().map(|c| c.x as f32).sum::<f32>() / n;
+        let cy = self.cells.iter().map(|c| c.y as f32).sum::<f32>() / n;
+        let hw = W as f32 / 2.0; let hh = H as f32 / 2.0;
         let spread = self.cells.iter().map(|c| {
-            let dx = c.px - cx; let dy = c.py - cy;
+            let mut dx = c.x as f32 - cx; let mut dy = c.y as f32 - cy;
+            if dx > hw { dx -= W as f32; } if dx < -hw { dx += W as f32; }
+            if dy > hh { dy -= H as f32; } if dy < -hh { dy += H as f32; }
             (dx*dx+dy*dy).sqrt()
         }).sum::<f32>() / n;
-
-        // Speed stats: avg, max, p10 — stuck cells count at 1/128 speed (hint, not zero).
-        let mut speeds: Vec<f32> = self.cells.iter()
-            .map(|c| { let s = (c.vx*c.vx+c.vy*c.vy).sqrt(); if c.moved { s } else { s / 128.0 } })
-            .collect();
-        speeds.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let avg_spd = speeds.iter().sum::<f32>() / n;
-        let max_spd = *speeds.last().unwrap_or(&0.0);
-        let p10_idx = ((speeds.len() as f32 * 0.10) as usize).min(speeds.len().saturating_sub(1));
-        let p10_spd = speeds[p10_idx];
-
-        // Effective speed: cells that didn't actually move last tick count as 0.
-        // Reveals true visual motion — packed cells have velocity but are frozen in place.
-        let eff_spd = self.cells.iter()
-            .map(|c| if c.moved { (c.vx*c.vx+c.vy*c.vy).sqrt() } else { 0.0 })
-            .sum::<f32>() / n;
-        let moved_frac = self.cells.iter().filter(|c| c.moved).count() as f32 / n;
-
-        // Clustering: divide grid into BLK×BLK blocks, count occupied blocks
-        // Low blk = tight clusters; high blk = spread across grid
-        const BLK: usize = 8;
-        let brows = (H() + BLK - 1) / BLK;
-        let bcols = (W() + BLK - 1) / BLK;
-        let btotal = brows * bcols;
-        let mut block_occ = vec![false; btotal];
-        let mut max_in_block = 0u16;
-        let mut block_counts = vec![0u16; btotal];
-        for c in &self.cells {
-            let bx = (c.px as usize / BLK).min(bcols - 1);
-            let by = (c.py as usize / BLK).min(brows - 1);
-            let bi = by * bcols + bx;
-            block_occ[bi] = true;
-            block_counts[bi] += 1;
-            if block_counts[bi] > max_in_block { max_in_block = block_counts[bi]; }
-        }
-        let blk_used = block_occ.iter().filter(|&&v| v).count();
-
-        // Top-3 densest block coordinates — track these across samples to detect blob drift
-        let mut block_list: Vec<(u16, usize, usize)> = block_counts.iter().enumerate()
-            .filter(|(_, &c)| c > 0)
-            .map(|(bi, &c)| (c, bi % bcols, bi / bcols))
-            .collect();
-        block_list.sort_by(|a, b| b.0.cmp(&a.0));
-        let hot: String = block_list.iter().take(3)
-            .map(|(_, bx, by)| format!("({},{})", bx * BLK, by * BLK))
-            .collect::<Vec<_>>().join(";");
-
-        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} eff_spd={eff_spd:.3} moved={moved_pct:.0}% max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{btotal} dense={max_in_block} hot=[{hot}] com=({cx:.1},{cy:.1})",
-            self.conway_births, self.conway_deaths,
-            moved_pct = moved_frac * 100.0)
+        format!("pop={} births={} deaths={} avg_spd={avg_spd:.3} max={max_spd:.3} spread={spread:.1} com=({cx:.1},{cy:.1})",
+            self.cells.len(), self.conway_births, self.conway_deaths)
     }
 }
 
@@ -1691,279 +1443,115 @@ fn shuffle_vec<T>(v: &mut Vec<T>, rng: &mut u64) {
     }
 }
 
-// ── Colour system ─────────────────────────────────────────────────────────────
-//
-// "Radical" mode (default): perceptual hue-wheel interpolation.
-//   Velocity direction θ → position on a circular spline through the palette colours.
-//   Speed ramp: zero-speed anchor → palette colour at speed_cap.
-//   Beyond speed_cap (cells can reach 2×): L and C extrapolated with √ taper.
-//   Out-of-gamut colours → OKLCH chroma binary-search reduction (hue-preserving).
-//
-// Palette loaded from palettes/active.txt at the start of each segment.
-// Copy any file from palettes/ to palettes/active.txt to switch schemes mid-render.
+// Returns Oklab (L, a, b) for a cell's velocity — stored directly in canvas, no RGB conversion here.
+// L: 0.45 (still) → 0.75 (fast); C: 0.0 (still) → 0.20 (fast); H: velocity direction angle.
+// ── Palette system ────────────────────────────────────────────────────────────
+// Hot-reload: binary reads /tmp/gravity_palette at the start of each chunk.
+// File contains a single palette name: "classic" | "jeremy"
+// If file is absent or unrecognised, falls back to "classic".
+// "classic" = original uniform hue wheel (exact same behaviour as before).
+// "jeremy"  = gravity-well hue biasing toward a curated palette; same L/C ramp.
 
-/// Parse a hex colour string like "#08223D" or "08223D" → (r, g, b).
-fn parse_hex_color(s: &str) -> Option<(u8, u8, u8)> {
-    let s = s.trim().trim_start_matches('#');
-    if s.len() != 6 { return None; }
-    let n = u32::from_str_radix(s, 16).ok()?;
-    Some(((n >> 16) as u8, ((n >> 8) & 0xFF) as u8, (n & 0xFF) as u8))
-}
-
-fn srgb_u8_to_linear(x: u8) -> f32 {
-    let x = x as f32 / 255.0;
-    if x <= 0.04045 { x / 12.92 } else { ((x + 0.055) / 1.055).powf(2.4) }
-}
-
-fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
-    let (rl, gl, bl) = (srgb_u8_to_linear(r), srgb_u8_to_linear(g), srgb_u8_to_linear(b));
-    let lms_l = 0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl;
-    let lms_m = 0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl;
-    let lms_s = 0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl;
-    let (l_, m_, s_) = (lms_l.cbrt(), lms_m.cbrt(), lms_s.cbrt());
-    let lab_l =  0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
-    let lab_a =  1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
-    let lab_b =  0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
-    (lab_l, lab_a, lab_b)
-}
-
-/// Oklab → Oklch: (L, C, H) where H is in radians −π..π.
-#[inline] fn to_lch(l: f32, a: f32, b: f32) -> (f32, f32, f32) {
-    (l, (a*a + b*b).sqrt(), b.atan2(a))
-}
-
-/// Polar Oklch lerp: blend two Oklab colors via Oklch (arc hue, linear L+C).
-/// Returns result as Oklab (L, a, b).
-#[inline] fn oklch_lerp(lab0: (f32,f32,f32), lab1: (f32,f32,f32), t: f32) -> (f32, f32, f32) {
-    let (l0, c0, h0) = to_lch(lab0.0, lab0.1, lab0.2);
-    let (l1, c1, h1) = to_lch(lab1.0, lab1.1, lab1.2);
-    let l = l0 + (l1 - l0) * t;
-    let c = c0 + (c1 - c0) * t;
-    let hx = (1.0 - t) * h0.cos() + t * h1.cos();
-    let hy = (1.0 - t) * h0.sin() + t * h1.sin();
-    let h  = hy.atan2(hx);
-    (l, c * h.cos(), c * h.sin())
-}
-
-/// Directional colour anchors blended in Oklch (polar Oklab).
-/// Velocity direction selects four basis colours via squared-clamp weights:
-///   w_right = max(rx, 0)²   w_left = max(−rx, 0)²
-///   w_down  = max(ry, 0)²   w_up   = max(−ry, 0)²
-/// where (rx, ry) is the velocity rotated by `wheel_rotation` turns.
-/// L and C blend linearly; H blends via unit-vector mean (arc, not through neutral).
-/// This keeps diagonals on the hue arc — no accidental white from opposite hue cancellation.
-///
-/// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
-/// down  / up    → warm family (#FFC01F gold / #EA2261 hot-pink)
-/// zero-speed anchor: #061B31 dark navy.
 #[derive(Clone, Debug)]
-struct DirectionalPalette {
-    dark:           (f32, f32, f32),  // #061B31  dark navy — slow/still anchor
-    c_right:        (f32, f32, f32),  // #533AFD  violet      — +x
-    c_left:         (f32, f32, f32),  // #635BFF  periwinkle  — −x
-    c_down:         (f32, f32, f32),  // #FFC01F  golden yellow — +y (screen-down)
-    c_up:           (f32, f32, f32),  // #EA2261  hot pink      — −y (screen-up)
-    wheel_rotation:       f32,   // turns; negative = CCW in screen space
-    pos_rotation_enabled: bool,  // apply position-based hue rotation to velocity input
-    pos_rotation_output:  bool,  // also rotate output (a,b) by same angle (default: off)
+enum PaletteMode {
+    /// Original: speed→L/C, direction→hue uniformly.
+    Classic,
+    /// Gravity-well hue biasing toward Jeremy's palette anchors.
+    /// pull ∈ [0,1]: 0 = classic, 1 = maximum bias.
+    /// sigma_rad: angular half-width of each well in radians (~0.7 ≈ 40°).
+    Jeremy { pull: f32, sigma_rad: f32 },
 }
 
-impl DirectionalPalette {
-    fn build(
-        zero:  (u8,u8,u8),
-        right: (u8,u8,u8),
-        left:  (u8,u8,u8),
-        down:  (u8,u8,u8),
-        up:    (u8,u8,u8),
-        wheel_rotation: f32,
-        pos_rotation_enabled: bool,
-        pos_rotation_output:  bool,
-    ) -> Self {
-        DirectionalPalette {
-            dark:    rgb_to_oklab(zero.0,  zero.1,  zero.2),
-            c_right: rgb_to_oklab(right.0, right.1, right.2),
-            c_left:  rgb_to_oklab(left.0,  left.1,  left.2),
-            c_down:  rgb_to_oklab(down.0,  down.1,  down.2),
-            c_up:    rgb_to_oklab(up.0,    up.1,    up.2),
-            wheel_rotation,
-            pos_rotation_enabled,
-            pos_rotation_output,
-        }
-    }
-
-    /// Blend the four directional anchors for a unit velocity (ux, uy).
-    /// Rotation = scheme wheel_rotation + optional position-based rotation:
-    ///   max 1 turn total; axes weighted by W()/(W()+H()) and H()/(W()+H()) respectively.
-    ///   Formula: px/W() + (py/H())*3 — 1 turn across width, 3 turns across height.
-    fn directional_color(&self, ux: f32, uy: f32, px: f32, py: f32) -> (f32, f32, f32) {
-        let pos_rot = if self.pos_rotation_enabled {
-            // 1 full turn across width, 3 full turns across height.
-            px / W() as f32 + (py / H() as f32) * 3.0
-        } else { 0.0 };
-        let angle = (self.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
-        let (ca, sa) = (angle.cos(), angle.sin());
-        // Screen-space CCW rotation: rx = ux·cos + uy·sin, ry = −ux·sin + uy·cos
-        let rx =  ux * ca + uy * sa;
-        let ry = -ux * sa + uy * ca;
-        let w_r = rx.max(0.0).powi(2);
-        let w_l = (-rx).max(0.0).powi(2);
-        let w_d = ry.max(0.0).powi(2);
-        let w_u = (-ry).max(0.0).powi(2);
-        // w_r + w_l + w_d + w_u = 1 on the unit circle — no normalisation needed.
-
-        let (lr, cr, hr) = to_lch(self.c_right.0, self.c_right.1, self.c_right.2);
-        let (ll, cl, hl) = to_lch(self.c_left.0,  self.c_left.1,  self.c_left.2);
-        let (ld, cd, hd) = to_lch(self.c_down.0,  self.c_down.1,  self.c_down.2);
-        let (lu, cu, hu) = to_lch(self.c_up.0,    self.c_up.1,    self.c_up.2);
-
-        // L and C blend linearly.
-        let l = w_r*lr + w_l*ll + w_d*ld + w_u*lu;
-        let c = w_r*cr + w_l*cl + w_d*cd + w_u*cu;
-
-        // H blends via unit-vector mean — correct circular interpolation across 0/2π wrap.
-        let hx = w_r*hr.cos() + w_l*hl.cos() + w_d*hd.cos() + w_u*hu.cos();
-        let hy = w_r*hr.sin() + w_l*hl.sin() + w_d*hd.sin() + w_u*hu.sin();
-        let h  = hy.atan2(hx);
-
-        // Back to Oklab (a, b).
-        let a = c * h.cos();
-        let b = c * h.sin();
-        (l, a, b)
+fn load_palette() -> PaletteMode {
+    let raw = std::fs::read_to_string("/tmp/gravity_palette")
+        .unwrap_or_default();
+    let s = raw.trim().to_lowercase();
+    if s.starts_with("jeremy") {
+        // Optional: "jeremy pull=0.8 sigma=0.6"
+        let pull = s.split("pull=").nth(1)
+            .and_then(|v| v.split_whitespace().next())
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0.85_f32);
+        let sigma = s.split("sigma=").nth(1)
+            .and_then(|v| v.split_whitespace().next())
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0.70_f32);  // ~40°
+        PaletteMode::Jeremy { pull, sigma_rad: sigma }
+    } else {
+        PaletteMode::Classic
     }
 }
 
-
-fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> DirectionalPalette {
-    let raw = std::fs::read_to_string("palettes/active.txt")
-        .expect("palettes/active.txt not found — copy a palette file there before running");
-
-    let mut zero:  Option<(u8,u8,u8)> = None;
-    let mut right: Option<(u8,u8,u8)> = None;
-    let mut left:  Option<(u8,u8,u8)> = None;
-    let mut down:  Option<(u8,u8,u8)> = None;
-    let mut up:    Option<(u8,u8,u8)> = None;
-    let mut wheel: Option<f32>        = None;  // turns; optional, default -11/360
-
-    for line in raw.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') { continue; }
-        if let Some((key, val)) = line.split_once('=') {
-            let key = key.trim();
-            let val = val.trim();
-            match key {
-                "wheel_rotation" => {
-                    wheel = Some(val.parse::<f32>()
-                        .unwrap_or_else(|_| panic!("invalid wheel_rotation {:?} in palettes/active.txt (must be a number in turns)", val)));
-                }
-                _ => {
-                    let rgb = parse_hex_color(val)
-                        .unwrap_or_else(|| panic!("invalid hex colour {:?} in palettes/active.txt", val));
-                    match key {
-                        "zero"  => zero  = Some(rgb),
-                        "right" => right = Some(rgb),
-                        "left"  => left  = Some(rgb),
-                        "down"  => down  = Some(rgb),
-                        "up"    => up    = Some(rgb),
-                        other   => panic!("unknown palette key {:?} in palettes/active.txt", other),
-                    }
-                }
-            }
-        }
-    }
-
-    let zero  = zero .expect("palettes/active.txt missing 'zero'");
-    let right = right.expect("palettes/active.txt missing 'right'");
-    let left  = left .expect("palettes/active.txt missing 'left'");
-    let down  = down .expect("palettes/active.txt missing 'down'");
-    let up    = up   .expect("palettes/active.txt missing 'up'");
-    let wheel = wheel.expect("palettes/active.txt missing 'wheel_rotation'");
-
-    DirectionalPalette::build(zero, right, left, down, up, wheel, pos_rotation_enabled, pos_rotation_output)
-}
-
-fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, dp: &DirectionalPalette) -> (f32, f32, f32) {
+fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
+    use std::f32::consts::PI;
     let spd = (vx * vx + vy * vy).sqrt();
 
-    // t = 0 → still (zero-speed anchor), t = 1 → speed_cap, up to ~2.0 beyond.
-    let t = spd / speed_cap;
+    match palette {
+        PaletteMode::Classic => {
+            // Original behaviour — unchanged.
+            let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
+            let l = 0.45 + 0.30 * t;
+            let c = 0.20 * t;
+            let h = vy.atan2(vx);
+            (l, c * h.cos(), c * h.sin())
+        }
 
-    let pos_rot = if dp.pos_rotation_enabled {
-        px / W() as f32 + (py / H() as f32) * 3.0
-    } else { 0.0 };
+        PaletteMode::Jeremy { pull, sigma_rad } => {
+            // Anchor hues in radians (Oklch atan2 convention, −π..π).
+            // Derived from Jeremy's palette: FF6118 FFC01F 635BFF 533AFD F44BCC EA2261
+            //   orange≈40°  gold≈80°  periwinkle≈274°  violet≈280°  pink≈325°  rose≈5°
+            const ANCHORS: [f32; 6] = [
+                 0.698,   // FF6118  orange  ~40°
+                 1.396,   // FFC01F  gold    ~80°
+                -1.501,   // 635BFF  periwinkle  ~274° (= −86°)
+                -1.396,   // 533AFD  violet  ~280° (= −80°)
+                -0.611,   // F44BCC  pink    ~325° (= −35°)
+                 0.087,   // EA2261  rose    ~5°
+            ];
 
-    let dark = dp.dark;
-    let tgt = if spd > 1e-6 {
-        dp.directional_color(vx / spd, vy / spd, px, py)
-    } else {
-        dark
-    };
+            let h_nat = vy.atan2(vx);   // natural hue from velocity direction
+            let s2    = sigma_rad * sigma_rad;
 
-    let (l, a, b) = if t <= 1.0 {
-        oklch_lerp(dark, tgt, t)
-    } else {
-        // Beyond speed_cap: push L brighter and C more saturated via Oklch.
-        let (tl, tc, th) = to_lch(tgt.0, tgt.1, tgt.2);
-        let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
-        let l = (tl + (0.92 - tl) * extra * 0.45).min(0.93);
-        let c = tc * (1.0 + extra * 0.40);
-        (l, c * th.cos(), c * th.sin())
-    };
+            // Each anchor exerts a pull ∝ weight × angular displacement.
+            // No snapping: force is continuous and zero when sitting on an anchor.
+            let force: f32 = ANCHORS.iter().map(|&h_i| {
+                let mut d = h_i - h_nat;
+                // Wrap angular distance to [−π, π]
+                if d >  PI { d -= 2.0 * PI; }
+                if d < -PI { d += 2.0 * PI; }
+                let w = s2 / (d * d + s2);
+                w * d
+            }).sum();
 
-    if dp.pos_rotation_output {
-        let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
-        let (oca, osa) = (out_angle.cos(), out_angle.sin());
-        (l, a * oca - b * osa, a * osa + b * oca)
-    } else {
-        (l, a, b)
+            let h_biased = h_nat + pull * force;
+
+            // Speed ramp: dark navy (061B31, L≈0.15) → full chroma at speed_cap.
+            // Slightly brighter and more saturated than classic to suit the palette.
+            let t = (spd / speed_cap).clamp(0.0, 1.0);
+            let l = 0.15 + 0.60 * t;
+            let c = 0.24 * t;
+            (l, c * h_biased.cos(), c * h_biased.sin())
+        }
     }
 }
 
-// ── sRGB conversion with hue-preserving gamut compression ─────────────────────
-
-/// Oklab → linear sRGB (values may be outside [0, 1] for out-of-gamut colours).
-fn oklab_to_linear_rgb(l: f32, a: f32, b: f32) -> (f32, f32, f32) {
+fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
+    // Oklab → LMS (cube roots)
     let l_ = l + 0.3963377774 * a + 0.2158037573 * b;
     let m_ = l - 0.1055613458 * a - 0.0638541728 * b;
     let s_ = l - 0.0894841775 * a - 1.2914855480 * b;
     let (l3, m3, s3) = (l_ * l_ * l_, m_ * m_ * m_, s_ * s_ * s_);
+    // LMS → linear sRGB
     let r_lin =  4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
     let g_lin = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
     let b_lin = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
-    (r_lin, g_lin, b_lin)
-}
-
-fn linear_to_srgb_u8(x: f32) -> u8 {
-    let x = x.clamp(0.0, 1.0);
-    let g = if x <= 0.0031308 { x * 12.92 } else { 1.055 * x.powf(1.0 / 2.4) - 0.055 };
-    (g * 255.0).round() as u8
-}
-
-fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
-    let (r, g, b_) = oklab_to_linear_rgb(l, a, b);
-
-    // Fast path: in-gamut (the common case).
-    if r >= 0.0 && r <= 1.0 && g >= 0.0 && g <= 1.0 && b_ >= 0.0 && b_ <= 1.0 {
-        return (linear_to_srgb_u8(r), linear_to_srgb_u8(g), linear_to_srgb_u8(b_));
-    }
-
-    // Out-of-gamut: reduce chroma via binary search in OKLCH while preserving hue and L.
-    // 8 iterations → precision of C to within C/256, imperceptible.
-    let c0 = (a * a + b * b).sqrt();
-    let h  = b.atan2(a);
-    let (mut c_lo, mut c_hi) = (0.0_f32, c0);
-    for _ in 0..8 {
-        let c_mid = (c_lo + c_hi) * 0.5;
-        let (a_m, b_m) = (c_mid * h.cos(), c_mid * h.sin());
-        let (r2, g2, b2) = oklab_to_linear_rgb(l, a_m, b_m);
-        if r2 >= 0.0 && r2 <= 1.0 && g2 >= 0.0 && g2 <= 1.0 && b2 >= 0.0 && b2 <= 1.0 {
-            c_lo = c_mid;
-        } else {
-            c_hi = c_mid;
-        }
-    }
-    let (a_s, b_s) = (c_lo * h.cos(), c_lo * h.sin());
-    let (rs, gs, bs) = oklab_to_linear_rgb(l, a_s, b_s);
-    (linear_to_srgb_u8(rs), linear_to_srgb_u8(gs), linear_to_srgb_u8(bs))
+    // Linear sRGB → gamma-corrected u8 (clamp handles out-of-gamut)
+    let gamma = |x: f32| -> u8 {
+        let x = x.clamp(0.0, 1.0);
+        let g = if x <= 0.0031308 { x * 12.92 } else { 1.055 * x.powf(1.0 / 2.4) - 0.055 };
+        (g * 255.0).round() as u8
+    };
+    (gamma(r_lin), gamma(g_lin), gamma(b_lin))
 }
 
 fn xoru64(s: &mut u64) -> u64 {
@@ -1974,65 +1562,15 @@ fn xorf32(s: &mut u64) -> f32 {
     (xoru64(s) & 0xFFFFFF) as f32 / 0xFFFFFF as f32
 }
 
-/// Build the ffmpeg filter_complex string for 2×2 tiling with stagger-aware edge alignment.
-///
-/// On a staggered torus the four tiles aren't all identical copies — adjacent tiles must be
-/// rolled so that their edges match where the topology actually connects:
-///   TL (col=0,row=0): unrolled
-///   TR (col=1,row=0): y-rolled up by stagger_y   (right neighbour is shifted down by stagger_y)
-///   BL (col=0,row=1): x-rolled left by stagger_x (bottom neighbour is shifted right by stagger_x)
-///   BR (col=1,row=1): both rolls combined
-///
-/// When stagger is zero the filtergraph degenerates to the original simple 2×2 clone.
-fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> String {
-    let ow = w * 2;
-    let oh = h * 2;
-    // Round to nearest pixel; clamp so crops are valid (shouldn't be needed but be safe).
-    let dy = (stagger_y.round() as usize).min(h.saturating_sub(1));
-    let dx = (stagger_x.round() as usize).min(w.saturating_sub(1));
-
-    if dx == 0 && dy == 0 {
-        // No stagger — all four tiles are identical.
-        format!(
-            "[0:v]split=4[a][b][c][d];[a][b]hstack[top];[c][d]hstack[bot];\
-             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
-        )
-    } else if dx == 0 {
-        // Only vertical stagger (landscape default: stagger_y = W-H).
-        // TL = BL = unrolled; TR = BR = y-rolled up by dy.
-        // y-roll-up by dy: rows dy..H-1 become new top, rows 0..dy-1 go to bottom.
-        let h_upper = h - dy;
-        format!(
-            "[0:v]split=4[tl][bl][ra][rb];\
-             [ra]crop={w}:{h_upper}:0:{dy}[yu];[rb]crop={w}:{dy}:0:0[yl];\
-             [yu][yl]vstack[rsrc];[rsrc]split=2[tr][br];\
-             [tl][tr]hstack[top];[bl][br]hstack[bot];\
-             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
-        )
-    } else if dy == 0 {
-        // Only horizontal stagger (portrait default: stagger_x = H-W).
-        // TL = TR = unrolled; BL = BR = x-rolled left by dx.
-        // x-roll-left by dx: rightmost dx columns become new left → [right][left] hstack.
-        let w_right = w - dx;
-        format!(
-            "[0:v]split=4[tl][tr][ra][rb];\
-             [ra]crop={w_right}:{h}:{dx}:0[xr];[rb]crop={dx}:{h}:0:0[xl];\
-             [xr][xl]hstack[rsrc];[rsrc]split=2[bl][br];\
-             [tl][tr]hstack[top];[bl][br]hstack[bot];\
-             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
-        )
-    } else {
-        // Both stagger non-zero: not supported (caught at arg parsing)
-        panic!("build_tile_filter: both stagger_x and stagger_y non-zero not supported");
-    }
-}
-
-fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
-                tile_2x2: bool, stagger_x: f32, stagger_y: f32) {
-    let ow = OUT_W() * 2;
-    let oh = OUT_H() * 2;
+fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize, tile_2x2: bool) {
+    // ffmpeg glob requires sorted files — they're zero-padded so glob order = numeric order
+    let ow = OUT_W * 2;
+    let oh = OUT_H * 2;
     let status = if tile_2x2 {
-        let fc = build_tile_filter(OUT_W() as usize, OUT_H() as usize, stagger_x, stagger_y);
+        // Tile the frame 2×2 then scale back to normal output size (each copy is half-size).
+        let fc = format!(
+            "[0:v]split=4[a][b][c][d];[a][b]hstack[top];[c][d]hstack[bot];[top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        );
         Command::new("ffmpeg")
             .args([
                 "-y",
@@ -2141,7 +1679,7 @@ fn main() {
     // Parse args
     let args: Vec<String> = std::env::args().collect();
     let parse_arg = |flag: &str| -> Option<String> {
-        args.iter().rposition(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
+        args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
     };
     // Initialise resolution FIRST — W() and H() are used everywhere below.
     let width:  usize = parse_arg("--width") .and_then(|s| s.parse().ok()).unwrap_or(256);
@@ -2302,7 +1840,7 @@ fn main() {
     let init_pop = if circles > 0 {
         // ~50% coin-flip density over disk area → expected placed ≈ target_pop
         target_pop
-    } else if seed_density_inv > 0 { W() * H() / seed_density_inv } else { 0 };
+    } else if seed_density_inv > 0 { W * H / seed_density_inv } else { 0 };
     let circles_str = if circles > 0 { format!("{}", circles) } else { "none".to_string() };
     let settings = format!(
         "run_id:        {run_id}\nseed:          {rng_seed}\nframes:        {total_frames}\nseconds:       {seconds}\n\
@@ -2313,8 +1851,8 @@ fn main() {
          circles:       {circles_str}\nvel_scale:     {vel_scale}\n\
          wrap_x:        {wrap_x}\nwrap_y:        {wrap_y}\nbounce_x:      {bounce_x}\nbounce_y:      {bounce_y}\nstagger_x:     {stagger_x}\nstagger_y:     {stagger_y}\ndampen_x:      {dampen_x}\ndampen_y:      {dampen_y}\nvel_decay:     {vel_decay}\nvel_nudge:     {vel_nudge}\nvel_nudge_rate:{vel_nudge_rate}\nsteer:         {steer}\n\
          pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\ntile_2x2:      {tile_2x2}\n\
-         resolution:    {}x{} → {}x{}\n",
-        width, height, width * 2, height * 2
+         resolution:    {}x{} → 2048x1280\n",
+        OUT_W * 2, OUT_H * 2
     );
     fs::create_dir_all(&segments_dir).unwrap();
     fs::create_dir_all(&frames_dir).unwrap();
@@ -2329,7 +1867,7 @@ fn main() {
 
     // Load checkpoint or init fresh
     let (mut sim, mut canvas, start_frame) =
-        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
+        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
         .map(|(s, c, sf)| {
             println!("Resuming from checkpoint: frame {} / {}", sf, total_frames);
             (s, c, sf)
@@ -2340,8 +1878,8 @@ fn main() {
             } else {
                 println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
             }
-            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
-            let c = vec![0.0f32; W() * H() * 3];
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, conway_every, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
+            let c = vec![0.0f32; W * H * 3];
             (s, c, 0)
         });
 
@@ -2352,8 +1890,8 @@ fn main() {
     let orig = if start_frame == 0 {
         // Fresh start — this IS tick=0
         let o = OriginalState {
-            positions:  sim.cells.iter().map(|c| (c.gx(), c.gy())).collect(),
-            velocities: sim.cells.iter().map(|c| ((c.gx(), c.gy()), (c.vx, c.vy))).collect(),
+            positions:  sim.cells.iter().map(|c| (c.x as usize % W, c.y as usize % H)).collect(),
+            velocities: sim.cells.iter().map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy))).collect(),
             count: sim.cells.len(),
         };
         Sim::save_orig_state(&o, &orig_state_path);
@@ -2366,8 +1904,8 @@ fn main() {
             None => {
                 println!("WARNING: orig_state.bin not found — epilogue will target checkpoint state, not tick=0.");
                 OriginalState {
-                    positions:  sim.cells.iter().map(|c| (c.gx(), c.gy())).collect(),
-                    velocities: sim.cells.iter().map(|c| ((c.gx(), c.gy()), (c.vx, c.vy))).collect(),
+                    positions:  sim.cells.iter().map(|c| (c.x as usize % W, c.y as usize % H)).collect(),
+                    velocities: sim.cells.iter().map(|c| ((c.x as usize % W, c.y as usize % H), (c.vx, c.vy))).collect(),
                     count: sim.cells.len(),
                 }
             }
@@ -2390,6 +1928,1621 @@ fn main() {
         .create(true).append(true)
         .open(&segments_file).unwrap();
 
+    'chunks: for chunk in start_chunk..n_chunks {
+        let chunk_start_frame = chunk * CHUNK_FRAMES;
+        let chunk_end_frame = ((chunk + 1) * CHUNK_FRAMES).min(total_frames);
+        let this_chunk_frames = chunk_end_frame - chunk_start_frame;
+
+        println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2); // stereo interleaved
+
+        // Render frames for this chunk — check signal each frame
+        for local_frame in 0..this_chunk_frames {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Discard partial chunk and stop immediately
+                println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
+                    chunk + 1, local_frame);
+                delete_frames(frames_dir);
+                break 'chunks;
+            }
+            let global_frame = chunk_start_frame + local_frame;
+            if !headless {
+                sim.paint_frame(&mut canvas);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:08}.png"));
+            }
+            sim.tick();
+            if !no_audio { sim.generate_audio(&mut chunk_audio); }
+
+            let log_every = if headless { FPS as usize } else { 480 };
+            if local_frame % log_every == 0 {
+                println!("  frame {}/{total_frames}  {}", global_frame, sim.stats());
+            }
+        }
+
+        if !headless {
+            // Encode chunk
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:08}.mp4");
+            encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+
+            // Append to segments list
+            writeln!(seg_list, "file '{seg_path}'").unwrap();
+            seg_list.flush().unwrap();
+
+            // Delete PNGs
+            delete_frames(frames_dir);
+        }
+
+        // Save checkpoint (next chunk index)
+        sim.save_checkpoint(&canvas, chunk + 1, &checkpoint_path);
+
+        let pct = (chunk + 1) * 100 / n_chunks;
+        let pop = sim.cells.len();
+        println!("  chunk {}/{n_chunks} done ({pct}%)  pop={pop}", chunk+1);
+        // Write stats for segment-watcher.sh to include in Discord messages
+        let _ = fs::write("state/last_stats.txt", format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\n"));
+    }
+
+    // ── Epilogue phase ────────────────────────────────────────────────────
+    if do_epilogue {
+        let palette = load_palette();
+        println!("\n[epilogue] converging to original {} cells...", orig.count);
+        const MAX_EPILOGUE_TICKS: usize = 240; // 4s hard cap
+        let mut ep_tick = 0usize;
+        let mut ep_frame = 0usize;
+        let mut ep_chunk_frames: Vec<String> = Vec::new();
+        let ep_seg_start = total_frames;
+        let mut pos_converged = false;
+        let mut vel_tick = 0usize;
+        let mut conv_t = 0.0f32; // RAMP_TICKS t-value when positions converged
+
+        loop {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Flush any accumulated epilogue frames (already fully rendered), then stop
+                if !ep_chunk_frames.is_empty() {
+                    let seg_path = format!("{segments_dir}/seg_{:08}.mp4",
+                        ep_seg_start + ep_frame - ep_chunk_frames.len());
+                    encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
+                    writeln!(seg_list, "file '{seg_path}'").unwrap();
+                    seg_list.flush().unwrap();
+                    delete_frames(frames_dir);
+                    ep_chunk_frames.clear();
+                }
+                println!("[signal] Stopping epilogue — concatenating completed segments.");
+                break;
+            }
+
+            // Two-phase epilogue:
+            // Phase 1 (position): kill/revive nudges until all cells at orig positions.
+            // Phase 2 (velocity): up to 64 ticks, gravity ramps to 0 over first 32,
+            //                     velocities clamped to never diverge from target.
+            let done = if pos_converged {
+                sim.epilogue_vel_tick(&orig, vel_tick, conv_t);
+                vel_tick += 1;
+                vel_tick >= 64
+            } else {
+                let pc = sim.epilogue_tick(&orig, ep_tick);
+                if pc {
+                    pos_converged = true;
+                    conv_t = (ep_tick as f32 / 32.0_f32).min(1.0);
+                    println!("  [epilogue] positions converged at tick {} ({:.1}s, t={:.2}) — velocity phase begins",
+                        ep_tick, ep_tick as f32 / FPS as f32, conv_t);
+                }
+                false
+            };
+
+            // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
+            let t = (ep_tick as f32 / 600.0_f32).min(1.0);
+            let fade = 0.999068_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
+            // Only fade L (brightness); a and b are irrelevant as L→0
+            for px in canvas.chunks_exact_mut(3) { px[0] = (px[0] * fade).max(0.0); }
+            sim.paint_frame(&mut canvas);
+            let global_frame = total_frames + ep_frame;
+            let path = format!("{frames_dir}/f{global_frame:08}.png");
+            Sim::save_png(&canvas, &path);
+            ep_chunk_frames.push(path);
+            ep_frame += 1;
+            ep_tick += 1;
+
+            // Encode + flush at same chunk size as last main chunk
+            if ep_chunk_frames.len() >= CHUNK_MIN_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
+                if !ep_chunk_frames.is_empty() {
+                    let seg_path = format!("{segments_dir}/seg_{:08}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
+                    encode_chunk(frames_dir, &seg_path, ep_chunk_frames.len());
+                    writeln!(seg_list, "file '{seg_path}'").unwrap();
+                    seg_list.flush().unwrap();
+                    delete_frames(frames_dir);
+                    ep_chunk_frames.clear();
+                }
+            }
+
+            if ep_tick % 120 == 0 {
+                let live_orig = sim.cells.iter()
+                    .filter(|c| orig.positions.contains(&(c.x as usize % W, c.y as usize % H)))
+                    .count();
+                let live_non_orig = sim.cells.len() - live_orig;
+                let dead_orig = orig.count.saturating_sub(live_orig);
+                println!("  epilogue t={:.2} pos_conv={} vel_tick={} pop={} live_orig={} non_orig={} dead_orig={}",
+                    (ep_tick as f32 / 600.0).min(1.0), pos_converged, vel_tick,
+                    sim.cells.len(), live_orig, live_non_orig, dead_orig);
+            }
+            if done { println!("  epilogue complete at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
+            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 128s)"); break; }
+        }
+        println!("  epilogue: {ep_frame} frames appended");
+    }
+
+    // Final concat
+    let total_segs = fs::read_to_string(&segments_file).unwrap_or_default().lines().count();
+    println!("\nConcatenating {total_segs} segments → {output_file}");
+    concat_segments(&segments_file, &output_file, tile_2x2);
+
+    let size = fs::metadata(&output_file).map(|m| m.len()).unwrap_or(0);
+    println!("Done! {output_file} ({:.1} MB)", size as f64 / 1_048_576.0);
+
+    // Clean up checkpoint on successful completion
+    let _ = fs::remove_file(checkpoint_path);
+    println!("Checkpoint removed.");
+
+    // Clean up segments after successful concat
+    if fs::remove_dir_all(&segments_dir).is_ok() {
+        println!("Segments deleted.");
+    }
+
+    // Archive final video: copy to shared storage, verify, delete local
+    if output_file_local != output_file_shared {
+        println!("Archiving video to shared storage...");
+        match fs::copy(&output_file_local, &output_file_shared) {
+            Ok(_) => {
+                let identical = Command::new("cmp")
+                    .args(["-s", &output_file_local, &output_file_shared])
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false);
+                if identical {
+                    let _ = fs::remove_file(&output_file_local);
+                    println!("Video archived successfully. Local copy removed.");
+                } else {
+                    eprintln!("Archive ERROR: verification failed — local copy kept.");
+                }
+            }
+            Err(e) => {
+                eprintln!("Archive ERROR: copy failed ({e}) — local copy kept.");
+            }
+        }
+    }
+
+    // Send a preview of the final video to Discord
+    let final_video = if std::path::Path::new(&output_file_shared).exists() {
+        &output_file_shared
+    } else {
+        &output_file_local
+    };
+    if std::path::Path::new(final_video).exists() {
+        let preview_path = format!("{}/preview_{}.mp4", run_dir, run_id);
+        // Extract 3 clips (start/mid/end) for a ~9s preview
+        let dur_secs = seconds as f64;
+        let mid = dur_secs / 2.0;
+        let end_start = (dur_secs - 3.0).max(0.0);
+        let preview_filter = format!(
+            "[0:v]split=3[a][b][c];\
+             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
+             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
+             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
+             [va][vb][vc]concat=n=3:v=1:a=0[vout]"
+        );
+        let preview_ok = Command::new("ffmpeg")
+            .args([
+                "-y", "-i", final_video,
+                "-filter_complex", &preview_filter,
+                "-map", "[vout]",
+                "-an",
+                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                &preview_path,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if preview_ok {
+            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
+            let msg = format!(
+                "✅ **{}** | {}MB | {}s\n`{}`",
+                run_id, size_mb, seconds,
+                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
+            );
+            let _ = Command::new("openclaw")
+                .args([
+                    "message", "send",
+                    "--channel", "discord",
+                    "-t", "1467063568712339561",
+                    "--media", &preview_path,
+                    "-m", &msg,
+                ])
+                .status();
+            let _ = fs::remove_file(&preview_path);
+        }
+    }
+}
+
+// [recovery] edit target not found, appending:
+use std::io::{BufWriter, Write};
+
+// [recovery] edit target not found, appending:
+        // Enforce per-component: clamp births and deaths independently.
+        // Births can't push us above pop_max; deaths can't push us below pop_min.
+        // Additionally rate-limit to ceil(pop_band/2) per tick — 1/4 of total band range.
+        // This applies even when outside the band, preventing runaway explosions/crashes.
+        let rate_limit = ((self.pop_band / 2.0).ceil() as usize).max(1);
+        let max_births = pop_max.saturating_sub(n).min(rate_limit);
+        let max_deaths = n.saturating_sub(pop_min).min(rate_limit);
+        desired_births.truncate(max_births);
+        desired_deaths.truncate(max_deaths);
+
+// [recovery] edit target not found, appending:
+    fn gravity_step_epilogue(&mut self, orig: &OriginalState, g_scale: f32) {
+        let n = self.cells.len();
+        // Barnes-Hut for epilogue: original particles are fixed, no force applied to them
+        let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        for i in 0..n {
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            qt_insert(&mut nodes, 0, i, px, py, 0);
+        }
+        for i in 0..n {
+            let is_orig = orig.positions.contains(
+                &(self.cells[i].x as usize % W, self.cells[i].y as usize % H));
+            if is_orig { continue; }
+            let (px, py) = (self.cells[i].x, self.cells[i].y);
+            let (fx, fy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening);
+
+// [recovery] edit target not found, appending:
+        // Rate-limit: 1 birth and 1 death per Conway call (independent of pop_band).
+        // With conway_every=FPS this equals 1 per second.
+        let rate_limit = 1_usize;
+
+// [recovery] edit target not found, appending:
+    fn gravity_step_epilogue(&mut self, orig: &OriginalState, g_scale: f32) {
+        let n = self.cells.len();
+        // Barnes-Hut for epilogue: forces only, no movement — positions stay integer-discrete.
+        // Original-position cells are frozen (no force applied); non-originals get force
+        // but movement is handled by the kill/revive nudges, not direct position update.
+        let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
+        nodes.push(QNode::empty(0.0, 0.0, W as f32, H as f32));
+        for i in 0..n {
+            let (px, py) = (self.cells[i].x as f32 + 0.5, self.cells[i].y as f32 + 0.5);
+            qt_insert(&mut nodes, 0, i, px, py, 0);
+        }
+        for i in 0..n {
+            if orig.positions.contains(&(self.cells[i].gx(), self.cells[i].gy())) { continue; }
+            let (px, py) = (self.cells[i].px, self.cells[i].py);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening);
+            self.cells[i].vx += gfx;
+            self.cells[i].vy += gfy;
+        }
+        // Cap speeds (velocity still evolves, even though positions don't move this phase)
+        for c in &mut self.cells {
+            let spd = (c.vx*c.vx+c.vy*c.vy).sqrt();
+            let cap = c.prev_speed.max(self.speed_cap);
+            if spd > cap { c.vx = c.vx/spd*cap; c.vy = c.vy/spd*cap; }
+            let hard_ceil = self.speed_cap * 2.0;
+            c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
+        }
+        self.order = (0..self.cells.len()).collect();
+    }
+
+// [recovery] edit target not found, appending:
+        let neighbour_offsets: [(i32, i32); 8] = [
+            (-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)
+        ];
+        let (wrap_x, wrap_y) = (self.wrap_x, self.wrap_y);
+        // Resolve a neighbour offset to a grid index, respecting per-axis wrap.
+        let resolve_nbr = |gy: usize, gx: usize, dy: i32, dx: i32| -> Option<(usize, usize)> {
+            let ry = gy as i32 + dy;
+            let rx = gx as i32 + dx;
+            let ry = if wrap_y { Some(ry.rem_euclid(H as i32) as usize) }
+                     else if ry >= 0 && ry < H as i32 { Some(ry as usize) }
+                     else { None };
+            let rx = if wrap_x { Some(rx.rem_euclid(W as i32) as usize) }
+                     else if rx >= 0 && rx < W as i32 { Some(rx as usize) }
+                     else { None };
+            match (ry, rx) { (Some(ry), Some(rx)) => Some((ry, rx)), _ => None }
+        };
+        let live_neighbours = |gy: usize, gx: usize| -> Vec<usize> {
+            neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
+                let idx = grid[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect()
+        };
+
+        let mut desired_births: Vec<(usize, usize, Vec<usize>)> = Vec::new();
+        let mut desired_deaths: Vec<usize> = Vec::new();
+
+        for (i, c) in self.cells.iter().enumerate() {
+            let gx = c.x;
+            let gy = c.y;
+            let nbrs = live_neighbours(gy, gx);
+            let count = nbrs.len();
+            if count != 2 && count != 3 {
+                if !nbrs.is_empty() { desired_deaths.push(i); }
+            }
+        }
+
+        let mut candidates = std::collections::HashSet::new();
+        for c in &self.cells {
+            let gx = c.x;
+            let gy = c.y;
+            for &(dy, dx) in &neighbour_offsets {
+                if let Some((ny, nx)) = resolve_nbr(gy, gx, dy, dx) {
+                    if grid[ny * W + nx] == usize::MAX { candidates.insert((ny, nx)); }
+                }
+            }
+        }
+
+// [recovery] edit target not found, appending:
+            let live_nbrs: Vec<usize> = neighbour_offsets.iter().filter_map(|&(dy, dx)| {
+                let (ny, nx) = resolve_nbr(gy, gx, dy, dx)?;
+                let idx = grid2[ny * W + nx];
+                if idx != usize::MAX { Some(idx) } else { None }
+            }).collect();
+            if live_nbrs.is_empty() { continue; }
+            let (vx, vy) = if self.wrap_x || self.wrap_y {
+                // Wrap mode: inherit avg neighbour velocity for interesting dynamics
+                let n_nbrs = live_nbrs.len() as f32;
+                let vx = live_nbrs.iter().map(|&i| self.cells[i].vx).sum::<f32>() / n_nbrs;
+                let vy = live_nbrs.iter().map(|&i| self.cells[i].vy).sum::<f32>() / n_nbrs;
+                (vx, vy)
+            } else {
+                // No-wrap: born at rest — gravity provides velocity organically.
+                // Inheriting neighbour velocity near walls continuously injects wall-facing
+                // momentum faster than gravity can correct it.
+                (0.0_f32, 0.0_f32)
+            };
+            let birth_spd = (vx * vx + vy * vy).sqrt();
+            let new_idx = self.cells.len();
+            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: birth_spd });
+            grid2[gy * W + gx] = new_idx;
+
+// [recovery] edit target not found, appending:
+            let new_idx = self.cells.len();
+            self.cells.push(Cell { x: gx, y: gy, vx, vy, prev_speed: birth_spd });
+            grid2[gy * W + gx] = new_idx;
+            self.conway_births += 1;
+        }
+
+        self.order = (0..self.cells.len()).collect();
+    }
+
+    // ── Gravity step (Barnes-Hut O(n log n)) ──────────────────────────────
+
+// [recovery] edit target not found, appending:
+        let o = OriginalState {
+            positions:  sim.cells.iter().map(|c| (c.gx(), c.gy())).collect(),
+            velocities: sim.cells.iter().map(|c| ((c.gx(), c.gy()), (c.vx, c.vy))).collect(),
+            count: sim.cells.len(),
+        };
+        Sim::save_orig_state(&o, orig_state_path);
+        println!("Saved original state ({} cells) for epilogue target.", o.count);
+        o
+    } else {
+        // Checkpoint resume — load the tick=0 state saved on fresh start
+        match Sim::load_orig_state(orig_state_path) {
+            Some(o) => { println!("Loaded original state ({} cells) for epilogue target.", o.count); o }
+            None => {
+                println!("WARNING: orig_state.bin not found — epilogue will target checkpoint state, not tick=0.");
+                OriginalState {
+                    positions:  sim.cells.iter().map(|c| (c.gx(), c.gy())).collect(),
+                    velocities: sim.cells.iter().map(|c| ((c.gx(), c.gy()), (c.vx, c.vy))).collect(),
+                    count: sim.cells.len(),
+                }
+            }
+        }
+    };
+
+// [recovery] edit target not found, appending:
+        // Per-frame velocity decay: multiplicative drain on every cell's speed.
+        // e.g. vel_decay=1/1024 removes ~0.1% of speed each frame.
+        if self.vel_decay > 0.0 {
+            let retain = 1.0 - self.vel_decay;
+            for c in &mut self.cells {
+                c.vx *= retain;
+                c.vy *= retain;
+            }
+        }
+
+        // Per-frame velocity nudge: steer each cell's velocity 1/32 of the way toward
+        // the target direction (vel_nudge in turns). Uses shortest-path arc so cells
+        // always rotate the small way around. Zero-velocity cells are skipped.
+        // e.g. vel_nudge = -11/360 → "11° above right" target; convergence half-life ≈ 22 frames.
+        if self.vel_nudge != 0.0 {
+            let target_h = self.vel_nudge * std::f32::consts::TAU;  // turns → radians
+            let rate = self.vel_nudge_rate;
+            for c in &mut self.cells {
+                let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
+                if spd < 1e-6 { continue; }
+                let cur_h = c.vy.atan2(c.vx);
+                // Shortest-path angular difference, wrapped to (−π, π]
+                let mut dh = target_h - cur_h;
+                while dh >  std::f32::consts::PI { dh -= std::f32::consts::TAU; }
+                while dh < -std::f32::consts::PI { dh += std::f32::consts::TAU; }
+                let theta = dh * rate;
+                let (sin_t, cos_t) = theta.sin_cos();
+                let nvx = c.vx * cos_t - c.vy * sin_t;
+                let nvy = c.vx * sin_t + c.vy * cos_t;
+                c.vx = nvx;
+                c.vy = nvy;
+            }
+        }
+
+        // Movement: float positions, collision by grid square.
+        // Process in shuffled order. Each cell computes its target float position (px+vx, py+vy).
+        // If the target grid square is free: move (update both float pos and grid).
+        // If occupied or same square: stay put entirely — no float accumulation.
+        // In no-wrap mode: if target would be out of bounds, stay put — gravity must pull back.
+        let mut grid = vec![usize::MAX; W * H];
+        for (i, c) in self.cells.iter().enumerate() {
+            grid[c.gy() * W + c.gx()] = i;
+        }
+        let n = self.order.len();
+        for i in (1..n).rev() {
+            let j = (xoru64(&mut self.rng) as usize) % (i + 1);
+            self.order.swap(i, j);
+        }
+        for &idx in &self.order {
+            // Capture pre-move state for audio stats (avoid borrow conflict later)
+            let (cvx, cvy, cpx, cpy) = {
+                let c = &self.cells[idx]; (c.vx, c.vy, c.px, c.py)
+            };
+            let old_gx = ((cpx.floor() as i32).rem_euclid(W as i32)) as usize;
+            let old_gy = ((cpy.floor() as i32).rem_euclid(H as i32)) as usize;
+            // Resolve position per axis: wrap / bounce / hard-wall
+            let mut nx = cpx + cvx;
+            let mut ny = cpy + cvy;
+            let mut nvx = cvx;
+            let mut nvy = cvy;
+            // X axis
+            if self.wrap_x {
+                nx = nx.rem_euclid(W as f32);
+            } else if self.bounce_x {
+                if nx < 0.0       { nx = -nx;                      nvx = -nvx; }
+                else if nx >= W as f32 { nx = 2.0 * W as f32 - nx; nvx = -nvx; }
+            } else if nx < 0.0 || nx >= W as f32 { continue; }
+            // Y axis
+            if self.wrap_y {
+                ny = ny.rem_euclid(H as f32);
+            } else if self.bounce_y {
+                if ny < 0.0       { ny = -ny;                      nvy = -nvy; }
+                else if ny >= H as f32 { ny = 2.0 * H as f32 - ny; nvy = -nvy; }
+            } else if ny < 0.0 || ny >= H as f32 { continue; }
+            // Apply any velocity changes from bounce before grid logic
+            if nvx != cvx { self.cells[idx].vx = nvx; }
+            if nvy != cvy { self.cells[idx].vy = nvy; }
+            let (new_px, new_py) = (nx, ny);
+            let tgx = (new_px.floor() as i32).rem_euclid(W as i32) as usize;
+            let tgy = (new_py.floor() as i32).rem_euclid(H as i32) as usize;
+            let crossing = tgx != old_gx || tgy != old_gy;
+            let moved_cross;
+            if !crossing {
+                // Same grid square — update float position freely
+                self.cells[idx].px = new_px;
+                self.cells[idx].py = new_py;
+                moved_cross = false;
+            } else if grid[tgy * W + tgx] == usize::MAX {
+                // Target square free — move
+                grid[old_gy * W + old_gx] = usize::MAX;
+                grid[tgy * W + tgx] = idx;
+                self.cells[idx].px = new_px;
+                self.cells[idx].py = new_py;
+                self.cells[idx].moved = true;
+                moved_cross = true;
+            } else {
+                // Target occupied — stay put
+                moved_cross = false;
+            }
+        }
+
+        // ── Audio: accumulate spatial region stats (all cells, post-move) ──────
+        // Divide canvas into 3×3 regions. Each cell contributes to its region's
+        // population count, total speed, and CoG sum.
+        for c in &self.cells {
+            let col = ((c.px / W as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
+            let row = ((c.py / H as f32) * 3.0).floor().clamp(0.0, 2.0) as usize;
+            let ri = row * 3 + col;
+            let speed = (c.vx * c.vx + c.vy * c.vy).sqrt();
+            let rs = &mut self.region_stats[ri];
+            rs.cell_count += 1.0;
+            rs.speed_sum  += speed;
+            rs.cog_x_sum  += c.px;
+            rs.cog_y_sum  += c.py;
+        }
+    }
+
+// [recovery] edit target not found, appending:
+            let gx = self.cells[di].gx();
+            let gy = self.cells[di].gy();
+
+// [recovery] edit target not found, appending:
+            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd });
+
+// [recovery] edit target not found, appending:
+        // Build quadtree with a SQUARE root centered on the grid center.
+        // The grid is W×H = 192×120 (non-square). A non-square root means
+        // node.width() = max(x_range, y_range) always equals the x dimension,
+        // making the BH opening criterion systematically less accurate for y forces.
+        // A square root at size max(W,H) makes every sub-node square, so the
+        // criterion is identical for x and y — no directional bias.
+        let mut nodes: Vec<QNode> = Vec::with_capacity(n * 8);
+        {
+            let half = 128.0_f32; // 256×256 square, power-of-2 subdivisions
+            let cx = W as f32 * 0.5; // 96
+            let cy = H as f32 * 0.5; // 60
+            // Root: [-32, 224] × [-68, 188] — 256×256, centred on grid centre
+            nodes.push(QNode::empty(cx - half, cy - half, cx + half, cy + half));
+        }
+        for i in 0..n {
+            let (px, py) = (self.cells[i].px, self.cells[i].py);
+            qt_insert(&mut nodes, 0, i, px, py, 0);
+        }
+
+// [recovery] edit target not found, appending:
+    fn stats(&self) -> String {
+        let total = self.cells.len() as f32;
+        if total == 0.0 {
+            return "pop=0 births=0 deaths=0 avg_spd=0 max=0 p10=0 spread=0 blk=0/0 com=(0,0)".into();
+        }
+        let in_bounds: Vec<&Cell> = if self.wrap_x && self.wrap_y {
+            self.cells.iter().collect()
+        } else {
+            self.cells.iter().filter(|c| c.in_bounds()).collect()
+        };
+        let pop = in_bounds.len();
+        let n = total;
+        let cx = self.cells.iter().map(|c| c.px).sum::<f32>() / n;
+        let cy = self.cells.iter().map(|c| c.py).sum::<f32>() / n;
+        let spread = self.cells.iter().map(|c| {
+            let dx = c.px - cx; let dy = c.py - cy;
+            (dx*dx+dy*dy).sqrt()
+        }).sum::<f32>() / n;
+
+        // Speed stats: avg, max, p10 — stuck cells count at 1/128 speed (hint, not zero).
+        let mut speeds: Vec<f32> = self.cells.iter()
+            .map(|c| { let s = (c.vx*c.vx+c.vy*c.vy).sqrt(); if c.moved { s } else { s / 128.0 } })
+            .collect();
+        speeds.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let avg_spd = speeds.iter().sum::<f32>() / n;
+        let max_spd = *speeds.last().unwrap_or(&0.0);
+        let p10_idx = ((speeds.len() as f32 * 0.10) as usize).min(speeds.len().saturating_sub(1));
+        let p10_spd = speeds[p10_idx];
+
+        // Effective speed: cells that didn't actually move last tick count as 0.
+        // Reveals true visual motion — packed cells have velocity but are frozen in place.
+        let eff_spd = self.cells.iter()
+            .map(|c| if c.moved { (c.vx*c.vx+c.vy*c.vy).sqrt() } else { 0.0 })
+            .sum::<f32>() / n;
+        let moved_frac = self.cells.iter().filter(|c| c.moved).count() as f32 / n;
+
+        // Clustering: divide grid into BLK×BLK blocks, count occupied blocks
+        // Low blk = tight clusters; high blk = spread across grid
+        const BLK: usize = 8;
+        const BROWS: usize = (H + BLK - 1) / BLK;  // 20
+        const BCOLS: usize = (W + BLK - 1) / BLK;  // 32
+        const BTOTAL: usize = BROWS * BCOLS;          // 640
+        let mut block_occ = [false; BTOTAL];
+        let mut max_in_block = 0u16;
+        let mut block_counts = [0u16; BTOTAL];
+        for c in &self.cells {
+            let bx = (c.px as usize / BLK).min(BCOLS - 1);
+            let by = (c.py as usize / BLK).min(BROWS - 1);
+            let bi = by * BCOLS + bx;
+            block_occ[bi] = true;
+            block_counts[bi] += 1;
+            if block_counts[bi] > max_in_block { max_in_block = block_counts[bi]; }
+        }
+        let blk_used = block_occ.iter().filter(|&&v| v).count();
+
+        // Top-3 densest block coordinates — track these across samples to detect blob drift
+        let mut block_list: Vec<(u16, usize, usize)> = block_counts.iter().enumerate()
+            .filter(|(_, &c)| c > 0)
+            .map(|(bi, &c)| (c, bi % BCOLS, bi / BCOLS))
+            .collect();
+        block_list.sort_by(|a, b| b.0.cmp(&a.0));
+        let hot: String = block_list.iter().take(3)
+            .map(|(_, bx, by)| format!("({},{})", bx * BLK, by * BLK))
+            .collect::<Vec<_>>().join(";");
+
+        format!("pop={pop} births={} deaths={} avg_spd={avg_spd:.3} eff_spd={eff_spd:.3} moved={moved_pct:.0}% max={max_spd:.3} p10={p10_spd:.3} spread={spread:.1} blk={blk_used}/{BTOTAL} dense={max_in_block} hot=[{hot}] com=({cx:.1},{cy:.1})",
+            self.conway_births, self.conway_deaths,
+            moved_pct = moved_frac * 100.0)
+    }
+
+// [recovery] edit target not found, appending:
+                let spd   = xorf32(&mut rng) * speed_cap * 0.001; // tiny perturbation — gravity does the work
+
+// [recovery] edit target not found, appending:
+                // Tiny random initial velocity: speed ~ U[0, 0.003% of speed_cap], gravity does the work
+                let spd   = xorf32(&mut rng) * speed_cap * 0.00003125; // 0.001 / 32
+
+// [recovery] edit target not found, appending:
+            if !occupied[idx] {
+                let cx = W as f32 / 2.0;
+                let cy = H as f32 / 2.0;
+                let (vx, vy) = match init_vel {
+                    "swirl" => {
+                        // Asymmetric quadrant bias — creates net angular momentum.
+                        // Top-left biased right, bottom-right biased left,
+                        // bottom-left biased down, top-right unbiased.
+                        if xi < W / 2 && yi < H / 2 {
+                            (xorf32(&mut rng) * 0.75 - 0.25, (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else if xi >= W / 2 && yi >= H / 2 {
+                            (xorf32(&mut rng) * 0.75 - 0.5,  (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else if xi >= W / 2 {
+                            ((xorf32(&mut rng) - 0.5) * 0.25, (xorf32(&mut rng) - 0.5) * 0.25)
+                        } else {
+                            ((xorf32(&mut rng) - 0.5) * 0.25, xorf32(&mut rng) * 0.25)
+                        }
+                    }
+                    "random" => {
+                        // Isotropic random — no net angular momentum or linear drift.
+                        ((xorf32(&mut rng) - 0.5) * 0.5, (xorf32(&mut rng) - 0.5) * 0.5)
+                    }
+                    "spin" => {
+                        // Clockwise tangential velocity field.
+                        // Speed proportional to distance from centre, capped at 0.5.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = (r / (cx.min(cy))).min(1.0) * 0.5;
+                        // Clockwise tangent: (-dy/r, dx/r)
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (-dy / r * scale + noise_x, dx / r * scale + noise_y)
+                    }
+                    "spin-ccw" => {
+                        // Counter-clockwise tangential velocity field.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = (r / (cx.min(cy))).min(1.0) * 0.5;
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (dy / r * scale + noise_x, -dx / r * scale + noise_y)
+                    }
+                    "radial-out" => {
+                        // Radially outward from centre — dramatic infall after reversal.
+                        let dx = xi as f32 + 0.5 - cx;
+                        let dy = yi as f32 + 0.5 - cy;
+                        let r = (dx * dx + dy * dy).sqrt().max(1.0);
+                        let scale = 0.4;
+                        let noise_x = (xorf32(&mut rng) - 0.5) * 0.1;
+                        let noise_y = (xorf32(&mut rng) - 0.5) * 0.1;
+                        (dx / r * scale + noise_x, dy / r * scale + noise_y)
+                    }
+                    "zero" | _ => {
+                        // All seeded cells start stationary — pure gravity collapse from rest.
+                        (0.0, 0.0)
+                    }
+                };
+                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy, prev_speed: 0.0 });
+
+// [recovery] edit target not found, appending:
+        // Momentum damping: remove dampen_x/dampen_y fraction of COM velocity each tick.
+        // e.g. dampen_y=0.125 removes 12.5% of avg vertical velocity per tick.
+        if (self.dampen_x > 0.0 || self.dampen_y > 0.0) && !self.cells.is_empty() {
+            let n = self.cells.len() as f32;
+            let avg_vx = self.cells.iter().map(|c| c.vx).sum::<f32>() / n;
+            let avg_vy = self.cells.iter().map(|c| c.vy).sum::<f32>() / n;
+            for c in &mut self.cells {
+                c.vx -= avg_vx * self.dampen_x;
+                c.vy -= avg_vy * self.dampen_y;
+            }
+        }
+
+// [recovery] edit target not found, appending:
+        let n = cells.len();
+        let target_pop = W * H / 16;
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
+
+// [recovery] edit target not found, appending:
+        let target_pop = W * H / 16;
+                        start_pop: target_pop, pop_band, rate_limit,
+
+// [recovery] edit target not found, appending:
+        let order = (0..cells.len()).collect();
+        let sim = Sim { cells, order, rng, g, softening, speed_cap,
+
+// [recovery] edit target not found, appending:
+    // ── Audio synthesis ────────────────────────────────────────────────────
+    // Called once per video frame. Appends SAMPLES_PER_FRAME f32 samples to chunk_audio.
+    // Only cells that moved (changed grid square) this tick sustain a voice.
+    // Stationary/blocked cells let their voice release.
+    fn generate_audio(&mut self, chunk_audio: &mut Vec<f32>) {
+        use std::f32::consts::PI;
+
+        // ── 1. Derive targets from accumulated region stats ────────────────
+        // Region dimensions in world units
+        let rw = W as f32 / 3.0; // width of one region column
+        let rh = H as f32 / 3.0; // height of one region row
+
+        for (ri, v) in self.region_voices.iter_mut().enumerate() {
+            let rs = &self.region_stats[ri];
+            let col = (ri % 3) as f32;
+            let row = (ri / 3) as f32;
+
+            // Amplitude target: population × avg_speed, normalised
+            let amp_target = if rs.cell_count > 0.0 {
+                let avg_speed = rs.speed_sum / rs.cell_count;
+                // Scale: ~100 cells × speed 2.0 → amplitude 1.0
+                (rs.cell_count * avg_speed / 200.0).min(2.0)
+            } else {
+                0.0
+            };
+            v.amplitude += (amp_target - v.amplitude) * SLEW_AMP;
+
+            // CoG — normalised within the region [0..1], defaulting to centre when empty
+            let (cog_x_target, cog_y_target) = if rs.cell_count > 0.0 {
+                let cx = (rs.cog_x_sum / rs.cell_count - col * rw) / rw;
+                let cy = (rs.cog_y_sum / rs.cell_count - row * rh) / rh;
+                (cx.clamp(0.0, 1.0), cy.clamp(0.0, 1.0))
+            } else {
+                (0.5, 0.5) // drift toward centre when idle
+            };
+            v.cog_x += (cog_x_target - v.cog_x) * SLEW_COG;
+            v.cog_y += (cog_y_target - v.cog_y) * SLEW_COG;
+
+            // Pitch bend: CoG-x drives ±PITCH_BEND_MAX cents
+            let bend_target = (v.cog_x - 0.5) * 2.0 * PITCH_BEND_MAX;
+            v.pitch_bend += (bend_target - v.pitch_bend) * SLEW_BEND;
+
+            // Filter: CoG-y drives warmth — top of region (cog_y→0) = bright, bottom = warm
+            let filter_target = FILTER_BRIGHT + (FILTER_WARM - FILTER_BRIGHT) * v.cog_y;
+            v.filter_coeff += (filter_target - v.filter_coeff) * SLEW_FILTER;
+        }
+
+        // ── 2. Synthesise SAMPLES_PER_FRAME stereo pairs ──────────────────
+        for _ in 0..SAMPLES_PER_FRAME {
+            let mut sum_l     = 0.0f32;
+            let mut sum_r     = 0.0f32;
+            let mut reverb_in = 0.0f32;
+
+            for v in self.region_voices.iter_mut() {
+                // Hard gate: silence very quiet voices to prevent droning
+                if v.amplitude < 1e-4 { continue; }
+
+                // Pitch with CoG-x bend
+                let freq = v.base_freq * 2.0f32.powf(v.pitch_bend / 1200.0);
+                v.phase = (v.phase + freq / SAMPLE_RATE as f32).rem_euclid(1.0);
+
+                // Sine wave through dynamic LP filter (CoG-y driven warmth)
+                let raw = (v.phase * 2.0 * PI).sin();
+                v.filter_state += v.filter_coeff * (raw - v.filter_state);
+
+                let s = v.filter_state * v.amplitude * AUDIO_AMP_SCALE;
+
+                // Equal-power pan (fixed per column)
+                let pan_angle = (v.pan + 1.0) * 0.5 * PI * 0.5;
+                sum_l     += s * pan_angle.cos();
+                sum_r     += s * pan_angle.sin();
+                reverb_in += s * v.reverb_send;
+            }
+
+            // Mid-side reverb
+            let wet  = self.reverb.process(reverb_in.tanh() * 0.7);
+            let side = (sum_l - sum_r) * 0.5;
+            chunk_audio.push((wet + side).tanh()); // L
+            chunk_audio.push((wet - side).tanh()); // R
+        }
+
+        // ── 3. Clear stats for next frame ──────────────────────────────────
+        self.region_stats = [RegionStats::default(); 9];
+    }
+
+    fn paint_frame(&mut self, canvas: &mut Vec<f32>) {
+        // Canvas stores Oklab (L, a, b) as f32 per channel.
+        // Fade only L (brightness): multiplicative + constant drain so L always reaches 0.
+        // a and b (chroma) are left intact — they become invisible as L→0.
+        const FADE_SLOW: f32 = 0.999068; // 0.999534² — doubled fade speed
+        // Epsilon ensures L hits 0 within ~28s at 60fps (not stuck at grey asymptote).
+        // At FADE_SLOW, without epsilon, a cell starting at L=0.75 would asymptote to ~0.32.
+        const FADE_EPSILON: f32 = 0.0003;
+        for py in 0..H {
+            for px in 0..W {
+                let i = (py * W + px) * 3;
+                if self.prev_live[py * W + px] {
+                    // Was alive last tick, now gone — fast brightness drop (trail burst)
+                    canvas[i] = (canvas[i] * 0.5).max(0.0);
+                    // a, b unchanged
+                } else {
+                    // Normal background fade — only L drained
+                    canvas[i] = (canvas[i] * FADE_SLOW - FADE_EPSILON).max(0.0);
+                    // a, b unchanged
+                }
+            }
+        }
+        self.prev_live.fill(false);
+        for c in &self.cells {
+            let xi = c.gx();
+            let yi = c.gy();
+            // Stuck cells dimmed by 1/8 of their value (×0.875), not to 1/8.
+            let (cvx, cvy) = if c.moved { (c.vx, c.vy) } else { (c.vx * 0.875, c.vy * 0.875) };
+            let (l, a, b) = velocity_color_oklab(cvx, cvy, c.px, c.py, self.speed_cap, palette);
+            let i = (yi * W + xi) * 3;
+            canvas[i]     = l;
+            canvas[i + 1] = a;
+            canvas[i + 2] = b;
+            self.prev_live[yi * W + xi] = true;
+        }
+    }
+
+    fn save_png(canvas: &[f32], path: &str) {
+        // Convert Oklab (L, a, b) → sRGB u8 only at output time.
+        let pixels: Vec<u8> = canvas.chunks_exact(3)
+            .flat_map(|px| {
+                let (r, g, b) = oklab_to_srgb(px[0], px[1], px[2]);
+                [r, g, b]
+            })
+            .collect();
+
+// [recovery] edit target not found, appending:
+            let birth_spd = (vx * vx + vy * vy).sqrt();
+            let new_idx = self.cells.len();
+            let id = self.next_id; self.next_id += 1;
+            let (bpx, bpy) = (gx as f32 + 0.5, gy as f32 + 0.5);
+            self.cells.push(Cell { px: bpx, py: bpy, vx, vy, prev_speed: birth_spd, id, moved: false });
+            // (no per-event audio in new direction-bucket system)
+            grid2[gy * W + gx] = new_idx;
+            self.conway_births += 1;
+
+// [recovery] edit target not found, appending:
+        for &(ox, oy) in &orig.positions {
+            if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                let id = self.next_id; self.next_id += 1;
+                self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
+                                       vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
+            }
+        }
+
+        // Lerp velocities of live-original cells 3.125% closer to their original velocity each tick (4× slower)
+
+// [recovery] edit target not found, appending:
+            let mut grid2 = vec![usize::MAX; W * H];
+            for (i, c) in self.cells.iter().enumerate() {
+                grid2[c.gy() * W + c.gx()] = i;
+            }
+            for &(ox, oy) in &orig.positions {
+                if grid2[oy * W + ox] == usize::MAX && xorf32(&mut self.rng) < revive_chance {
+                    let id = self.next_id; self.next_id += 1;
+                    self.cells.push(Cell { px: ox as f32 + 0.5, py: oy as f32 + 0.5,
+                                           vx: 0.0, vy: 0.0, prev_speed: 0.0, id, moved: false });
+                }
+            }
+        }
+
+// [recovery] edit target not found, appending:
+            let new_idx = self.cells.len();
+            let spd = (vx*vx+vy*vy).sqrt();
+            let id = self.next_id; self.next_id += 1;
+            self.cells.push(Cell { px: gx as f32 + 0.5, py: gy as f32 + 0.5, vx, vy, prev_speed: spd, id, moved: false });
+            grid2[gy * W + gx] = new_idx;
+
+// [recovery] edit target not found, appending:
+        if !headless {
+            // Encode chunk
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
+            encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+            mux_audio_into_segment(&seg_path, &chunk_audio);
+
+            // Append to segments list
+
+// [recovery] edit target not found, appending:
+        println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames);
+
+        // Render frames for this chunk — check signal each frame
+        let sim_t0 = std::time::Instant::now();
+        for local_frame in 0..this_chunk_frames {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Discard partial chunk and stop immediately
+                println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
+                    chunk + 1, local_frame);
+                delete_frames(frames_dir);
+                break 'chunks;
+            }
+            let global_frame = chunk_start_frame + local_frame;
+            if !headless {
+                sim.paint_frame(&mut canvas);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
+            }
+            sim.tick();
+            sim.generate_audio(&mut chunk_audio);
+
+            let log_every = if headless { FPS as usize } else { 480 };
+            if local_frame % log_every == 0 {
+                println!("  frame {}/{total_frames}  {}", global_frame, sim.stats());
+            }
+        }
+        let sim_ms = sim_t0.elapsed().as_millis();
+
+        let enc_ms;
+        if !headless {
+            // Encode chunk
+            let enc_t0 = std::time::Instant::now();
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
+            encode_chunk(frames_dir, &seg_path, this_chunk_frames);
+            mux_audio_into_segment(&seg_path, &chunk_audio);
+            enc_ms = enc_t0.elapsed().as_millis();
+
+            // Append to segments list
+            writeln!(seg_list, "file '{seg_path}'").unwrap();
+            seg_list.flush().unwrap();
+
+            // Delete PNGs
+            delete_frames(frames_dir);
+        } else {
+            enc_ms = 0;
+        }
+
+        // Save checkpoint (next chunk index)
+        sim.save_checkpoint(&canvas, chunk + 1, checkpoint_path);
+
+        let pct = (chunk + 1) * 100 / n_chunks;
+        let pop = sim.cells.len();
+        println!("  chunk {}/{n_chunks} done ({pct}%)  pop={pop}  sim={sim_ms}ms enc={enc_ms}ms", chunk+1);
+        // Write stats for segment-watcher.sh to include in Discord messages
+        let _ = fs::write("state/last_stats.txt",
+            format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
+
+// [recovery] edit target not found, appending:
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
+              pop_band, rate_limit, tick_count: 0, prev_live: vec![false; W * H], wrap, steer, dampen,
+
+// [recovery] edit target not found, appending:
+        fn new(rng_seed: u64, g: f32, softening: f32, speed_cap: f32, pop_band: f32,
+           rate_limit: usize, seed_density_inv: usize, target_pop: usize, wrap: bool, steer: bool, dampen: bool, init_vel: &str) -> Self {
+
+// [recovery] edit target not found, appending:
+        println!("\n[chunk {}/{n_chunks}] frames {}..{}", chunk+1, chunk_start_frame, chunk_end_frame);
+        // Hot-reload palette at chunk boundary — drop a file to change mid-run.
+        let palette = load_palette();
+        if !headless { println!("  palette: {:?}", palette); }
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2); // stereo interleaved
+
+        // Render frames for this chunk — check signal each frame
+        let sim_t0 = std::time::Instant::now();
+        for local_frame in 0..this_chunk_frames {
+            if !keep_running.load(Ordering::Relaxed) {
+                // Discard partial chunk and stop immediately
+                println!("[signal] Discarding partial chunk {}, cleaning up {} frames...",
+                    chunk + 1, local_frame);
+                delete_frames(frames_dir);
+                break 'chunks;
+            }
+            let global_frame = chunk_start_frame + local_frame;
+            if !headless {
+                sim.paint_frame(&mut canvas, &palette);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
+
+// [recovery] edit target not found, appending:
+            sim.paint_frame(&mut canvas, &palette);
+            let global_frame = total_frames + ep_frame;
+            let path = format!("{frames_dir}/f{global_frame:013}.png");
+
+// [recovery] edit target not found, appending:
+// ── Colour system ────────────────────────────────────────────────────────────
+//
+// "Radical" (default): perceptual hue-wheel interpolation.
+//   • Velocity direction θ → position on a circular interpolation of the 9
+//     palette colours (sorted by OKLCH hue; achromatic colours with C < 0.02
+//     are excluded from the wheel).
+//   • Speed ramp: #061B31 dark navy at t=0 → interpolated palette colour at
+//     t=1 (speed_cap).  Linear in OKLab all the way through.
+//   • t > 1 (beyond speed_cap, up to 2×): extrapolate — push L toward 0.92
+//     and scale C outward, both with a √-taper for diminishing returns.
+//   • Out-of-gamut handling: OKLCH binary-search chroma reduction (8
+//     iterations) — hue and lightness are preserved, only C is squeezed.
+//     This is the CSS Color Level 4 gamut-mapping algorithm.
+//
+// "Classic" (write "classic" to /tmp/gravity_palette): original uniform wheel.
+//
+// Hot-reload: binary reads /tmp/gravity_palette at each chunk boundary.
+// Default (file absent or unrecognised): "radical".
+
+/// One anchor on the hue wheel (OKLab + precomputed OKLCH hue).
+#[derive(Clone)]
+struct HueAnchor { l: f32, a: f32, b: f32, h: f32 }
+
+/// The 9 palette colours (#061B31 also serves as the zero-speed anchor).
+const PALETTE_SRGB: [(u8, u8, u8); 9] = [
+    (0x53, 0x3A, 0xFD), // #533AFD — violet
+    (0x06, 0x1B, 0x31), // #061B31 — dark navy  (also slow anchor)
+    (0x50, 0x61, 0x7A), // #50617A — steel blue-gray
+    (0xF6, 0xF9, 0xFC), // #F6F9FC — near white  (skipped: C < 0.02)
+    (0xFF, 0xC0, 0x1F), // #FFC01F — golden yellow
+    (0xFF, 0x61, 0x18), // #FF6118 — orange
+    (0xF4, 0x4B, 0xCC), // #F44BCC — hot pink
+    (0xEA, 0x22, 0x61), // #EA2261 — crimson
+    (0x63, 0x5B, 0xFF), // #635BFF — periwinkle
+];
+
+/// Zero-speed (still) anchor colour — dark navy.
+const SLOW_RGB: (u8, u8, u8) = (0x08, 0x22, 0x3D);
+
+fn srgb_u8_to_linear(x: u8) -> f32 {
+    let x = x as f32 / 255.0;
+    if x <= 0.04045 { x / 12.92 } else { ((x + 0.055) / 1.055).powf(2.4) }
+}
+
+fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    let (rl, gl, bl) = (srgb_u8_to_linear(r), s
+
+// [recovery] edit target not found, appending:
+// ── Colour system ─────────────────────────────────────────────────────────────
+//
+// "Radical" mode (default): perceptual hue-wheel interpolation.
+//   Velocity direction θ → position on a circular spline through the palette colours.
+//   Speed ramp: #061B31 (dark navy, still) → palette colour at speed_cap.
+//   Beyond speed_cap (cells can reach 2×): L and C extrapolated with √ taper.
+//   Out-of-gamut colours → OKLCH chroma binary-search reduction (hue-preserving).
+//
+// "Classic" mode (write "classic" to /tmp/gravity_palette): original uniform hue wheel.
+//
+// Palette (9 colours). Near-achromatic ones (C < 0.02 in Oklch) are excluded from
+// the hue wheel but #061B31 is used as the zero-speed anchor regardless.
+//
+//   #533AFD  violet           #635BFF  periwinkle
+//   #F44BCC  hot pink         #EA2261  crimson
+//   #FF6118  orange           #FFC01F  golden yellow
+//   #50617A  steel blue-gray  #061B31  dark navy (zero-speed anchor)
+//   #F6F9FC  near white       (excluded: C < 0.02)
+
+const PALETTE_SRGB: &[(u8, u8, u8)] = &[
+    (0x53, 0x3A, 0xFD), // #533AFD — violet
+    (0x08, 0x22, 0x3D), // #08223D — dark navy  (also zero-speed anchor)
+    (0x50, 0x61, 0x7A), // #50617A — steel blue-gray
+    (0xF6, 0xF9, 0xFC), // #F6F9FC — near white  (C < 0.02, skipped from wheel)
+    (0xFF, 0xC0, 0x1F), // #FFC01F — golden yellow
+    (0xFF, 0x61, 0x18), // #FF6118 — orange
+    (0xF4, 0x4B, 0xCC), // #F44BCC — hot pink
+    (0xEA, 0x22, 0x61), // #EA2261 — crimson
+    (0x63, 0x5B, 0xFF), // #635BFF — periwinkle
+];
+
+/// Zero-speed (still cell) colour — dark navy.
+const SLOW_RGB: (u8, u8, u8) = (0x06, 0x1B, 0x31);
+
+fn srgb_u8_to_linear(x: u8) -> f32 {
+    let x = x as f32 / 255.0;
+    if x <= 0.04045 { x / 12.92 } else { ((x + 0.055) / 1.055).powf(2.4) }
+}
+
+fn rgb_to_oklab(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    let (rl, gl, bl) = (srgb_u8_to_linear(r), srgb_u8_to_linear(g), srgb_u8_to_linear(b));
+    let lms_l = 0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl;
+    let lms_m = 0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl;
+    let lms_s = 0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl;
+    let (l_, m_, s_) = (lms_l.cbrt(), lms_m.cbrt(), lms_s.cbrt());
+    let lab_l =  0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+    let lab_a =  1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+    let lab_b =  0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+    (lab_l, lab_a, lab_b)
+}
+
+/// Oklab → Oklch: (L, C, H) where H is in radians −π..π.
+#[inline] fn to_lch(l: f32, a: f32, b: f32) -> (f32, f32, f32) {
+    (l, (a*a + b*b).sqrt(), b.atan2(a))
+}
+
+/// Polar Oklch lerp: blend two Oklab colors via Oklch (arc hue, linear L+C).
+/// Returns result as Oklab (L, a, b).
+#[inline] fn oklch_lerp(lab0: (f32,f32,f32), lab1: (f32,f32,f32), t: f32) -> (f32, f32, f32) {
+    let (l0, c0, h0) = to_lch(lab0.0, lab0.1, lab0.2);
+    let (l1, c1, h1) = to_lch(lab1.0, lab1.1, lab1.2);
+    let l = l0 + (l1 - l0) * t;
+    let c = c0 + (c1 - c0) * t;
+    let hx = (1.0 - t) * h0.cos() + t * h1.cos();
+    let hy = (1.0 - t) * h0.sin() + t * h1.sin();
+    let h  = hy.atan2(hx);
+    (l, c * h.cos(), c * h.sin())
+}
+
+/// Directional colour anchors blended in Oklch (polar Oklab).
+/// Velocity direction selects four basis colours via squared-clamp weights:
+///   w_right = max(rx, 0)²   w_left = max(−rx, 0)²
+///   w_down  = max(ry, 0)²   w_up   = max(−ry, 0)²
+/// where (rx, ry) is the velocity rotated by `wheel_rotation` turns.
+/// L and C blend linearly; H blends via unit-vector mean (arc, not through neutral).
+/// This keeps diagonals on the hue arc — no accidental white from opposite hue cancellation.
+///
+/// right / left  → blue family (#635BFF periwinkle / #533AFD violet)
+/// down  / up    → warm family (#FFC01F gold / #EA2261 hot-pink)
+/// zero-speed anchor: #061B31 dark navy.
+#[derive(Clone, Debug)]
+struct DirectionalPalette {
+    dark:           (f32, f32, f32),  // #061B31  dark navy — slow/still anchor
+    c_right:        (f32, f32, f32),  // #533AFD  violet      — +x
+    c_left:         (f32, f32, f32),  // #635BFF  periwinkle  — −x
+    c_down:         (f32, f32, f32),  // #FFC01F  golden yellow — +y (screen-down)
+    c_up:           (f32, f32, f32),  // #EA2261  hot pink      — −y (screen-up)
+    wheel_rotation:       f32,   // turns; negative = CCW in screen space
+    pos_rotation_enabled: bool,  // apply position-based hue rotation to velocity input
+    pos_rotation_output:  bool,  // also rotate output (a,b) by same angle (default: off)
+}
+
+impl DirectionalPalette {
+    fn build(
+        zero:  (u8,u8,u8),
+        right: (u8,u8,u8),
+        left:  (u8,u8,u8),
+        down:  (u8,u8,u8),
+        up:    (u8,u8,u8),
+        wheel_rotation: f32,
+        pos_rotation_enabled: bool,
+        pos_rotation_output:  bool,
+    ) -> Self {
+        DirectionalPalette {
+            dark:    rgb_to_oklab(zero.0,  zero.1,  zero.2),
+            c_right: rgb_to_oklab(right.0, right.1, right.2),
+            c_left:  rgb_to_oklab(left.0,  left.1,  left.2),
+            c_down:  rgb_to_oklab(down.0,  down.1,  down.2),
+            c_up:    rgb_to_oklab(up.0,    up.1,    up.2),
+            wheel_rotation,
+            pos_rotation_enabled,
+            pos_rotation_output,
+        }
+    }
+
+    /// Blend the four directional anchors for a unit velocity (ux, uy).
+    /// Rotation = scheme wheel_rotation + optional position-based rotation:
+    ///   max 1 turn total; axes weighted by W/(W+H) and H/(W+H) respectively.
+    ///   Formula: px/W + (py/H)*3 — 1 turn across width, 3 turns across height.
+    fn directional_color(&self, ux: f32, uy: f32, px: f32, py: f32) -> (f32, f32, f32) {
+        let pos_rot = if self.pos_rotation_enabled {
+            // 1 full turn across width, 3 full turns across height.
+            px / W as f32 + (py / H as f32) * 3.0
+        } else { 0.0 };
+        let angle = (self.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
+        let (ca, sa) = (angle.cos(), angle.sin());
+        // Screen-space CCW rotation: rx = ux·cos + uy·sin, ry = −ux·sin + uy·cos
+        let rx =  ux * ca + uy * sa;
+        let ry = -ux * sa + uy * ca;
+        let w_r = rx.max(0.0).powi(2);
+        let w_l = (-rx).max(0.0).powi(2);
+        let w_d = ry.max(0.0).powi(2);
+        let w_u = (-ry).max(0.0).powi(2);
+        // w_r + w_l + w_d + w_u = 1 on the unit circle — no normalisation needed.
+
+        let (lr, cr, hr) = to_lch(self.c_right.0, self.c_right.1, self.c_right.2);
+        let (ll, cl, hl) = to_lch(self.c_left.0,  self.c_left.1,  self.c_left.2);
+        let (ld, cd, hd) = to_lch(self.c_down.0,  self.c_down.1,  self.c_down.2);
+        let (lu, cu, hu) = to_lch(self.c_up.0,    self.c_up.1,    self.c_up.2);
+
+        // L and C blend linearly.
+        let l = w_r*lr + w_l*ll + w_d*ld + w_u*lu;
+        let c = w_r*cr + w_l*cl + w_d*cd + w_u*cu;
+
+        // H blends via unit-vector mean — correct circular interpolation across 0/2π wrap.
+        let hx = w_r*hr.cos() + w_l*hl.cos() + w_d*hd.cos() + w_u*hu.cos();
+        let hy = w_r*hr.sin() + w_l*hl.sin() + w_d*hd.sin() + w_u*hu.sin();
+        let h  = hy.atan2(hx);
+
+        // Back to Oklab (a, b).
+        let a = c * h.cos();
+        let b = c * h.sin();
+        (l, a, b)
+    }
+}
+
+
+fn load_palette(pos_rotation_enabled: bool, pos_rotation_output: bool) -> DirectionalPalette {
+    let raw = std::fs::read_to_string("palettes/active.txt")
+        .expect("palettes/active.txt not found — copy a palette file there before running");
+
+    let mut zero:  Option<(u8,u8,u8)> = None;
+    let mut right: Option<(u8,u8,u8)> = None;
+    let mut left:  Option<(u8,u8,u8)> = None;
+    let mut down:  Option<(u8,u8,u8)> = None;
+    let mut up:    Option<(u8,u8,u8)> = None;
+    let mut wheel: Option<f32>        = None;  // turns; optional, default -11/360
+
+    for line in raw.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') { continue; }
+        if let Some((key, val)) = line.split_once('=') {
+            let key = key.trim();
+            let val = val.trim();
+            match key {
+                "wheel_rotation" => {
+                    wheel = Some(val.parse::<f32>()
+                        .unwrap_or_else(|_| panic!("invalid wheel_rotation {:?} in palettes/active.txt (must be a number in turns)", val)));
+                }
+                _ => {
+                    let rgb = parse_hex_color(val)
+                        .unwrap_or_else(|| panic!("invalid hex colour {:?} in palettes/active.txt", val));
+                    match key {
+                        "zero"  => zero  = Some(rgb),
+                        "right" => right = Some(rgb),
+                        "left"  => left  = Some(rgb),
+                        "down"  => down  = Some(rgb),
+                        "up"    => up    = Some(rgb),
+                        other   => panic!("unknown palette key {:?} in palettes/active.txt", other),
+                    }
+                }
+            }
+        }
+    }
+
+    let zero  = zero .expect("palettes/active.txt missing 'zero'");
+    let right = right.expect("palettes/active.txt missing 'right'");
+    let left  = left .expect("palettes/active.txt missing 'left'");
+    let down  = down .expect("palettes/active.txt missing 'down'");
+    let up    = up   .expect("palettes/active.txt missing 'up'");
+    let wheel = wheel.expect("palettes/active.txt missing 'wheel_rotation'");
+
+    DirectionalPalette::build(zero, right, left, down, up, wheel, pos_rotation_enabled, pos_rotation_output)
+}
+
+fn velocity_color_oklab(vx: f32, vy: f32, speed_cap: f32, palette: &PaletteMode) -> (f32, f32, f32) {
+    let spd = (vx * vx + vy * vy).sqrt();
+
+    match palette {
+        PaletteMode::Classic => {
+            let t = (spd / (speed_cap * 0.5)).clamp(0.0, 1.0);
+            let l = 0.45 + 0.30 * t;
+            let c = 0.20 * t;
+            let h = vy.atan2(vx);
+            (l, c * h.cos(), c * h.sin())
+        }
+
+        PaletteMode::Radical(dp) => {
+            // t = 0 → still (dark navy), t = 1 → speed_cap, up to ~2.0 beyond.
+            let t = spd / speed_cap;
+
+            // Position-based rotation (same formula as directional_color input rotation).
+            // Applied twice: once to input (inside directional_color), once to output ab.
+            let pos_rot = if dp.pos_rotation_enabled {
+                px / W as f32 + (py / H as f32) * 3.0
+            } else { 0.0 };
+
+            // Directional blend: unit velocity selects among four palette colours.
+            let (dl, da, db) = dp.dark;
+            let (tgt_l, tgt_a, tgt_b) = if spd > 1e-6 {
+                dp.directional_color(vx / spd, vy / spd, px, py)
+            } else {
+                (dl, da, db)
+            };
+
+            let (l, a, b) = if t <= 1.0 {
+                // Linear blend in OKLab: dark navy → directional palette colour.
+                let l = dl + (tgt_l - dl) * t;
+                let a = da + (tgt_a - da) * t;
+                let b = db + (tgt_b - db) * t;
+                (l, a, b)
+            } else {
+                // Beyond speed_cap: push L brighter and C more saturated.
+                let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
+                let l = (tgt_l + (0.92 - tgt_l) * extra * 0.45).min(0.93);
+                let c_scale = 1.0 + extra * 0.40;
+                (l, tgt_a * c_scale, tgt_b * c_scale)
+            };
+
+            // Output hue rotation: only when explicitly enabled (--pos-color-out).
+            // wheel_rotation is input-only by default; pos_rot also drives output when opted in.
+            if dp.pos_rotation_output {
+                let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
+                let (oca, osa) = (out_angle.cos(), out_angle.sin());
+                (l, a * oca - b * osa, a * osa + b * oca)
+            } else {
+                (l, a, b)
+            }
+        }
+    }
+}
+
+// ── sRGB conversion with hue-preserving gamut compression ─────────────────────
+
+/// Oklab → linear sRGB (values may be outside [0, 1] for out-of-gamut colours).
+fn oklab_to_linear_rgb(l: f32, a: f32, b: f32) -> (f32, f32, f32) {
+    let l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+    let m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+    let s_ = l - 0.0894841775 * a - 1.2914855480 * b;
+    let (l3, m3, s3) = (l_ * l_ * l_, m_ * m_ * m_, s_ * s_ * s_);
+    let r_lin =  4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+    let g_lin = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+    let b_lin = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+    (r_lin, g_lin, b_lin)
+}
+
+fn linear_to_srgb_u8(x: f32) -> u8 {
+    let x = x.clamp(0.0, 1.0);
+    let g = if x <= 0.0031308 { x * 12.92 } else { 1.055 * x.powf(1.0 / 2.4) - 0.055 };
+    (g * 255.0).round() as u8
+}
+
+fn oklab_to_srgb(l: f32, a: f32, b: f32) -> (u8, u8, u8) {
+    let (r, g, b_) = oklab_to_linear_rgb(l, a, b);
+
+    // Fast path: in-gamut (the common case).
+    if r >= 0.0 && r <= 1.0 && g >= 0.0 && g <= 1.0 && b_ >= 0.0 && b_ <= 1.0 {
+        return (linear_to_srgb_u8(r), linear_to_srgb_u8(g), linear_to_srgb_u8(b_));
+    }
+
+    // Out-of-gamut: reduce chroma via binary search in OKLCH while preserving hue and L.
+    // 8 iterations → precision of C to within C/256, imperceptible.
+    let c0 = (a * a + b * b).sqrt();
+    let h  = b.atan2(a);
+    let (mut c_lo, mut c_hi) = (0.0_f32, c0);
+    for _ in 0..8 {
+        let c_mid = (c_lo + c_hi) * 0.5;
+        let (a_m, b_m) = (c_mid * h.cos(), c_mid * h.sin());
+        let (r2, g2, b2) = oklab_to_linear_rgb(l, a_m, b_m);
+        if r2 >= 0.0 && r2 <= 1.0 && g2 >= 0.0 && g2 <= 1.0 && b2 >= 0.0 && b2 <= 1.0 {
+            c_lo = c_mid;
+        } else {
+            c_hi = c_mid;
+        }
+    }
+    let (a_s, b_s) = (c_lo * h.cos(), c_lo * h.sin());
+    let (rs, gs, bs) = oklab_to_linear_rgb(l, a_s, b_s);
+    (linear_to_srgb_u8(rs), linear_to_srgb_u8(gs), linear_to_srgb_u8(bs))
+}
+
+// [recovery] edit target not found, appending:
+            let idx = yi * W + xi;
+            if !occupied[idx] {
+                let (vx, vy) = make_vel(xi, yi, &mut rng);
+                let (vx, vy) = (vx * vel_scale, vy * vel_scale);
+                cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                  prev_speed: 0.0, id: next_id, moved: false });
+                next_id += 1;
+                occupied[idx] = true;
+                seeded += 1;
+            }
+        }
+        } // end else (random scatter)
+        shuffle_vec(&mut cells, &mut rng);
+
+// [recovery] edit target not found, appending:
+              conway_births: 0, conway_deaths: 0, next_id,
+              bucket_stats: [BucketStats::default(); 8],
+              dir_voices: std::array::from_fn(|i| DirVoice::new(BUCKET_FREQS[i])),
+              reverb: Reverb::new() }
+
+// [recovery] edit target not found, appending:
+                        next_id,
+                        region_stats: [RegionStats::default(); 9],
+                        region_voices: std::array::from_fn(|i| RegionVoice::new(
+                            REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
+                        reverb: Reverb::new() };
+
+// [recovery] edit target not found, appending:
+    // Recommended invocation: --wrap --dampen-y 1.0 (vertical COM drift removal).
+    // Good first defaults (may need tuning):
+    //   G=0.075  soft=3  cap=2  pop=768  band=256  rate=16  vel=swirl  wrap  --dampen-y 1.0
+
+// [recovery] edit target not found, appending:
+        // Axis gravity scale: (1 - dampen) fraction of normal force on each axis.
+        // Clamped to [0,1] so dampen>=1 means no gravity on that axis (not reversed).
+        let gx_scale = (1.0 - self.dampen_x).clamp(0.0, 1.0);
+        let gy_scale = (1.0 - self.dampen_y).clamp(0.0, 1.0);
+        for i in 0..n {
+            let (px, py) = (self.cells[i].px, self.cells[i].py);
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g, self.softening, self.wrap_x, self.wrap_y, self.stagger_x, self.stagger_y);
+            self.cells[i].vx += gfx * gx_scale;
+            self.cells[i].vy += gfy * gy_scale;
+        }
+
+        for c in &mut self.cells {
+            // Isotropic speed cap (unchanged)
+            let spd = (c.vx * c.vx + c.vy * c.vy).sqrt();
+            let effective_cap = c.prev_speed.max(self.speed_cap);
+            if spd > effective_cap {
+                c.vx = c.vx / spd * effective_cap;
+                c.vy = c.vy / spd * effective_cap;
+            }
+            let hard_ceil = self.speed_cap * 2.0;
+            c.prev_speed = c.prev_speed.min(spd).max(self.speed_cap).min(hard_ceil);
+            // Per-axis speed cap: dampen axis gets a proportionally lower ceiling
+            let vx_cap = self.speed_cap * gx_scale;
+            let vy_cap = self.speed_cap * gy_scale;
+            c.vx = c.vx.clamp(-vx_cap, vx_cap);
+            c.vy = c.vy.clamp(-vy_cap, vy_cap);
+        }
+
+// [recovery] edit target not found, appending:
+            let (gfx, gfy) = qt_force(&nodes, 0, i, px, py, self.g * g_scale, self.softening, self.wrap_x, self.wrap_y, self.stagger_x, self.stagger_y);
+
+// [recovery] edit target not found, appending:
+              region_stats: [RegionStats::default(); 9],
+              region_voices: std::array::from_fn(|i| RegionVoice::new(
+                  REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
+              reverb: Reverb::new() }
+    }
+
+// [recovery] edit target not found, appending:
+/// right / left  → blue vs orange (#635BFF periwinkle / #FF9B3B orange-gold — opposite hues)
+/// down  / up    → pink family  (#F44BCC hot-pink    / #FAF0F5 soft blush)
+/// zero-speed anchor: #061B31 dark navy.
+
+// [recovery] edit target not found, appending:
+#[inline] fn W() -> usize { *W_CELL.get().expect("W not initialised") }
+#[inline] fn H() -> usize { *H_CELL.get().expect("H not initialised") }
+#[inline] fn OUT_W() -> u32 { W() as u32 }
+#[inline] fn OUT_H() -> u32 { H() as u32 }
+
+// [recovery] edit target not found, appending:
+         pos_color_in:  {pos_rotation_enabled}\npos_color_out: {pos_rotation_output}\ntile_2x2:      {tile_2x2}\n\
+         resolution:    {}x{} → {}x{}\n",
+        width, height, width * 2, height * 2
+
+// [recovery] edit target not found, appending:
+        // Clustering: divide grid into BLK×BLK blocks, count occupied blocks
+        // Low blk = tight clusters; high blk = spread across grid
+        const BLK: usize = 8;
+        let brows = (H() + BLK - 1) / BLK;
+        let bcols = (W() + BLK - 1) / BLK;
+        let btotal = brows * bcols;
+        let mut block_occ = vec![false; btotal];
+        let mut max_in_block = 0u16;
+        let mut block_counts = vec![0u16; btotal];
+
+// [recovery] edit target not found, appending:
+              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()], wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
+              conway_births: 0, conway_deaths: 0, next_id,
+
+// [recovery] edit target not found, appending:
+            // Candidate grid: full valid-cell range when wrapped, margin-inset when not.
+            // x_max is W()-1 (not W()) on wrapped axes — cell positions are 0..W()-1.
+            let x_min = if wrap_x { 0.0 } else { margin };
+            let x_max = if wrap_x { (W() - 1) as f32 } else { W() as f32 - margin };
+            let y_min = if wrap_y { 0.0 } else { margin };
+            let y_max = if wrap_y { (H() - 1) as f32 } else { H() as f32 - margin };
+
+// [recovery] edit target not found, appending:
+                        let xi_i = disk_cx as isize + dx;
+                        let yi_i = disk_cy as isize + dy;
+                        // On non-wrapped axes skip out-of-bounds; on wrapped axes fold around.
+                        if !wrap_x && (xi_i < 0 || xi_i >= W() as isize) { continue; }
+                        if !wrap_y && (yi_i < 0 || yi_i >= H() as isize) { continue; }
+                        let xi = xi_i.rem_euclid(W() as isize) as usize;
+                        let yi = yi_i.rem_euclid(H() as isize) as usize;
+
+// [recovery] edit target not found, appending:
+                let mut placed = 0usize;
+
+                // For spin modes, compute velocity relative to THIS circle's centre
+                // (disk_cx/disk_cy), not the global canvas centre.  Calling make_vel
+                // for spin would use cx_global and give wrong tangential directions for
+                // off-centre circles.
+                let disk_vel = |xi: usize, yi: usize, rng: &mut u64| -> (f32, f32) {
+                    match init_vel {
+                        "spin" | "spin-ccw" | "spin-flat" => {
+                            let dx = xi as f32 + 0.5 - disk_cx;
+                            let dy = yi as f32 + 0.5 - disk_cy;
+                            let r = (dx*dx + dy*dy).sqrt().max(1.0);
+                            let scale = (r / radius).min(1.0) * 0.5;
+                            let nx = (xorf32(rng)-0.5)*0.1;
+                            let ny = (xorf32(rng)-0.5)*0.1;
+                            match init_vel {
+                                "spin"      => (-dy/r * scale + nx,  dx/r * scale + ny),
+                                "spin-ccw"  => ( dy/r * scale + nx, -dx/r * scale + ny),
+                                _/* flat */ => (-dy/r * scale + nx, (dx/r * scale + ny) * 0.09375),
+                            }
+                        }
+                        _ => make_vel(xi, yi, rng),
+                    }
+                };
+
+                // Primary pass: 50% coin flip at each point in distance order.
+                for &(xi, yi, _) in &pts {
+                    if placed >= cells_this_circle { break; }
+                    if occupied[yi * W() + xi] { continue; }
+                    if xoru64(&mut rng) & 1 == 0 { continue; } // 50% skip
+                    let (vx, vy) = disk_vel(xi, yi, &mut rng);
+                    let (vx, vy) = (vx * vel_scale, vy * vel_scale);
+                    cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                      prev_speed: 0.0, id: next_id, moved: false });
+                    next_id += 1;
+                    occupied[yi * W() + xi] = true;
+                    placed += 1;
+                }
+
+                // Fallback pass: fill remaining slots from inner points outward.
+                if placed < cells_this_circle {
+                    for &(xi, yi, _) in &pts {
+                        if placed >= cells_this_circle { break; }
+                        if occupied[yi * W() + xi] { continue; }
+                        let (vx, vy) = disk_vel(xi, yi, &mut rng);
+                        let (vx, vy) = (vx * vel_scale, vy * vel_scale);
+                        cells.push(Cell { px: xi as f32 + 0.5, py: yi as f32 + 0.5, vx, vy,
+                                          prev_speed: 0.0, id: next_id, moved: false });
+                        next_id += 1;
+                        occupied[yi * W() + xi] = true;
+                        placed += 1;
+                    }
+                }
+
+// [recovery] edit target not found, appending:
+    let mut chunk_frames = CHUNK_FRAMES; // dynamic; adjusted each chunk based on render time
+    let mut chunk_start_frame = start_frame;
+    let mut chunk_num = 0usize;
+
+    'chunks: loop {
+        if chunk_start_frame >= total_frames { break; }
+        if !keep_running.load(Ordering::Relaxed) { break; }
+        chunk_num += 1;
+
+        let chunk_end_frame = (chunk_start_frame + chunk_frames).min(total_frames);
+        let this_chunk_frames = chunk_end_frame - chunk_start_frame;
+        let pct_done = chunk_start_frame * 100 / total_frames;
+        let frames_left = total_frames - chunk_start_frame;
+        let est_chunks_left = (frames_left + chunk_frames - 1) / chunk_frames;
+
+        println!("\n[chunk {chunk_num} | {pct_done}% | ~{est_chunks_left} left] frames {chunk_start_frame}..{chunk_end_frame} ({chunk_frames} frames)");
+        let palette = load_palette(pos_rotation_enabled, pos_rotation_output);
+        if !headless { println!("  palette: {:?}", palette); }
+        let mut chunk_audio: Vec<f32> = Vec::with_capacity(SAMPLES_PER_FRAME * this_chunk_frames * 2);
+
+        let chunk_wall_t0 = std::time::Instant::now();
+        let sim_t0 = std::time::Instant::now();
+        for local_frame in 0..this_chunk_frames {
+            if !keep_running.load(Ordering::Relaxed) {
+                println!("[signal] Discarding partial chunk {chunk_num}, cleaning up {local_frame} frames...");
+                delete_frames(&frames_dir);
+                break 'chunks;
+            }
+            let global_frame = chunk_start_frame + local_frame;
+            if !headless {
+                sim.paint_frame(&mut canvas, &palette);
+                Sim::save_png(&canvas, &format!("{frames_dir}/f{global_frame:013}.png"));
+            }
+            sim.tick();
+            if !no_audio { sim.generate_audio(&mut chunk_audio); }
+
+            let log_every = if headless { FPS as usize } else { 480 };
+            if local_frame % log_every == 0 {
+                println!("  frame {}/{total_frames}  {}", global_frame, sim.stats());
+            }
+        }
+        let sim_ms = sim_t0.elapsed().as_millis();
+
+        let enc_ms;
+        if !headless {
+            let enc_t0 = std::time::Instant::now();
+            let seg_path = format!("{segments_dir}/seg_{chunk_start_frame:013}.mp4");
+            encode_chunk(&frames_dir, &seg_path, this_chunk_frames, tile_2x2);
+            mux_audio_into_segment(&seg_path, &chunk_audio);
+            enc_ms = enc_t0.elapsed().as_millis();
+            writeln!(seg_list, "file '{seg_path}'").unwrap();
+            seg_list.flush().unwrap();
+            delete_frames(&frames_dir);
+        } else {
+            enc_ms = 0;
+        }
+
+        // Save checkpoint (resume frame = next chunk start)
+        sim.save_checkpoint(&canvas, chunk_end_frame, &checkpoint_path);
+
+        let wall_secs = chunk_wall_t0.elapsed().as_secs_f64();
+        let pop = sim.cells.len();
+        println!("  chunk {chunk_num} done ({pct_done}%)  pop={pop}  wall={wall_secs:.1}s  sim={sim_ms}ms enc={enc_ms}ms  chunk_frames={chunk_frames}");
+        let _ = fs::write("state/last_stats.txt",
+            format!("pop={pop}\ntarget=2560\nrange=[1920,3200]\nsim_ms={sim_ms}\nenc_ms={enc_ms}\n"));
+
+        // Adjust chunk_frames for next chunk: target CHUNK_TARGET_SECS wall time,
+        // clamped to [CHUNK_MIN_SECS, CHUNK_MAX_SECS].
+        if wall_secs > 0.5 {
+            let scale = CHUNK_TARGET_SECS / wall_secs;
+            let next = (chunk_frames as f64 * scale).round() as usize;
+            let fps_render = this_chunk_frames as f64 / wall_secs;
+            let min_by_time = (fps_render * CHUNK_MIN_SECS).round() as usize;
+            let max_by_time = (fps_render * CHUNK_MAX_SECS).round() as usize;
+            chunk_frames = next.clamp(min_by_time.max(CHUNK_MIN_FRAMES), max_by_time.max(CHUNK_MIN_FRAMES));
+            println!("  next chunk_frames={chunk_frames} (wall={wall_secs:.1}s target={CHUNK_TARGET_SECS}s [{CHUNK_MIN_SECS}..{CHUNK_MAX_SECS}])");
+        }
+
+        chunk_start_frame = chunk_end_frame;
+    }
+
+// [recovery] edit target not found, appending:
     let mut chunk_start_frame = start_frame;
     let mut chunk_num = 0usize;
 
@@ -2469,22 +3622,7 @@ fn main() {
         chunk_start_frame = chunk_end_frame;
     }
 
-    // ── Epilogue phase ────────────────────────────────────────────────────
-    if do_epilogue {
-        let palette = load_palette(pos_rotation_enabled, pos_rotation_output);
-        println!("\n[epilogue] converging to original {} cells...", orig.count);
-        const MAX_EPILOGUE_TICKS: usize = 240; // 4s hard cap
-        let mut ep_tick = 0usize;
-        let mut ep_frame = 0usize;
-        let mut ep_chunk_frames: Vec<String> = Vec::new();
-        let ep_seg_start = total_frames;
-        let mut pos_converged = false;
-        let mut vel_tick = 0usize;
-        let mut conv_t = 0.0f32; // RAMP_TICKS t-value when positions converged
-
-        loop {
-            if !keep_running.load(Ordering::Relaxed) {
-                // Flush any accumulated epilogue frames (already fully rendered), then stop
+// [recovery] edit target not found, appending:
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4",
                         ep_seg_start + ep_frame - ep_chunk_frames.len());
@@ -2497,42 +3635,8 @@ fn main() {
                     ep_chunk_frames.clear();
                 }
                 println!("[signal] Stopping epilogue — concatenating completed segments.");
-                break;
-            }
 
-            // Two-phase epilogue:
-            // Phase 1 (position): kill/revive nudges until all cells at orig positions.
-            // Phase 2 (velocity): up to 64 ticks, gravity ramps to 0 over first 32,
-            //                     velocities clamped to never diverge from target.
-            let done = if pos_converged {
-                sim.epilogue_vel_tick(&orig, vel_tick, conv_t);
-                vel_tick += 1;
-                vel_tick >= 64
-            } else {
-                let pc = sim.epilogue_tick(&orig, ep_tick);
-                if pc {
-                    pos_converged = true;
-                    conv_t = (ep_tick as f32 / 32.0_f32).min(1.0);
-                    println!("  [epilogue] positions converged at tick {} ({:.1}s, t={:.2}) — velocity phase begins",
-                        ep_tick, ep_tick as f32 / FPS as f32, conv_t);
-                }
-                false
-            };
-
-            // Ramp background fade: starts at normal rate, ramps to 0.5^0.25≈0.84/tick at full t
-            let t = (ep_tick as f32 / 600.0_f32).min(1.0);
-            let fade = 0.999068_f32.powf(1.0 - t) * 0.5_f32.powf(t * 0.25);
-            // Only fade L (brightness); a and b are irrelevant as L→0
-            for px in canvas.chunks_exact_mut(3) { px[0] = (px[0] * fade).max(0.0); }
-            sim.paint_frame(&mut canvas, &palette);
-            let global_frame = total_frames + ep_frame;
-            let path = format!("{frames_dir}/f{global_frame:013}.png");
-            Sim::save_png(&canvas, &path);
-            ep_chunk_frames.push(path);
-            ep_frame += 1;
-            ep_tick += 1;
-
-            // Encode + flush at same chunk size as last main chunk
+// [recovery] edit target not found, appending:
             if ep_chunk_frames.len() >= CHUNK_MIN_FRAMES || done || ep_tick >= MAX_EPILOGUE_TICKS {
                 if !ep_chunk_frames.is_empty() {
                     let seg_path = format!("{segments_dir}/seg_{:013}.mp4", ep_seg_start + ep_frame - ep_chunk_frames.len());
@@ -2546,114 +3650,384 @@ fn main() {
                 }
             }
 
-            if ep_tick % 120 == 0 {
-                let live_orig = sim.cells.iter()
-                    .filter(|c| orig.positions.contains(&(c.gx(), c.gy())))
-                    .count();
-                let live_non_orig = sim.cells.len() - live_orig;
-                let dead_orig = orig.count.saturating_sub(live_orig);
-                println!("  epilogue t={:.2} pos_conv={} vel_tick={} pop={} live_orig={} non_orig={} dead_orig={}",
-                    (ep_tick as f32 / 600.0).min(1.0), pos_converged, vel_tick,
-                    sim.cells.len(), live_orig, live_non_orig, dead_orig);
-            }
-            if done { println!("  epilogue complete at tick {ep_tick} ({:.1}s)", ep_tick as f32 / FPS as f32); break; }
-            if ep_tick >= MAX_EPILOGUE_TICKS { println!("  epilogue hit safety cap ({MAX_EPILOGUE_TICKS} ticks = 128s)"); break; }
-        }
-        println!("  epilogue: {ep_frame} frames appended");
-    }
+// [recovery] edit target not found, appending:
+//   Velocity direction θ → position on a circular spline through the palette colours.
+//   Speed ramp: zero-speed anchor → palette colour at speed_cap.
+//   Beyond speed_cap (cells can reach 2×): L and C extrapolated with √ taper.
+//   Out-of-gamut colours → OKLCH chroma binary-search reduction (hue-preserving).
+//
+// Palette loaded from palettes/active.txt at the start of each segment.
+// Copy any file from palettes/ to palettes/active.txt to switch schemes mid-render.
 
-    // Final concat
-    let total_segs = fs::read_to_string(&segments_file).unwrap_or_default().lines().count();
-    println!("\nConcatenating {total_segs} segments → {output_file}");
-    concat_segments(&segments_file, &output_file, tile_2x2);
+/// Parse a hex colour string like "#08223D" or "08223D" → (r, g, b).
+fn parse_hex_color(s: &str) -> Option<(u8, u8, u8)> {
+    let s = s.trim().trim_start_matches('#');
+    if s.len() != 6 { return None; }
+    let n = u32::from_str_radix(s, 16).ok()?;
+    Some(((n >> 16) as u8, ((n >> 8) & 0xFF) as u8, (n & 0xFF) as u8))
+}
 
-    let size = fs::metadata(&output_file).map(|m| m.len()).unwrap_or(0);
-    println!("Done! {output_file} ({:.1} MB)", size as f64 / 1_048_576.0);
+// [recovery] edit target not found, appending:
+fn velocity_color_oklab(vx: f32, vy: f32, px: f32, py: f32, speed_cap: f32, dp: &DirectionalPalette) -> (f32, f32, f32) {
+    let spd = (vx * vx + vy * vy).sqrt();
 
-    // Clean up checkpoint on successful completion
-    let _ = fs::remove_file(checkpoint_path);
-    println!("Checkpoint removed.");
+    // t = 0 → still (zero-speed anchor), t = 1 → speed_cap, up to ~2.0 beyond.
+    let t = spd / speed_cap;
 
-    // Clean up segments after successful concat
-    if fs::remove_dir_all(&segments_dir).is_ok() {
-        println!("Segments deleted.");
-    }
+    let pos_rot = if dp.pos_rotation_enabled {
+        px / W() as f32 + (py / H() as f32) * 3.0
+    } else { 0.0 };
 
-    // Archive final video: copy to shared storage, verify, delete local
-    if output_file_local != output_file_shared {
-        println!("Archiving video to shared storage...");
-        match fs::copy(&output_file_local, &output_file_shared) {
-            Ok(_) => {
-                let identical = Command::new("cmp")
-                    .args(["-s", &output_file_local, &output_file_shared])
-                    .status()
-                    .map(|s| s.success())
-                    .unwrap_or(false);
-                if identical {
-                    let _ = fs::remove_file(&output_file_local);
-                    println!("Video archived successfully. Local copy removed.");
-                } else {
-                    eprintln!("Archive ERROR: verification failed — local copy kept.");
-                }
-            }
-            Err(e) => {
-                eprintln!("Archive ERROR: copy failed ({e}) — local copy kept.");
-            }
-        }
-    }
-
-    // Send a preview of the final video to Discord
-    let final_video = if std::path::Path::new(&output_file_shared).exists() {
-        &output_file_shared
+    let dark = dp.dark;
+    let tgt = if spd > 1e-6 {
+        dp.directional_color(vx / spd, vy / spd, px, py)
     } else {
-        &output_file_local
+        dark
     };
-    if std::path::Path::new(final_video).exists() {
-        let preview_dir = "/Users/matte/.openclaw/workspace/shared/gravity";
-        let _ = fs::create_dir_all(preview_dir);
-        let preview_path = format!("{}/preview_{}.mp4", preview_dir, run_id);
-        // Extract 3 clips (start/mid/end) for a ~9s preview
-        let dur_secs = seconds as f64;
-        let mid = dur_secs / 2.0;
-        let end_start = (dur_secs - 3.0).max(0.0);
-        let preview_filter = format!(
-            "[0:v]split=3[a][b][c];\
-             [a]trim=start=0:duration=3,setpts=PTS-STARTPTS[va];\
-             [b]trim=start={mid}:duration=3,setpts=PTS-STARTPTS[vb];\
-             [c]trim=start={end_start}:duration=3,setpts=PTS-STARTPTS[vc];\
-             [va][vb][vc]concat=n=3:v=1:a=0[raw];\
-             [raw]scale=512:-2:flags=neighbor[vout]"
-        );
-        let preview_ok = Command::new("ffmpeg")
-            .args([
-                "-y", "-i", final_video,
-                "-filter_complex", &preview_filter,
-                "-map", "[vout]",
-                "-an",
-                "-c:v", "libx264", "-crf", "22", "-preset", "fast",
-                "-pix_fmt", "yuv420p",
-                &preview_path,
-            ])
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false);
-        if preview_ok {
-            let size_mb = fs::metadata(final_video).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
-            let msg = format!(
-                "✅ **{}** | {}MB | {}s\n`{}`",
-                run_id, size_mb, seconds,
-                settings.lines().take(20).collect::<Vec<_>>().join(" | ")
-            );
-            let _ = Command::new("openclaw")
-                .args([
-                    "message", "send",
-                    "--channel", "discord",
-                    "-t", "1467063568712339561",
-                    "--media", &preview_path,
-                    "-m", &msg,
-                ])
-                .status();
-            let _ = fs::remove_file(&preview_path);
-        }
+
+    let (l, a, b) = if t <= 1.0 {
+        oklch_lerp(dark, tgt, t)
+    } else {
+        // Beyond speed_cap: push L brighter and C more saturated via Oklch.
+        let (tl, tc, th) = to_lch(tgt.0, tgt.1, tgt.2);
+        let extra = (t - 1.0).clamp(0.0, 1.0).sqrt();
+        let l = (tl + (0.92 - tl) * extra * 0.45).min(0.93);
+        let c = tc * (1.0 + extra * 0.40);
+        (l, c * th.cos(), c * th.sin())
+    };
+
+    if dp.pos_rotation_output {
+        let out_angle = (dp.wheel_rotation + pos_rot) * 2.0 * std::f32::consts::PI;
+        let (oca, osa) = (out_angle.cos(), out_angle.sin());
+        (l, a * oca - b * osa, a * osa + b * oca)
+    } else {
+        (l, a, b)
     }
 }
+
+// [recovery] edit target not found, appending:
+
+
+// [recovery] edit target not found, appending:
+/// Find the (dx, dy) to the nearest periodic image of a particle on a (possibly staggered) torus.
+/// stagger_y: Y-shift applied when crossing the X boundary (right→left wraps down by stagger_y).
+/// stagger_x: X-shift applied when crossing the Y boundary (bottom→top wraps right by stagger_x).
+/// Searches all 9 nearest lattice images (n,m ∈ {-1,0,1}) and returns the closest.
+#[inline]
+fn nearest_image_delta(raw_dx: f32, raw_dy: f32,
+                       stagger_x: f32, stagger_y: f32,
+                       wrap_x: bool, wrap_y: bool) -> (f32, f32) {
+    let (w, h) = (W() as f32, H() as f32);
+    let mut best_dx = raw_dx;
+    let mut best_dy = raw_dy;
+    let mut best_r2 = raw_dx * raw_dx + raw_dy * raw_dy;
+    for n in -1i32..=1 {
+        for m in -1i32..=1 {
+            if n == 0 && m == 0 { continue; }
+            if (n != 0 && !wrap_x) || (m != 0 && !wrap_y) { continue; }
+            // image reached by crossing X boundary n times, Y boundary m times
+            let cdx = raw_dx + n as f32 * w + m as f32 * stagger_x;
+            let cdy = raw_dy + n as f32 * stagger_y + m as f32 * h;
+            let r2 = cdx * cdx + cdy * cdy;
+            if r2 < best_r2 { best_r2 = r2; best_dx = cdx; best_dy = cdy; }
+        }
+    }
+    (best_dx, best_dy)
+}
+
+fn qt_force(nodes: &[QNode], node_idx: usize, body: usize,
+            px: f32, py: f32, g: f32, softening: f32,
+            wrap_x: bool, wrap_y: bool, stagger_x: f32, stagger_y: f32) -> (f32, f32) {
+    let node = &nodes[node_idx];
+    if node.body == -2 { return (0.0, 0.0); } // empty node
+    let raw_dx = node.com_x - px;
+    let raw_dy = node.com_y - py;
+    let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+    // Leaf: exact pairwise force (skip self)
+    if node.body >= 0 {
+        if node.body as usize == body { return (0.0, 0.0); }
+        let r2 = dx*dx + dy*dy + softening*softening;
+        let r  = r2.sqrt();
+        let f  = g * node.mass / r2;
+        return (f * dx / r, f * dy / r);
+    }
+    // Internal: Barnes-Hut criterion uses actual (un-softened) distance
+    let r2_actual = dx*dx + dy*dy;
+    let d = r2_actual.sqrt();
+    if d > 0.0 && node.width() / d < BH_THETA {
+        // Far enough: treat as single point mass
+        let r2 = r2_actual + softening*softening;
+        let r  = r2.sqrt();
+        let f  = g * node.mass / r2;
+        return (f * dx / r, f * dy / r);
+    }
+    // Too close or at same position: recurse into children
+    let mut fx = 0.0f32;
+    let mut fy = 0.0f32;
+    for &ch in &node.ch {
+        if ch >= 0 {
+            let (cfx, cfy) = qt_force(nodes, ch as usize, body, px, py, g, softening, wrap_x, wrap_y, stagger_x, stagger_y);
+            fx += cfx;
+            fy += cfy;
+        }
+    }
+    (fx, fy)
+}
+
+// [recovery] edit target not found, appending:
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
+              pop_band, rate_limit, conway_every, tick_count: 0, prev_live: vec![false; W() * H()],
+              wrap_x, wrap_y, bounce_x, bounce_y, steer,
+              dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate,
+              stagger_x, stagger_y,
+              conway_births: 0, conway_deaths: 0, next_id,
+              region_stats: [RegionStats::default(); 9],
+              region_voices: std::array::from_fn(|i| RegionVoice::new(
+                  REGION_FREQS[i], REGION_PAN[i % 3], REGION_REVERB[i / 3])),
+              reverb: Reverb::new() }
+    }
+
+// [recovery] edit target not found, appending:
+            // X axis
+            let mut stagger_ny_add = 0.0f32;
+            if self.wrap_x {
+                if nx < 0.0              { stagger_ny_add -= self.stagger_y; }
+                else if nx >= W() as f32 { stagger_ny_add += self.stagger_y; }
+                nx = nx.rem_euclid(W() as f32);
+            } else if self.bounce_x {
+                if nx < 0.0       { nx = -nx;                      nvx = -nvx; }
+                else if nx >= W() as f32 { nx = 2.0 * W() as f32 - nx; nvx = -nvx; }
+            } else if nx < 0.0 || nx >= W() as f32 { continue; }
+            // Y axis
+            let mut stagger_nx_add = 0.0f32;
+            if self.wrap_y {
+                if ny < 0.0              { stagger_nx_add -= self.stagger_x; }
+                else if ny >= H() as f32 { stagger_nx_add += self.stagger_x; }
+                ny = ny.rem_euclid(H() as f32);
+            } else if self.bounce_y {
+                if ny < 0.0       { ny = -ny;                      nvy = -nvy; }
+                else if ny >= H() as f32 { ny = 2.0 * H() as f32 - ny; nvy = -nvy; }
+            } else if ny < 0.0 || ny >= H() as f32 { continue; }
+            // Apply stagger offsets after wrapping (order-independent; computed from pre-wrap state)
+            if stagger_ny_add != 0.0 { ny = (ny + stagger_ny_add).rem_euclid(H() as f32); }
+            if stagger_nx_add != 0.0 { nx = (nx + stagger_nx_add).rem_euclid(W() as f32); }
+
+// [recovery] edit target not found, appending:
+/// Build the ffmpeg filter_complex string for 2×2 tiling with stagger-aware edge alignment.
+///
+/// On a staggered torus the four tiles aren't all identical copies — adjacent tiles must be
+/// rolled so that their edges match where the topology actually connects:
+///   TL (col=0,row=0): unrolled
+///   TR (col=1,row=0): y-rolled up by stagger_y   (right neighbour is shifted down by stagger_y)
+///   BL (col=0,row=1): x-rolled left by stagger_x (bottom neighbour is shifted right by stagger_x)
+///   BR (col=1,row=1): both rolls combined
+///
+/// When stagger is zero the filtergraph degenerates to the original simple 2×2 clone.
+fn build_tile_filter(w: usize, h: usize, stagger_x: f32, stagger_y: f32) -> String {
+    let ow = w * 2;
+    let oh = h * 2;
+    // Round to nearest pixel; clamp so crops are valid (shouldn't be needed but be safe).
+    let dy = (stagger_y.round() as usize).min(h.saturating_sub(1));
+    let dx = (stagger_x.round() as usize).min(w.saturating_sub(1));
+
+    if dx == 0 && dy == 0 {
+        // No stagger — all four tiles are identical.
+        format!(
+            "[0:v]split=4[a][b][c][d];[a][b]hstack[top];[c][d]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else if dx == 0 {
+        // Only vertical stagger (landscape default: stagger_y = W-H).
+        // TL = BL = unrolled; TR = BR = y-rolled up by dy.
+        // y-roll-up by dy: rows dy..H-1 become new top, rows 0..dy-1 go to bottom.
+        let h_upper = h - dy;
+        format!(
+            "[0:v]split=4[tl][bl][ra][rb];\
+             [ra]crop={w}:{h_upper}:0:{dy}[yu];[rb]crop={w}:{dy}:0:0[yl];\
+             [yu][yl]vstack[rsrc];[rsrc]split=2[tr][br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else if dy == 0 {
+        // Only horizontal stagger (portrait default: stagger_x = H-W).
+        // TL = TR = unrolled; BL = BR = x-rolled left by dx.
+        // x-roll-left by dx: rightmost dx columns become new left → [right][left] hstack.
+        let w_right = w - dx;
+        format!(
+            "[0:v]split=4[tl][tr][ra][rb];\
+             [ra]crop={w_right}:{h}:{dx}:0[xr];[rb]crop={dx}:{h}:0:0[xl];\
+             [xr][xl]hstack[rsrc];[rsrc]split=2[bl][br];\
+             [tl][tr]hstack[top];[bl][br]hstack[bot];\
+             [top][bot]vstack[tiled];[tiled]scale={ow}:{oh}:flags=neighbor[out]"
+        )
+    } else {
+        // Both stagger non-zero: not supported (caught at arg parsing)
+        panic!("build_tile_filter: both stagger_x and stagger_y non-zero not supported");
+    }
+}
+
+fn encode_chunk(frames_dir: &str, seg_path: &str, n_frames: usize,
+                tile_2x2: bool, stagger_x: f32, stagger_y: f32) {
+    let ow = OUT_W() * 2;
+    let oh = OUT_H() * 2;
+    let status = if tile_2x2 {
+        let fc = build_tile_filter(OUT_W() as usize, OUT_H() as usize, stagger_x, stagger_y);
+        Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate", &FPS.to_string(),
+                "-pattern_type", "glob",
+                "-i", &format!("{frames_dir}/*.png"),
+                "-filter_complex", &fc,
+                "-map", "[out]",
+                "-c:v", "libx264",
+                "-crf", &CRF.to_string(),
+                "-pix_fmt", "yuv420p",
+                "-f", "mp4",
+                seg_path,
+            ])
+            .status()
+            .expect("ffmpeg failed")
+    } else {
+        let scale = format!("scale={ow}:{oh}:flags=neighbor");
+        Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate", &FPS.to_string(),
+                "-pattern_type", "glob",
+                "-i", &format!("{frames_dir}/*.png"),
+                "-vf", &scale,
+                "-c:v", "libx264",
+                "-crf", &CRF.to_string(),
+                "-pix_fmt", "yuv420p",
+                "-f", "mp4",
+                seg_path,
+            ])
+            .status()
+            .expect("ffmpeg failed")
+    };
+    assert!(status.success(), "ffmpeg exited non-zero for {seg_path}");
+    println!("  encoded {n_frames} frames → {seg_path}");
+}
+
+// [recovery] edit target not found, appending:
+        let (wrap_x, wrap_y) = (self.wrap_x, self.wrap_y);
+        let stag_x = self.stagger_x.round() as i32;
+        let stag_y = self.stagger_y.round() as i32;
+        // Resolve a neighbour offset to a grid index, respecting per-axis wrap + stagger.
+        // When crossing the X boundary, apply stagger_y to Y (and vice versa).
+        let resolve_nbr = |gy: usize, gx: usize, dy: i32, dx: i32| -> Option<(usize, usize)> {
+            let mut ry = gy as i32 + dy;
+            let mut rx = gx as i32 + dx;
+            // Detect boundary crossings and apply stagger offsets
+            if wrap_x {
+                if rx < 0        { ry -= stag_y; }
+                else if rx >= W() as i32 { ry += stag_y; }
+                rx = rx.rem_euclid(W() as i32);
+            } else if rx < 0 || rx >= W() as i32 { return None; }
+            if wrap_y {
+                if ry < 0        { rx -= stag_x; }
+                else if ry >= H() as i32 { rx += stag_x; }
+                ry = ry.rem_euclid(H() as i32);
+            } else if ry < 0 || ry >= H() as i32 { return None; }
+            // After stagger, re-wrap both axes (stagger offset may push out of bounds)
+            if wrap_x { rx = rx.rem_euclid(W() as i32); }
+            else if rx < 0 || rx >= W() as i32 { return None; }
+            if wrap_y { ry = ry.rem_euclid(H() as i32); }
+            else if ry < 0 || ry >= H() as i32 { return None; }
+            Some((ry as usize, rx as usize))
+        };
+
+// [recovery] edit target not found, appending:
+                // Stagger-aware distance to nearest chosen circle.
+                let nbr = chosen.iter()
+                    .map(|&(qx, qy)| {
+                        let raw_dx = px - qx;
+                        let raw_dy = py - qy;
+                        let (dx, dy) = nearest_image_delta(raw_dx, raw_dy, stagger_x, stagger_y, wrap_x, wrap_y);
+                        (dx*dx + dy*dy).sqrt()
+                    })
+                    .fold(f32::INFINITY, f32::min);
+
+// [recovery] edit target not found, appending:
+                // Collect integer grid points within a search radius (1.5× for buffer).
+                // Use stagger-aware distance so circles near edges wrap correctly.
+                let r_search = radius * 1.5;
+                let r_sq     = r_search * r_search;
+                let mut pts: Vec<(usize, usize, f32)> = Vec::new();
+                for yi in 0..H() {
+                    for xi in 0..W() {
+                        if occupied[yi * W() + xi] { continue; }
+                        // Simple wrap-aware distance (no stagger) for circle filling.
+                        // Stagger affects physics but not visual circle shape.
+                        let raw_dx = xi as f32 + 0.5 - disk_cx;
+                        let raw_dy = yi as f32 + 0.5 - disk_cy;
+                        let dx = if wrap_x {
+                            let d = raw_dx.abs();
+                            d.min(W() as f32 - d) * raw_dx.signum()
+                        } else { raw_dx };
+                        let dy = if wrap_y {
+                            let d = raw_dy.abs();
+                            d.min(H() as f32 - d) * raw_dy.signum()
+                        } else { raw_dy };
+                        let d2 = dx * dx + dy * dy;
+                        if d2 <= r_sq {
+                            pts.push((xi, yi, d2));
+                        }
+                    }
+                }
+
+// [recovery] edit target not found, appending:
+        let n = cells.len();
+        Sim { cells, order: (0..n).collect(), rng, g, softening, speed_cap, start_pop: target_pop,
+              pop_band, rate_limit, birth_chance, death_chance,
+              tick_count: 0, prev_live: vec![false; W() * H()],
+
+// [recovery] edit target not found, appending:
+        let order = (0..cells.len()).collect();
+        let sim = Sim { cells, order, rng, g, softening, speed_cap,
+                        start_pop: target_pop, pop_band, rate_limit, birth_chance, death_chance,
+                        tick_count, prev_live: prev_live_rebuilt, wrap_x, wrap_y, bounce_x, bounce_y, steer,
+
+// [recovery] edit target not found, appending:
+    let (mut sim, mut canvas, start_frame) =
+        Sim::load_checkpoint(&checkpoint_path, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y)
+        .map(|(s, c, sf)| {
+            println!("Resuming from checkpoint: frame {} / {}", sf, total_frames);
+            (s, c, sf)
+        })
+        .unwrap_or_else(|| {
+            if circles > 0 {
+                println!("Fresh start [{run_id}] seed={rng_seed} circles={circles}");
+            } else {
+                println!("Fresh start [{run_id}] seed={rng_seed} density=1/{seed_density_inv}");
+            }
+            let s = Sim::new(rng_seed, g, softening, speed_cap, pop_band, rate_limit, birth_chance, death_chance, seed_density_inv, target_pop, wrap_x, wrap_y, bounce_x, bounce_y, steer, dampen_x, dampen_y, vel_decay, vel_nudge, vel_nudge_rate, stagger_x, stagger_y, &init_vel, circles, vel_scale);
+            let c = vec![0.0f32; W() * H() * 3];
+            (s, c, 0)
+        });
+
+// [recovery] edit target not found, appending:
+        // Birth selection: if chance-based, filter by probability; otherwise shuffle and take max_births.
+        let mut birth_indices: Vec<usize> = desired_births.iter()
+            .enumerate()
+            .filter_map(|(i, (gy, gx, _))| {
+                if grid2[gy * W() + gx] != usize::MAX { return None; }
+                Some(i)
+            })
+            .collect();
+        
+        let birth_limit = if let Some(birth_chance) = self.birth_chance {
+            if births_allowed {
+                // Filter by probability
+                birth_indices.retain(|_| xorf32(&mut self.rng) < birth_chance);
+                birth_indices.len() // take all that passed the probability filter
+            } else {
+                0
+            }
+        } else {
+            shuffle_vec(&mut birth_indices, &mut self.rng);
+            if births_allowed { self.rate_limit } else { 0 }
+        };
+
+        for bi in birth_indices.into_iter().take(birth_limit) {
