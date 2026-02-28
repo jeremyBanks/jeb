@@ -216,12 +216,12 @@ fn version(m: &str, v: &str) -> String {
 
 fn apply_edit(cur: &str, old: &str, new: &str) -> (String, bool) {
     if cur.contains(old) { return (cur.replacen(old, new, 1), true); }
-    // Append fallback
+    // Append fallback - just add blank lines and the new content
     let mut r = cur.to_string();
     if !r.is_empty() && !r.ends_with('\n') { r.push('\n'); }
-    r.push_str("\n// [recovery] edit target not found, appending:\n");
+    r.push_str("\n\n\n"); // Three blank lines to separate
     r.push_str(new);
-    r.push('\n');
+    if !new.ends_with('\n') { r.push('\n'); }
     (r, false)
 }
 
@@ -450,10 +450,15 @@ fn main() -> Result<()> {
         repo.set_head(&format!("refs/heads/{}", repo.head()?.shorthand().unwrap_or("main")))?;
         repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))?;
         
-        // Merge with prefer-theirs (recovery branch)
-        let mut opts = git2::MergeOptions::new();
-        opts.file_favor(git2::FileFavor::Theirs);
-        repo.merge(&[&ann], Some(&mut opts), None)?;
+        // Merge with "ours" strategy: keep our tree exactly, just incorporate history
+        // The recovery branch may have accumulated errors from failed edits,
+        // but the history is valuable. This is like `git merge -s ours`.
+        repo.merge(&[&ann], None, None)?;
+        
+        // Resolve by keeping our version of everything
+        let our_commit = repo.find_commit(orig_head.unwrap())?;
+        let our_tree = our_commit.tree()?;
+        repo.checkout_tree(our_tree.as_object(), Some(git2::build::CheckoutBuilder::new().force()))?;
         
         // Prepare merge message
         let slist = if session_ids.len() == 1 { 
