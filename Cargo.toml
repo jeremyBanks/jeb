@@ -30,6 +30,7 @@ members = [
     "crates/zerodmg-codes",
     "crates/zerodmg-emulator",
     "crates/zerodmg-utils",
+    "crates/session-recovery",
     "crates/zipng",
     "crates/zipng-wasm",
 ]
