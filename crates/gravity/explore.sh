@@ -54,73 +54,18 @@ echo "=== Base: $BASE_ARGS ==="
 declare -a CONFIGS
 case "$ROUND" in
 1)
-  # Round 1: vary around 3am known-good baseline (BASE_ARGS).
-  # Baseline: G=0.03125 soft=6 cap=4.5 pop_band=160 rate=4 init_vel=zero
-  # Test wrap/nowrap, rate_limit, pop_band, and init_vel modes.
+  # Round 1: wrap-only. Vary speed_cap and init_vel around constant-rate baseline.
   CONFIGS=(
-    "wrap+base:--wrap"
-    "nowrap+base:"
-    "wrap+rate=1:--wrap --rate-limit 1"
-    "wrap+rate=8:--wrap --rate-limit 8"
-    "wrap+band=80:--wrap --pop-band 80"
-    "wrap+band=320:--wrap --pop-band 320"
-    "wrap+swirl:--wrap --init-vel swirl"
-    "wrap+spin:--wrap --init-vel spin"
+    "wrap+cap6+zero:--speed-cap 6 --init-vel zero --wrap"
+    "wrap+cap9+zero:--speed-cap 9 --init-vel zero --wrap"
+    "wrap+cap6+swirl:--speed-cap 6 --init-vel swirl --wrap"
+    "wrap+cap9+swirl:--speed-cap 9 --init-vel swirl --wrap"
+    "wrap+cap6+random:--speed-cap 6 --init-vel random --wrap"
+    "wrap+cap9+random:--speed-cap 9 --init-vel random --wrap"
+    "wrap+cap6+spin:--speed-cap 6 --init-vel spin --wrap"
+    "wrap+cap9+spin:--speed-cap 9 --init-vel spin --wrap"
   )
-  ;;
-2)
-  # Round 2: vary gravity + softening with wrap, holding Conway params at baseline.
-  CONFIGS=(
-    "wrap+base:--gravity 0.03125 --softening 6 --wrap"
-    "wrap+G/2+s6:--gravity 0.015 --softening 6 --wrap"
-    "wrap+G×2+s6:--gravity 0.0625 --softening 6 --wrap"
-    "wrap+G×4+s6:--gravity 0.125 --softening 6 --wrap"
-    "wrap+G×1+s3:--gravity 0.03125 --softening 3 --wrap"
-    "wrap+G×1+s12:--gravity 0.03125 --softening 12 --wrap"
-    "wrap+G×2+s3:--gravity 0.0625 --softening 3 --wrap"
-    "wrap+G×2+s12:--gravity 0.0625 --softening 12 --wrap"
-  )
-  ;;
-3)
-  # Round 3: vary initial conditions (seed_density, pop_target) and dampen.
-  # Different starting densities → different initial cluster topologies.
-  CONFIGS=(
-    "wrap+base:--gravity 0.03125 --softening 6 --wrap"
-    "wrap+dense=1/64:--gravity 0.03125 --softening 6 --wrap --seed-density 64"
-    "wrap+dense=1/256:--gravity 0.03125 --softening 6 --wrap --seed-density 256"
-    "wrap+pop=1280:--gravity 0.03125 --softening 6 --wrap --pop-target 1280"
-    "wrap+pop=2560:--gravity 0.03125 --softening 6 --wrap --pop-target 2560"
-    "wrap+pop=10240:--gravity 0.03125 --softening 6 --wrap --pop-target 10240"
-    "wrap+dampen:--gravity 0.03125 --softening 6 --wrap --dampen"
-    "wrap+rate=8+band=512:--gravity 0.03125 --softening 6 --wrap --rate-limit 8 --pop-band 512"
-  )
-  ;;
-4)
-  # Round 4: explore init_vel modes — does initial angular momentum affect long-term?
-  CONFIGS=(
-    "swirl+wrap:--init-vel swirl --gravity 0.03125 --softening 6 --wrap"
-    "random+wrap:--init-vel random --gravity 0.03125 --softening 6 --wrap"
-    "spin+wrap:--init-vel spin --gravity 0.03125 --softening 6 --wrap"
-    "spin-ccw+wrap:--init-vel spin-ccw --gravity 0.03125 --softening 6 --wrap"
-    "radial-out+wrap:--init-vel radial-out --gravity 0.03125 --softening 6 --wrap"
-    "zero+wrap:--init-vel zero --gravity 0.03125 --softening 6 --wrap"
-    "spin+nowrap:--init-vel spin --gravity 0.03125 --softening 6"
-    "spin+G×2:--init-vel spin --gravity 0.0625 --softening 6 --wrap"
-  )
-  ;;
-*)
-  # Round 5+: cross-product of best init_vel + best G/soft/rate from R1-R4
-  CONFIGS=(
-    "r${ROUND}a:--init-vel swirl --gravity 0.0625 --softening 6 --rate-limit 8 --wrap"
-    "r${ROUND}b:--init-vel spin --gravity 0.0625 --softening 6 --rate-limit 8 --wrap"
-    "r${ROUND}c:--init-vel swirl --gravity 0.03125 --softening 12 --rate-limit 8 --wrap"
-    "r${ROUND}d:--init-vel spin --gravity 0.03125 --softening 12 --rate-limit 8 --wrap"
-    "r${ROUND}e:--init-vel swirl --gravity 0.125 --softening 6 --rate-limit 8 --wrap"
-    "r${ROUND}f:--init-vel spin --gravity 0.125 --softening 12 --rate-limit 8 --wrap"
-    "r${ROUND}g:--init-vel random --gravity 0.0625 --softening 12 --pop-band 512 --wrap"
-    "r${ROUND}h:--init-vel spin --gravity 0.03125 --softening 6 --speed-cap 2 --rate-limit 8 --wrap"
-  )
-  ;;
+  
 esac
 
 BEST_SCORE="-1"
@@ -247,51 +192,3 @@ echo "Written → $BEST_FILE"
 # Write flag file so heartbeat can detect completion and act
 echo "EXPLORE_READY round=$ROUND label=$BEST_LABEL score=$BEST_SCORE" > /tmp/gravity_explore_ready.txt
 echo "results=/tmp/gravity_explore_round${ROUND}.txt" >> /tmp/gravity_explore_ready.txt
-
-// [recovery] edit target not found, appending:
-SIM_SECONDS="${1:-120}"
-
-// [recovery] edit target not found, appending:
-    # Compare settled state (skip first 15 lines of ramp-up)
-    local settled
-    settled=$(echo "$stat_lines" | tail -n +16)
-    local first_line last_line
-    first_line=$(echo "$settled" | head -1)
-    last_line=$(echo  "$settled" | tail -1)
-    [ -z "$first_line" ] && first_line=$(echo "$stat_lines" | head -1)
-    [ -z "$last_line"  ] && last_line=$(echo  "$stat_lines" | tail -1)
-
-    local hot_start hot_end
-    hot_start=$(echo "$first_line" | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
-    hot_end=$(echo   "$last_line"  | grep -oE 'hot=\[[^]]*\]' | sed 's/hot=\[//;s/\]//')
-    local blob_moved=0
-    [ "$hot_start" != "$hot_end" ] && blob_moved=1
-
-// [recovery] edit target not found, appending:
-4)
-  # Round 4: explore init_vel modes with the best G/soft from R2.
-  # Tests whether initial angular momentum changes long-term dynamics.
-  CONFIGS=(
-    "swirl+wrap:--init-vel swirl --gravity 0.03125 --softening 6 --wrap"
-    "random+wrap:--init-vel random --gravity 0.03125 --softening 6 --wrap"
-    "spin+wrap:--init-vel spin --gravity 0.03125 --softening 6 --wrap"
-    "spin-ccw+wrap:--init-vel spin-ccw --gravity 0.03125 --softening 6 --wrap"
-    "radial-out+wrap:--init-vel radial-out --gravity 0.03125 --softening 6 --wrap"
-    "zero+wrap:--init-vel zero --gravity 0.03125 --softening 6 --wrap"
-    "spin+nowrap:--init-vel spin --gravity 0.03125 --softening 6"
-    "spin+G×2:--init-vel spin --gravity 0.0625 --softening 6 --wrap"
-  )
-  ;;
-*)
-  # Round 5+: cross-product of best init_vel + best G/soft/rate from R1-R4
-  CONFIGS=(
-    "r${ROUND}a:--init-vel swirl --gravity 0.0625 --softening 6 --rate-limit 8 --wrap"
-    "r${ROUND}b:--init-vel spin --gravity 0.0625 --softening 6 --rate-limit 8 --wrap"
-    "r${ROUND}c:--init-vel swirl --gravity 0.03125 --softening 12 --rate-limit 8 --wrap"
-    "r${ROUND}d:--init-vel spin --gravity 0.03125 --softening 12 --rate-limit 8 --wrap"
-    "r${ROUND}e:--init-vel swirl --gravity 0.125 --softening 6 --rate-limit 8 --wrap"
-    "r${ROUND}f:--init-vel spin --gravity 0.125 --softening 12 --rate-limit 8 --wrap"
-    "r${ROUND}g:--init-vel swirl --gravity 0.0625 --softening 12 --pop-band 512 --wrap"
-    "r${ROUND}h:--init-vel spin --gravity 0.03125 --softening 6 --speed-cap 2 --rate-limit 8 --wrap"
-  )
-  ;;

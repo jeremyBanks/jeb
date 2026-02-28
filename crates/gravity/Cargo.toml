@@ -1,18 +1,4 @@
 [package]
-name = "partli"
-version = "0.1.0"
-edition = "2021"
-description = "Partli: A Particle-Life Cellular Automaton"
-license = "MIT"
-
-[dependencies]
-rand = "0.8"
-
-[dev-dependencies]
-rand_chacha = "0.3"
-
-// [recovery] edit target not found, appending:
-[package]
 name = "gravity"
 version = "0.1.0"
 edition = "2021"

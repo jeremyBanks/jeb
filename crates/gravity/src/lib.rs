@@ -41,8 +41,6 @@
 //! This crate includes property-based tests verifying the momentum invariant
 //! across random birth/death sequences. Run with `cargo test`.
 
-
-
 /// A 2D vector for positions and velocities.
 ///
 /// Implements common vector operations: addition, subtraction, scalar multiplication.
@@ -153,7 +151,7 @@ pub struct GridConfig {
 
 impl GridConfig {
     pub fn new(width: usize, height: usize) -> Self {
-        let stagger_x = if width > height && width % 2 == 0 {
+        let stagger_x = if width > height && width.is_multiple_of(2) {
             (width / 2) as i32
         } else {
             0
@@ -604,6 +602,3 @@ mod tests {
         }
     }
 }
-
-// [recovery] edit target not found, appending:
-/// 2D vector
