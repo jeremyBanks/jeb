@@ -287,17 +287,17 @@ fn game_code() -> Vec<Instruction> {
         .inst(OR(A))
         .jr_cond(if_NZ, "FADESET");     // alive → set to 255
     // Dead: fade[i] = fade[i] - (fade[i] >> 3)
-    .inst(LD_8_FROM_SECONDARY(AT_DE))   // A = fade[i]
-    .inst(LD_8_INTERNAL(B, A))          // B = fade[i]
-    .inst(SRA(A))                        // A >>= 1 (signed shift, but fade is 0-255, fine)
-    .inst(SRA(A))                        // >>= 2
-    .inst(SRA(A))                        // >>= 3 → A = fade[i] >> 3
-    .inst(LD_8_INTERNAL(C, A))          // C = fade[i] >> 3
-    .inst(LD_8_INTERNAL(A, B))          // A = fade[i]
-    .inst(SUB(C))                        // A = fade[i] - (fade[i] >> 3)
-    .jr_cond(if_C, "FADEZ");            // if underflow → 0
-    .inst(LD_8_TO_SECONDARY(AT_DE))     // fade[i] = A
-    .jp("FADENXT");
+    asm.inst(LD_8_FROM_SECONDARY(AT_DE))   // A = fade[i]
+        .inst(LD_8_INTERNAL(B, A))          // B = fade[i]
+        .inst(SRA(A))                        // A >>= 1 (signed shift, but fade is 0-255, fine)
+        .inst(SRA(A))                        // >>= 2
+        .inst(SRA(A))                        // >>= 3 → A = fade[i] >> 3
+        .inst(LD_8_INTERNAL(C, A))          // C = fade[i] >> 3
+        .inst(LD_8_INTERNAL(A, B))          // A = fade[i]
+        .inst(SUB(C))                        // A = fade[i] - (fade[i] >> 3)
+        .jr_cond(if_C, "FADEZ");            // if underflow → 0
+    asm.inst(LD_8_TO_SECONDARY(AT_DE))     // fade[i] = A
+        .jp("FADENXT");
     asm.label("FADEZ")
         .inst(LD_8_IMMEDIATE(A, 0))
         .inst(LD_8_TO_SECONDARY(AT_DE))
