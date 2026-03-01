@@ -586,11 +586,13 @@ fn version(m: &str, v: &str) -> String {
 
 fn apply_edit(cur: &str, old: &str, new: &str) -> (String, bool) {
     if cur.contains(old) { return (cur.replacen(old, new, 1), true); }
+    // Mismatch: append with separators and trailing blank line
     let mut r = cur.to_string();
     if !r.is_empty() && !r.ends_with('\n') { r.push('\n'); }
     r.push_str("\n\n\n");
     r.push_str(new);
     if !new.ends_with('\n') { r.push('\n'); }
+    r.push('\n'); // trailing blank line for mismatched edits
     (r, false)
 }
 
@@ -1102,6 +1104,18 @@ fn main() -> Result<()> {
     
     let orig_head = repo.head().ok().and_then(|h| h.target());
     
+    // Build session ID → format name map
+    let session_formats: HashMap<String, String> = session_infos.iter()
+        .map(|s| {
+            let fmt = match s.format {
+                LogFormat::ClaudeCode => "Claude Code",
+                LogFormat::OpenClaw => "OpenClaw",
+                LogFormat::Unknown => "Session",
+            };
+            (s.id.clone(), fmt.to_string())
+        })
+        .collect();
+    
     // Process operations and create commits
     let mut files: HashMap<String, String> = HashMap::new();
     let mut tree_id: Option<Oid> = None;
@@ -1180,7 +1194,8 @@ fn main() -> Result<()> {
                 let (aname, aemail) = model_author(&op.model);
                 let sig = Signature::new(&aname, aemail, &Time::new(op.ts.timestamp(), op.tz))?;
                 let t = repo.find_tree(new_tree)?;
-                let msg = format!("write: {}", ps);
+                let format_name = session_formats.get(&op.session).map(|s| s.as_str()).unwrap_or("Session");
+                let msg = format!("write: {}\n\n{} session {}", ps, format_name, op.session);
                 let pc = repo.find_commit(parent.unwrap())?;
                 let oid = repo.commit(None, &sig, &sig, &msg, &t, &[&pc])?;
                 parent = Some(oid);
@@ -1208,10 +1223,11 @@ fn main() -> Result<()> {
                 let (aname, aemail) = model_author(&op.model);
                 let sig = Signature::new(&aname, aemail, &Time::new(op.ts.timestamp(), op.tz))?;
                 let t = repo.find_tree(new_tree)?;
+                let format_name = session_formats.get(&op.session).map(|s| s.as_str()).unwrap_or("Session");
                 let msg = if ok { 
-                    format!("edit: {}", ps) 
+                    format!("edit: {}\n\n{} session {}", ps, format_name, op.session) 
                 } else { 
-                    format!("⚠️ edit (appended): {}", ps) 
+                    format!("⚠️ edit (mismatched): {}\n\n{} session {}", ps, format_name, op.session) 
                 };
                 let pc = repo.find_commit(parent.unwrap())?;
                 let oid = repo.commit(None, &sig, &sig, &msg, &t, &[&pc])?;
@@ -1222,7 +1238,7 @@ fn main() -> Result<()> {
                     warnings.push(Warning {
                         path: ps.clone(),
                         ts: op.ts,
-                        message: "Edit target not found, content appended".into(),
+                        message: "Edit target not found, content appended as mismatched".into(),
                         commit: Some(oid),
                     });
                 }
