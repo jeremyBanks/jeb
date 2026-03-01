@@ -71,6 +71,14 @@ struct Args {
     #[arg(long)]
     no_collapse: bool,
 
+    /// Remove this prefix from file paths
+    #[arg(long)]
+    strip_prefix: Option<String>,
+
+    /// Add this prefix to file paths
+    #[arg(long)]
+    add_prefix: Option<String>,
+
     /// Actually apply the recovery (default: preview only)
     #[arg(long, visible_alias = "yes")]
     confirm: bool,
@@ -273,7 +281,33 @@ fn sanitize(p: &Path) -> PathBuf {
     }).collect()
 }
 
-fn resolve(path: &str, repo: &Path, ignore_ext: bool) -> Option<PathBuf> {
+fn remap_path(path: &str, strip_prefix: Option<&str>, add_prefix: Option<&str>) -> String {
+    let mut result = path.to_string();
+    
+    // Strip prefix if specified
+    if let Some(prefix) = strip_prefix {
+        if result.starts_with(prefix) {
+            result = result[prefix.len()..].to_string();
+            // Remove leading slash if present
+            if result.starts_with('/') {
+                result = result[1..].to_string();
+            }
+        }
+    }
+    
+    // Add prefix if specified
+    if let Some(prefix) = add_prefix {
+        result = format!("{}{}", prefix, result);
+    }
+    
+    result
+}
+
+fn resolve(path: &str, repo: &Path, ignore_ext: bool, strip_prefix: Option<&str>, add_prefix: Option<&str>) -> Option<PathBuf> {
+    // Apply path remapping first
+    let remapped = remap_path(path, strip_prefix, add_prefix);
+    let path = &remapped;
+    
     let abs = if Path::new(path).is_absolute() { PathBuf::from(path) } else { repo.join(path) };
     let resolved = abs.canonicalize().unwrap_or_else(|_| abs.clone());
     let repo_resolved = repo.canonicalize().unwrap_or_else(|_| repo.to_path_buf());
@@ -585,7 +619,7 @@ fn main() -> Result<()> {
                 }
             }
             OpKind::Write(content) => {
-                let rp = match resolve(&op.path, &repo_path, args.ignore_external) { Some(p) => p, None => continue };
+                let rp = match resolve(&op.path, &repo_path, args.ignore_external, args.strip_prefix.as_deref(), args.add_prefix.as_deref()) { Some(p) => p, None => continue };
                 let ps = rp.to_string_lossy().to_string();
                 files.insert(ps.clone(), content.clone());
                 
@@ -605,7 +639,7 @@ fn main() -> Result<()> {
                 repo.reference(&branch_ref, oid, true, "write")?;
             }
             OpKind::Edit { old, new } => {
-                let rp = match resolve(&op.path, &repo_path, args.ignore_external) { Some(p) => p, None => continue };
+                let rp = match resolve(&op.path, &repo_path, args.ignore_external, args.strip_prefix.as_deref(), args.add_prefix.as_deref()) { Some(p) => p, None => continue };
                 let ps = rp.to_string_lossy().to_string();
                 let cur = files.get(&ps).cloned().unwrap_or_default();
                 let (updated, ok) = apply_edit(&cur, old, new);
