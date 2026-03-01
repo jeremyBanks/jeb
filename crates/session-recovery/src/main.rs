@@ -81,6 +81,14 @@ struct Args {
     #[arg(long, default_value = "~/.claude/projects/")]
     claude_sessions_dir: String,
 
+    /// Only scan OpenClaw sessions (skip Claude Code)
+    #[arg(long)]
+    openclaw_only: bool,
+
+    /// Only scan Claude Code sessions (skip OpenClaw)
+    #[arg(long)]
+    claude_only: bool,
+
     /// Only include sessions with activity after this time
     #[arg(long)]
     since: Option<String>,
@@ -750,14 +758,18 @@ fn scan_claude_code_sessions(dir: &Path, includes: &[Pattern], since: DateTime<U
 }
 
 /// Scan all session sources
-fn scan_sessions(openclaw_dir: &Path, claude_code_dir: &Path, includes: &[Pattern], since: DateTime<Utc>, until: DateTime<Utc>, verbose: bool) -> Result<Vec<PathBuf>> {
+fn scan_sessions(openclaw_dir: &Path, claude_code_dir: &Path, includes: &[Pattern], since: DateTime<Utc>, until: DateTime<Utc>, verbose: bool, openclaw_only: bool, claude_only: bool) -> Result<Vec<PathBuf>> {
     let mut all_sessions = Vec::new();
     
-    let openclaw = scan_openclaw_sessions(openclaw_dir, includes, since, until, verbose)?;
-    let claude = scan_claude_code_sessions(claude_code_dir, includes, since, until, verbose)?;
+    if !claude_only {
+        let openclaw = scan_openclaw_sessions(openclaw_dir, includes, since, until, verbose)?;
+        all_sessions.extend(openclaw);
+    }
     
-    all_sessions.extend(openclaw);
-    all_sessions.extend(claude);
+    if !openclaw_only {
+        let claude = scan_claude_code_sessions(claude_code_dir, includes, since, until, verbose)?;
+        all_sessions.extend(claude);
+    }
     
     // Sort by path for consistent ordering
     all_sessions.sort();
@@ -957,21 +969,29 @@ fn main() -> Result<()> {
         effective_includes.push(Pattern::new(&format!("*{}*", p)).unwrap_or_else(|_| Pattern::new(p).unwrap()));
     }
     
+    // Validate mutually exclusive flags
+    if args.openclaw_only && args.claude_only {
+        bail!("Cannot use both --openclaw-only and --claude-only");
+    }
+    
     // Scan or collect sessions
     let sessions: Vec<PathBuf> = if args.scan_sessions || args.sessions.is_empty() || at_path.is_some() {
         let openclaw_dir = expand_home(&args.sessions_dir);
         let claude_code_dir = expand_home(&args.claude_sessions_dir);
         
-        if !openclaw_dir.exists() && !claude_code_dir.exists() { 
+        let check_openclaw = !args.claude_only && openclaw_dir.exists();
+        let check_claude = !args.openclaw_only && claude_code_dir.exists();
+        
+        if !check_openclaw && !check_claude { 
             bail!("No session directories found.\n\nTried:\n  OpenClaw: {}\n  Claude Code: {}\n\nTip: Use --sessions-dir or --claude-sessions-dir to specify locations", 
                 openclaw_dir.display(), claude_code_dir.display()); 
         }
         if args.verbose { 
             eprintln!("Scanning sessions..."); 
-            if openclaw_dir.exists() { eprintln!("  OpenClaw: {}", openclaw_dir.display()); }
-            if claude_code_dir.exists() { eprintln!("  Claude Code: {}", claude_code_dir.display()); }
+            if check_openclaw { eprintln!("  OpenClaw: {}", openclaw_dir.display()); }
+            if check_claude { eprintln!("  Claude Code: {}", claude_code_dir.display()); }
         }
-        scan_sessions(&openclaw_dir, &claude_code_dir, &effective_includes, since, until, args.verbose)?
+        scan_sessions(&openclaw_dir, &claude_code_dir, &effective_includes, since, until, args.verbose, args.openclaw_only, args.claude_only)?
     } else {
         args.sessions.iter().filter_map(|p| if p.exists() { Some(p.clone()) } else { None }).collect()
     };
@@ -1015,11 +1035,18 @@ fn main() -> Result<()> {
             last_commit: None,
         });
         
-        all_ops.push(Op { ts: ft, tz: 0, model: "system".into(), session: sid.clone(), kind: OpKind::Start, path: String::new() });
+        // Store format prefix for commit messages
+        let format_name = match format {
+            LogFormat::ClaudeCode => "Claude Code",
+            LogFormat::OpenClaw => "OpenClaw",
+            LogFormat::Unknown => "unknown",
+        };
+        
+        all_ops.push(Op { ts: ft, tz: 0, model: format_name.into(), session: sid.clone(), kind: OpKind::Start, path: String::new() });
         for op in ops {
             all_ops.push(op);
         }
-        all_ops.push(Op { ts: lt, tz: 0, model: "system".into(), session: sid.clone(), kind: OpKind::End, path: String::new() });
+        all_ops.push(Op { ts: lt, tz: 0, model: format_name.into(), session: sid.clone(), kind: OpKind::End, path: String::new() });
     }
     
     all_ops.sort_by_key(|o| o.ts);
@@ -1081,10 +1108,12 @@ fn main() -> Result<()> {
     for op in &all_ops {
         match &op.kind {
             OpKind::Start => {
-                let sig = Signature::new("OpenClaw", "noreply@anthropic.com", &Time::new(op.ts.timestamp(), op.tz))?;
+                // op.model contains format name ("OpenClaw", "Claude Code") for Start/End ops
+                let source = &op.model;
+                let sig = Signature::new(source, "noreply@anthropic.com", &Time::new(op.ts.timestamp(), op.tz))?;
                 let empty = repo.treebuilder(None)?.write()?;
                 let etree = repo.find_tree(empty)?;
-                let msg = format!("Beginning recovery from OpenClaw session {}", op.session);
+                let msg = format!("Beginning recovery from {} session {}", source, op.session);
                 let oid = repo.commit(None, &sig, &sig, &msg, &etree, &[])?;
                 total_commits += 1;
                 
@@ -1100,7 +1129,7 @@ fn main() -> Result<()> {
                     let pc = repo.find_commit(p)?;
                     let oc = repo.find_commit(oid)?;
                     let t = repo.find_tree(tree_id.unwrap())?;
-                    let msg = format!("Including OpenClaw session {} in recovery", op.session);
+                    let msg = format!("Including {} session {} in recovery", source, op.session);
                     let mid = repo.commit(None, &sig, &sig, &msg, &t, &[&pc, &oc])?;
                     parent = Some(mid);
                     total_commits += 1;
@@ -1112,9 +1141,10 @@ fn main() -> Result<()> {
             }
             OpKind::End => {
                 if let Some(tid) = tree_id {
-                    let sig = Signature::new("OpenClaw", "noreply@anthropic.com", &Time::new(op.ts.timestamp(), op.tz))?;
+                    let source = &op.model;
+                    let sig = Signature::new(source, "noreply@anthropic.com", &Time::new(op.ts.timestamp(), op.tz))?;
                     let t = repo.find_tree(tid)?;
-                    let msg = format!("Completing recovery from OpenClaw session {}", op.session);
+                    let msg = format!("Completing recovery from {} session {}", source, op.session);
                     let pc = repo.find_commit(parent.unwrap())?;
                     let oid = repo.commit(None, &sig, &sig, &msg, &t, &[&pc])?;
                     parent = Some(oid);
@@ -1243,14 +1273,22 @@ fn main() -> Result<()> {
         };
         repo.checkout_tree(tree_to_use.as_object(), Some(git2::build::CheckoutBuilder::new().force()))?;
         
-        let session_ids: Vec<_> = session_infos.iter().map(|s| &s.id[..8]).collect();
-        let slist = if session_ids.len() == 1 { 
-            format!("session {}", session_ids[0]) 
+        // Build session list with format labels
+        let session_labels: Vec<_> = session_infos.iter().map(|s| {
+            let fmt = match s.format {
+                LogFormat::ClaudeCode => "Claude Code",
+                LogFormat::OpenClaw => "OpenClaw", 
+                LogFormat::Unknown => "unknown",
+            };
+            format!("{} ({})", &s.id[..8], fmt)
+        }).collect();
+        let slist = if session_labels.len() == 1 { 
+            format!("session {}", session_labels[0]) 
         } else { 
-            format!("sessions {}", session_ids.join(", ")) 
+            format!("sessions {}", session_labels.join(", ")) 
         };
         let suffix = if !warnings.is_empty() { " (partial recovery with errors)" } else { "" };
-        let mmsg = format!("Merge recovered OpenClaw {}{}", slist, suffix);
+        let mmsg = format!("Merge recovered {}{}", slist, suffix);
         
         let git_dir = repo.path();
         fs::write(git_dir.join("MERGE_MSG"), &mmsg)?;
