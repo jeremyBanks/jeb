@@ -584,13 +584,19 @@ fn print_warnings(warnings: &[Warning]) {
     eprintln!();
 }
 
-fn print_merge_state(branch: &str, last_commit: Oid, _merge_msg: &str, errors: bool) {
+fn print_merge_state(branch: &str, last_commit: Oid, _merge_msg: &str, errors: bool, strategy: &str) {
     eprintln!("Branch created: {} @ {}", branch, short_oid(last_commit));
     eprintln!();
     eprintln!("Merge State");
     eprintln!("  Repository is now in an uncommitted merge state.");
-    eprintln!("  Current tree:    unchanged (--strategy ours)");
-    eprintln!("  Recovery branch: {} (merged for history only)", branch);
+    let tree_desc = if strategy == "theirs" {
+        "from recovery branch (recovered files)"
+    } else {
+        "unchanged (current files preserved)"
+    };
+    eprintln!("  Current tree:    {}", tree_desc);
+    eprintln!("  Strategy:        -s {}", strategy);
+    eprintln!("  Recovery branch: {}", branch);
     eprintln!();
     eprintln!("  To complete:     git commit");
     eprintln!("  To abort:        git merge --abort");
@@ -920,12 +926,25 @@ fn main() -> Result<()> {
         let branch_commit = repo.find_commit(parent.unwrap())?;
         let ann = repo.find_annotated_commit(branch_commit.id())?;
         
+        // Validate merge strategy
+        let use_theirs = match args.merge.as_str() {
+            "ours" => false,
+            "theirs" => true,
+            other => bail!("Invalid merge strategy '{}'. Use 'ours' or 'theirs'.", other),
+        };
+        
         repo.merge(&[&ann], None, None)?;
         
-        // Checkout our original tree (ours strategy)
-        let our_commit = repo.find_commit(head_id)?;
-        let our_tree = our_commit.tree()?;
-        repo.checkout_tree(our_tree.as_object(), Some(git2::build::CheckoutBuilder::new().force()))?;
+        // Checkout the appropriate tree based on strategy
+        let tree_to_use = if use_theirs {
+            // "theirs" = use the recovery branch's tree (the recovered files)
+            branch_commit.tree()?
+        } else {
+            // "ours" = keep our original tree (just add history)
+            let our_commit = repo.find_commit(head_id)?;
+            our_commit.tree()?
+        };
+        repo.checkout_tree(tree_to_use.as_object(), Some(git2::build::CheckoutBuilder::new().force()))?;
         
         let session_ids: Vec<_> = session_infos.iter().map(|s| &s.id[..8]).collect();
         let slist = if session_ids.len() == 1 { 
@@ -939,7 +958,7 @@ fn main() -> Result<()> {
         let git_dir = repo.path();
         fs::write(git_dir.join("MERGE_MSG"), &mmsg)?;
         
-        print_merge_state(&branch, parent.unwrap(), &mmsg, !warnings.is_empty());
+        print_merge_state(&branch, parent.unwrap(), &mmsg, !warnings.is_empty(), &args.merge);
     } else {
         eprintln!("Branch created: {} @ {}", branch, short_oid(parent.unwrap()));
         eprintln!();
