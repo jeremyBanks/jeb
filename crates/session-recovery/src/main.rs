@@ -23,6 +23,41 @@ const DEFAULT_SINCE_SECONDS: i64 = 3 * 365 * 24 * 60 * 60;
 /// Max gap between operations for consolidation (64 * 32 = 2048 seconds ≈ 34 minutes)
 const CONSOLIDATION_MAX_GAP_SECONDS: i64 = 64 * 32;
 
+/// Format a consolidated commit message with deduplicated operations
+fn format_batch_commit_message(
+    ops: &[(String, &str, String)], // (path, kind, session)
+    session_formats: &HashMap<String, String>,
+) -> String {
+    use std::collections::BTreeMap;
+    
+    // Count operations per (kind, path) pair, preserving order with BTreeMap
+    let mut op_counts: BTreeMap<(String, String), usize> = BTreeMap::new();
+    for (path, kind, _) in ops {
+        let key = (kind.to_string(), path.clone());
+        *op_counts.entry(key).or_insert(0) += 1;
+    }
+    
+    let mut msg = String::new();
+    for ((kind, path), count) in &op_counts {
+        if *count > 1 {
+            msg.push_str(&format!("{}: {} (×{})\n", kind, path, count));
+        } else {
+            msg.push_str(&format!("{}: {}\n", kind, path));
+        }
+    }
+    
+    msg.push('\n');
+    
+    // Deduplicated session IDs
+    let sessions: HashSet<_> = ops.iter().map(|(_, _, s)| s.as_str()).collect();
+    for session in sessions {
+        let format_name = session_formats.get(session).map(|s| s.as_str()).unwrap_or("Session");
+        msg.push_str(&format!("{} session {}\n", format_name, session));
+    }
+    
+    msg
+}
+
 /// Session log format
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LogFormat {
@@ -1215,55 +1250,10 @@ fn main() -> Result<()> {
     
     for (op_idx, op) in all_ops.iter().enumerate() {
         match &op.kind {
-            OpKind::Start => {
-                // op.model contains format name ("OpenClaw", "Claude Code") for Start/End ops
-                let source = &op.model;
-                let sig = Signature::new(source, "noreply@anthropic.com", &Time::new(op.ts.timestamp(), op.tz))?;
-                let empty = repo.treebuilder(None)?.write()?;
-                let etree = repo.find_tree(empty)?;
-                let msg = format!("Beginning recovery from {} session {}", source, op.session);
-                let oid = repo.commit(None, &sig, &sig, &msg, &etree, &[])?;
-                total_commits += 1;
-                
-                session_commits.entry(op.session.clone()).or_insert((None, None)).0 = Some(oid);
-                
-                if seen_sessions.is_empty() {
-                    parent = Some(oid);
-                    tree_id = Some(empty);
-                    if args.confirm {
-                        repo.reference(&branch_ref, oid, true, "init recovery branch")?;
-                    }
-                } else if let Some(p) = parent {
-                    let pc = repo.find_commit(p)?;
-                    let oc = repo.find_commit(oid)?;
-                    let t = repo.find_tree(tree_id.unwrap())?;
-                    let msg = format!("Including {} session {} in recovery", source, op.session);
-                    let mid = repo.commit(None, &sig, &sig, &msg, &t, &[&pc, &oc])?;
-                    parent = Some(mid);
-                    total_commits += 1;
-                    if args.confirm {
-                        repo.reference(&branch_ref, mid, true, "merge session")?;
-                    }
-                }
+            OpKind::Start | OpKind::End => {
+                // Session markers are for batching logic only, no commits created
+                // All session info is in the commit message body
                 seen_sessions.insert(op.session.clone());
-            }
-            OpKind::End => {
-                if let Some(tid) = tree_id {
-                    let source = &op.model;
-                    let sig = Signature::new(source, "noreply@anthropic.com", &Time::new(op.ts.timestamp(), op.tz))?;
-                    let t = repo.find_tree(tid)?;
-                    let msg = format!("Completing recovery from {} session {}", source, op.session);
-                    let pc = repo.find_commit(parent.unwrap())?;
-                    let oid = repo.commit(None, &sig, &sig, &msg, &t, &[&pc])?;
-                    parent = Some(oid);
-                    total_commits += 1;
-                    
-                    session_commits.entry(op.session.clone()).or_insert((None, None)).1 = Some(oid);
-                    
-                    if args.confirm {
-                        repo.reference(&branch_ref, oid, true, "end session")?;
-                    }
-                }
             }
             OpKind::Write(content) => {
                 let rp = match resolve(&op.path, &repo_path, args.ignore_external, args.strip_prefix.as_deref(), args.add_prefix.as_deref()) { 
@@ -1307,22 +1297,17 @@ fn main() -> Result<()> {
                         let format_name = session_formats.get(&op.session).map(|s| s.as_str()).unwrap_or("Session");
                         format!("write: {}\n\n{} session {}", ps, format_name, op.session)
                     } else {
-                        // Multiple ops: consolidated message
-                        let mut msg = String::new();
-                        for (path, kind, _) in &current_batch_ops {
-                            msg.push_str(&format!("{}: {}\n", kind, path));
-                        }
-                        msg.push('\n');
-                        let sessions: HashSet<_> = current_batch_ops.iter().map(|(_, _, s)| s.as_str()).collect();
-                        for session in sessions {
-                            let format_name = session_formats.get(session).map(|s| s.as_str()).unwrap_or("Session");
-                            msg.push_str(&format!("{} session {}\n", format_name, session));
-                        }
-                        msg
+                        // Multiple ops: consolidated message with deduplication
+                        format_batch_commit_message(&current_batch_ops, &session_formats)
                     };
                     
-                    let pc = repo.find_commit(parent.unwrap())?;
-                    let oid = repo.commit(None, &sig, &sig, &msg, &t, &[&pc])?;
+                    // Create commit (first commit has no parent)
+                    let oid = if let Some(p) = parent {
+                        let pc = repo.find_commit(p)?;
+                        repo.commit(None, &sig, &sig, &msg, &t, &[&pc])?
+                    } else {
+                        repo.commit(None, &sig, &sig, &msg, &t, &[])?
+                    };
                     parent = Some(oid);
                     total_commits += 1;
                     
@@ -1393,22 +1378,17 @@ fn main() -> Result<()> {
                         let format_name = session_formats.get(&op.session).map(|s| s.as_str()).unwrap_or("Session");
                         format!("{}: {}\n\n{} session {}", kind_label, ps, format_name, op.session)
                     } else {
-                        // Multiple ops: consolidated message
-                        let mut msg = String::new();
-                        for (path, kind, _) in &current_batch_ops {
-                            msg.push_str(&format!("{}: {}\n", kind, path));
-                        }
-                        msg.push('\n');
-                        let sessions: HashSet<_> = current_batch_ops.iter().map(|(_, _, s)| s.as_str()).collect();
-                        for session in sessions {
-                            let format_name = session_formats.get(session).map(|s| s.as_str()).unwrap_or("Session");
-                            msg.push_str(&format!("{} session {}\n", format_name, session));
-                        }
-                        msg
+                        // Multiple ops: consolidated message with deduplication
+                        format_batch_commit_message(&current_batch_ops, &session_formats)
                     };
                     
-                    let pc = repo.find_commit(parent.unwrap())?;
-                    let oid = repo.commit(None, &sig, &sig, &msg, &t, &[&pc])?;
+                    // Create commit (first commit has no parent)
+                    let oid = if let Some(p) = parent {
+                        let pc = repo.find_commit(p)?;
+                        repo.commit(None, &sig, &sig, &msg, &t, &[&pc])?
+                    } else {
+                        repo.commit(None, &sig, &sig, &msg, &t, &[])?
+                    };
                     parent = Some(oid);
                     total_commits += 1;
                     
