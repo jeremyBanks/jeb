@@ -1,4 +1,4 @@
-<!-- Last reviewed: 2026-03-01 -->
+<!-- Last reviewed: 2026-03-04 -->
 
 # Session Recovery - Design Document
 
@@ -6,7 +6,7 @@ Inspired by [claude-file-recovery](https://github.com/hjtenklooster/claude-file-
 
 ## Overview
 
-Reconstruct file edit history from OpenClaw session logs as git commits, with deterministic commit hashes for reproducibility.
+Reconstruct file edit history from OpenClaw and Claude Code session logs as git commits, with deterministic commit hashes for reproducibility.
 
 ## Guiding Principle: Capture Everything
 
@@ -122,13 +122,23 @@ Mapped path in repo:             /a/b/c/d/_../_../x/file.txt
 ## Automatic Session Discovery
 
 **`--scan-sessions`**:
-- Instead of specifying session files explicitly, scan the OpenClaw sessions directory
+- Instead of specifying session files explicitly, scan all session directories
 - Find sessions that contain operations matching the include patterns
+- Scans both OpenClaw and Claude Code sources by default
 - Append matching sessions to the recovery list
 
-**`--sessions-dir <path>`**:
-- Directory to scan for sessions
+**`--sessions-dir <path>`** (alias: `--openclaw-sessions-dir`):
+- Directory to scan for OpenClaw sessions
 - Default: `~/.openclaw/agents/main/sessions/`
+
+**`--claude-sessions-dir <path>`**:
+- Directory to scan for Claude Code sessions (scans all project subdirectories)
+- Default: `~/.claude/projects/`
+- Claude Code organizes sessions by project: `~/.claude/projects/{project-slug}/{session-id}.jsonl`
+- Project slug is the project path with `/` replaced by `-` (e.g., `-Users-matte-jeb`)
+
+**`--openclaw-only`** / **`--claude-only`**:
+- Restrict scanning to only one source format (mutually exclusive)
 
 **`--since <timestamp>`** and **`--until <timestamp>`**:
 - Only include sessions with activity within this time range
@@ -357,8 +367,11 @@ Key principles:
 | `--include <glob>` | Include files matching pattern | all |
 | `--exclude <glob>` | Exclude files matching pattern | none |
 | `--ignore-external` | Skip files outside repo | no |
-| `--scan-sessions` | Auto-discover sessions | no |
-| `--sessions-dir <path>` | Directory to scan | `~/.openclaw/agents/main/sessions/` |
+| `--scan-sessions` | Auto-discover sessions (both sources) | no |
+| `--sessions-dir <path>` | OpenClaw sessions directory | `~/.openclaw/agents/main/sessions/` |
+| `--claude-sessions-dir <path>` | Claude Code projects directory | `~/.claude/projects/` |
+| `--openclaw-only` | Only scan OpenClaw sessions | no |
+| `--claude-only` | Only scan Claude Code sessions | no |
 | `--since <time>` | Start of time range | ~3.3 years ago |
 | `--until <time>` | End of time range | now |
 | `--at <path>@<time>` | Point-in-time recovery for specific file | (none) |
@@ -394,18 +407,33 @@ The default behavior is preview-only:
 - Requires `--confirm` or `--yes` flag to actually apply changes
 - This makes the tool safe for exploration — run freely to see what's available
 
+## Multi-Format Support
+
+This tool supports both **OpenClaw** and **Claude Code** session log formats.
+Format is auto-detected per session file from JSONL content markers.
+
+See `CLAUDE_CODE_SUPPORT.md` for detailed format comparison, field mapping,
+and implementation notes.
+
+### Format Detection
+
+Heuristic based on first 50 lines:
+- **OpenClaw**: `type:"message"`, `type:"toolCall"`, `type:"session"`, `type:"model_change"`
+- **Claude Code**: `type:"assistant"`, `type:"tool_use"`, `version:"2.x"` / `version:"3.x"`
+- **Unknown**: Falls back to OpenClaw parser
+
+### Claude Code Specifics
+
+- Tool calls use `type:"tool_use"` with `input` (not `arguments`)
+- Edit fields: `old_string` / `new_string` (not `oldText` / `newText`)
+- Session ID via `sessionId` per-message (not a separate session entry)
+- `cwd` field enables relative path resolution
+- `MultiEdit` tool extracted as sequence of Edit ops
+
 ## Future Scope
 
-### Claude Code and Other Agents
-This tool is designed for OpenClaw session logs, but the architecture should eventually support:
-- Claude Code (`~/.claude/` session history)
-- Other AI coding agents with similar log formats
-- Generic JSONL transcript format
-
-This is out of scope for the initial implementation. We will continue refining the OpenClaw support first, then consider extending to other formats.
-
-### Additional Future Considerations
 - Non-Anthropic model identification
 - Integrate with `save` crate author conventions
 - Better fuzzy matching strategies (explicit priority order for determinism)
 - Handle file deletions if detectable from exec calls
+- Support for other AI coding agents with similar log formats
