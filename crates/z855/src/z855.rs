@@ -842,9 +842,26 @@ fn try_long_passthrough(
     // Not at end: use length-prefixed escape
     // Structure: [offset prefix][length prefix][|][padding before][raw bytes][padding after]
     //
-    let raw_len = safe_count
+    let mut raw_len = safe_count
         .min(config.max_raw_segment_length)
         .min(MAX_LONG_PASSTHROUGH_LENGTH);
+
+    // Length invariant: the long escape output + Z85 of remaining bytes must not
+    // exceed the standard Z85 output for the total remaining input from start_idx.
+    // This mirrors the check in try_extended_passthrough_of_length.
+    let total_remaining = input.len() - start_idx;
+    loop {
+        if raw_len < 8 {
+            return None;
+        }
+        let escape_chars = long_escape_total_length(raw_len);
+        let remaining = total_remaining - raw_len;
+        if escape_chars + z855_output_length(remaining) <= z855_output_length(total_remaining) {
+            break;
+        }
+        raw_len -= 1;
+    }
+
     let length_prefix = generate_long_escape_prefix(raw_len);
     let total_len = long_escape_total_length(raw_len);
     let our_len_no_padding = length_prefix.len() + 1 + raw_len;
