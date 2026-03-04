@@ -14,8 +14,10 @@ version.workspace = true
 jeb-common.workspace = true
 jeb-value.workspace = true
 serde = { workspace = true, optional = true, features = ["derive"] }
+serde_json = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 async-stream.workspace = true
+base64 = { workspace = true, optional = true }
 cfg-if.workspace = true
 derive_more = { workspace = true, features = ["full"] }
 document-features.workspace = true
@@ -29,8 +31,9 @@ tokio-util = { workspace = true, features = ["codec", "io"] }
 
 [features]
 default = []
+base64 = ["dep:base64"]
 fs = ["tokio/fs"]
-json = []
+json = ["dep:serde_json", "jeb-value/serde_json"]
 serde = ["dep:serde", "jeb-value/serde"]
 stdio = ["tokio/io-std"]
 wasm = ["jeb-common/wasm", "jeb-value/wasm", "dep:wasm-bindgen"]

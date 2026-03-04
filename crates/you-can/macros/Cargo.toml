@@ -1,0 +1,20 @@
+[package]
+authors = ["Jeremy Banks <_@jeremy.ca>"]
+description = "#[you_can::turn_off_the_borrow_checker]"
+documentation = "https://docs.rs/you-can"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+name = "you-can-build-macros"
+repository = "https://github.com/jeremyBanks/you-can"
+version = "0.0.14"
+
+[lib]
+proc-macro = true
+path = "./lib.rs"
+
+[dependencies]
+quote = "1.0.14"
+syn = { version = "1.0.85", features = ["full", "visit", "fold"] }
+
+[build-dependencies]
+rustc_version = "0.2"

@@ -476,6 +476,7 @@ impl FlowsTo for Instruction {
             RET => to::unknown(),
             RET_IF(_) => to::next(),
             RETI => to::unknown(),
+            PUSH_AF | POP_AF => to::next(),
         }
     }
 }

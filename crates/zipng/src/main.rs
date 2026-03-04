@@ -557,15 +557,96 @@ fn run_create(
 }
 
 fn run_extract(
-    _file_flag: Option<String>,
-    _in_args: Vec<String>,
-    _out_path: Option<String>,
-    _positionals: Vec<String>,
+    file_flag: Option<String>,
+    in_args: Vec<String>,
+    out_path: Option<String>,
+    positionals: Vec<String>,
     _force: bool,
-    _verbose: u32,
-    _quiet: bool,
+    verbose: u32,
+    quiet: bool,
 ) -> ExitCode {
-    unimplemented!("zipng extract mode is not yet implemented");
+    // Determine archive path
+    let archive_path = if let Some(ref f) = file_flag {
+        f.clone()
+    } else if !in_args.is_empty() {
+        in_args[0].clone()
+    } else if !positionals.is_empty() {
+        positionals[0].clone()
+    } else {
+        if !quiet {
+            eprintln!("Error: no archive specified");
+        }
+        return ExitCode::FAILURE;
+    };
+
+    // Determine output directory
+    let out_dir = out_path.unwrap_or_else(|| ".".to_string());
+
+    // Read archive data
+    let data = match fs::read(&archive_path) {
+        Ok(d) => d,
+        Err(e) => {
+            if !quiet {
+                eprintln!("Error reading {}: {}", archive_path, e);
+            }
+            return ExitCode::FAILURE;
+        },
+    };
+
+    // Decode files
+    let files = match zipng::v2::decode(&data) {
+        Ok(f) => f,
+        Err(e) => {
+            if !quiet {
+                eprintln!("Error decoding archive: {}", e);
+            }
+            return ExitCode::FAILURE;
+        },
+    };
+
+    // Extract files to output directory
+    let out_path = Path::new(&out_dir);
+    if !out_path.exists() {
+        if let Err(e) = fs::create_dir_all(out_path) {
+            if !quiet {
+                eprintln!("Error creating output directory: {}", e);
+            }
+            return ExitCode::FAILURE;
+        }
+    }
+
+    for (name_bytes, content) in files {
+        let name = String::from_utf8_lossy(&name_bytes);
+        let file_path = out_path.join(name.as_ref());
+
+        // Create parent directories if needed
+        if let Some(parent) = file_path.parent() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                if !quiet {
+                    eprintln!("Error creating directory {}: {}", parent.display(), e);
+                }
+                return ExitCode::FAILURE;
+            }
+        }
+
+        // Write file
+        if let Err(e) = fs::write(&file_path, &content) {
+            if !quiet {
+                eprintln!("Error writing {}: {}", file_path.display(), e);
+            }
+            return ExitCode::FAILURE;
+        }
+
+        if verbose > 0 {
+            eprintln!("  {} ({} bytes)", name, content.len());
+        }
+    }
+
+    if verbose > 0 || !quiet {
+        eprintln!("Extraction complete");
+    }
+
+    ExitCode::SUCCESS
 }
 
 fn run_list(

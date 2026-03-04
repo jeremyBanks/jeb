@@ -1,3 +1,35 @@
+## This Repository
+
+This is a fork of [jeremyBanks/jeb](https://github.com/jeremyBanks/jeb),
+branched from `jeb/jeb`. We work on `mattemoon/dev`.
+
+**We are free to do anything here.** Break things, experiment, add crates,
+diverge from upstream — all fine. This is our space.
+
+**One constraint:** we regularly merge changes FROM upstream, so keep the
+overall project structure compatible enough that merges remain feasible.
+Individual crates can diverge completely (we just pick one side on conflict),
+but don't restructure the top-level workspace layout without good reason.
+
+**We do NOT optimize for upstreaming.** If something gets upstreamed later,
+it'll be rewritten at that point. Don't let "will this merge cleanly upstream?"
+influence your work here.
+
+**Git rules:**
+- **Commit extremely often.** After every meaningful change, commit. Don't batch.
+- **NEVER rewrite history** — no `--force`, no `--amend`, no `rebase -i`, no
+  `reset --hard` on pushed commits. Once committed, it stays forever.
+  **One exception:** if you notice *immediately* after committing (before push
+  or any further commits) that you included something you didn't mean to, you
+  may amend or soft-reset that single commit to fix it. That's it.
+- **No force push.** Ever. If push fails, figure out why.
+
+This repository has a messy history with bloated binary files in old commits.
+Prefer a **shallow clone** (`git clone --depth=1`) if you don't need deep
+history. `git fetch --unshallow` later if needed.
+
+---
+
 While editing files, please run `./run save` to commit all changes in the
 working tree _very_ often, for the sake of having a lot of snapshots so we can
 cleanly revert exactly as far as we need to, if we ever need to. You'll want to

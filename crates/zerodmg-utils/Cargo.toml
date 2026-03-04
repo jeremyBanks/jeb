@@ -13,3 +13,6 @@ keywords = []
 
 [dependencies]
 image.workspace = true
+
+[dev-dependencies]
+proptest = "1"

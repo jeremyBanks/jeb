@@ -1,4 +1,4 @@
-save v0.0.0-dev-2026-01-19.4531
+save v0.0.0-dev-2026-01-25.7901
 Commit everything in the current directory and repository -- no questions
 asked.
 
@@ -89,10 +89,11 @@ COMMIT OPTIONS:
             May be explicitly set to an empty string to skip brute-forcing the
             hash.
             
-            [default: the commit index as decimal digits, followed by any hex
-            letter
-            (a-f). Use --tree-target to use the first 4 hex digits of the tree
-            hash
+            [default: generation index using hex-b1032 encoding:
+              • 0-9999: decimal + any letter [a-f]
+              • 10000-65535: hex (≥4 digits) + any digit [0-9]
+              • 65536+: hex, no suffix constraint
+            Use --tree-target to use the first 4 hex digits of the tree hash
             instead.]
             
             [env: SAVE_COMMIT_PREFIX=]
@@ -256,12 +257,12 @@ HISTORY OPTIONS:
 INSTALLATION:
     save can be installed from a source release using the Cargo package manager:
 
-        cargo install save --version 0.0.0-dev-2026-01-19.4531
+        cargo install save --version 0.0.0-dev-2026-01-25.7901
 
     Cargo can be installed along with Rust/rustup using its official installer:
 
         curl -sSf https://sh.rustup.rs | sh
 
 LINKS:
-    https://docs.rs/save/0.0.0-dev-2026-01-19.4531
-    https://crates.io/crates/save/0.0.0-dev-2026-01-19.4531
+    https://docs.rs/save/0.0.0-dev-2026-01-25.7901
+    https://crates.io/crates/save/0.0.0-dev-2026-01-25.7901

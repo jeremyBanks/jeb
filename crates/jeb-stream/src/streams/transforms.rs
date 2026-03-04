@@ -753,3 +753,176 @@ where
         }
     }
 }
+
+/// Transforms a stream of Items by parsing JSON text/bytes into Values.
+///
+/// Handles both `Item::Text` and `Item::Bytes`, parsing each as JSON.
+/// Successfully parsed items become `Item::Value`. Parse errors are yielded
+/// as stream errors.
+#[cfg(feature = "json")]
+pub fn parse_json<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            match serde_json::from_str::<jeb_value::Value>(text.as_ref()) {
+                                Ok(value) => yield Ok(Item::Value(value)),
+                                Err(_) => yield Err("invalid JSON"),
+                            }
+                        }
+                        Item::Bytes(bytes) => {
+                            match serde_json::from_slice::<jeb_value::Value>(bytes.as_ref()) {
+                                Ok(value) => yield Ok(Item::Value(value)),
+                                Err(_) => yield Err("invalid JSON"),
+                            }
+                        }
+                        Item::Value(value) => {
+                            // Already a value, pass through
+                            yield Ok(Item::Value(value));
+                        }
+                    }
+                }
+                Err(e) => yield Err(e),
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by serializing Values to JSON text.
+///
+/// `Item::Value` items are serialized to JSON. `Item::Text` and `Item::Bytes`
+/// are passed through unchanged (they're already text/binary).
+#[cfg(feature = "json")]
+pub fn to_json<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Value(value) => {
+                            match serde_json::to_string(&value) {
+                                Ok(json) => yield Ok(Item::Text(json.into())),
+                                Err(_) => yield Err("JSON serialization failed"),
+                            }
+                        }
+                        // Text and Bytes pass through - they're already in serialized form
+                        other => yield Ok(other),
+                    }
+                }
+                Err(e) => yield Err(e),
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by serializing Values to pretty-printed JSON.
+#[cfg(feature = "json")]
+pub fn to_json_pretty<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Value(value) => {
+                            match serde_json::to_string_pretty(&value) {
+                                Ok(json) => yield Ok(Item::Text(json.into())),
+                                Err(_) => yield Err("JSON serialization failed"),
+                            }
+                        }
+                        other => yield Ok(other),
+                    }
+                }
+                Err(e) => yield Err(e),
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by encoding bytes to base64.
+#[cfg(feature = "base64")]
+pub fn to_base64<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    use base64::Engine;
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Bytes(bytes) => {
+                            let encoded = base64::engine::general_purpose::STANDARD.encode(&*bytes);
+                            yield Ok(Item::Text(encoded.into()));
+                        }
+                        Item::Text(text) => {
+                            let encoded = base64::engine::general_purpose::STANDARD.encode(text.as_bytes());
+                            yield Ok(Item::Text(encoded.into()));
+                        }
+                        other => yield Ok(other),
+                    }
+                }
+                Err(e) => yield Err(e),
+            }
+        }
+    }
+}
+
+/// Transforms a stream of Items by decoding base64 to bytes.
+///
+/// Whitespace is stripped before decoding to be lenient with formatted input.
+#[cfg(feature = "base64")]
+pub fn parse_base64<S>(input: S) -> impl Stream<Item = Result<Item, &'static str>> + Send
+where
+    S: Stream<Item = Result<Item, &'static str>> + Send + 'static,
+{
+    use base64::Engine;
+    stream! {
+        let mut input = pin!(input);
+
+        while let Some(result) = input.next().await {
+            match result {
+                Ok(item) => {
+                    match item {
+                        Item::Text(text) => {
+                            // Strip whitespace before decoding
+                            let cleaned: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+                            match base64::engine::general_purpose::STANDARD.decode(cleaned.as_bytes()) {
+                                Ok(decoded) => yield Ok(Item::Bytes(decoded.into())),
+                                Err(_) => yield Err("invalid base64"),
+                            }
+                        }
+                        Item::Bytes(bytes) => {
+                            // Strip whitespace before decoding
+                            let cleaned: Vec<u8> = bytes.iter().filter(|b| !b.is_ascii_whitespace()).copied().collect();
+                            match base64::engine::general_purpose::STANDARD.decode(&cleaned) {
+                                Ok(decoded) => yield Ok(Item::Bytes(decoded.into())),
+                                Err(_) => yield Err("invalid base64"),
+                            }
+                        }
+                        other => yield Ok(other),
+                    }
+                }
+                Err(e) => yield Err(e),
+            }
+        }
+    }
+}

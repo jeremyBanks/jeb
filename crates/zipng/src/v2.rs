@@ -26,8 +26,8 @@ where
 
 /// Decode a polyglot PNG+ZIP into files.
 ///
-/// Not yet implemented.
-pub fn decode(data: &[u8]) -> Vec<(Vec<u8>, Vec<u8>)> {
+/// Uses both ZIP and PNG decoding methods and verifies they match.
+pub fn decode(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
     Decoder::new().decode(data)
 }
 
@@ -49,8 +49,8 @@ pub enum EncoderMode {
 pub enum Source {
     /// Decode from the ZIP layer.
     Zip,
-    /// Decode from the PNG layer.
-    Png,
+    /// Decode from the image pixel data (works with PNG, GIF, or any indexed format).
+    Image,
 }
 
 /// Named font choice.
@@ -283,12 +283,13 @@ impl Encoder {
 }
 
 // ---------------------------------------------------------------------------
-// Decoder (stub)
+// Decoder
 // ---------------------------------------------------------------------------
 
 /// Builder for decoding a polyglot PNG+ZIP.
 pub struct Decoder {
     source: Option<Source>,
+    verify: bool,
 }
 
 impl Default for Decoder {
@@ -299,7 +300,10 @@ impl Default for Decoder {
 
 impl Decoder {
     pub fn new() -> Self {
-        Self { source: None }
+        Self {
+            source: None,
+            verify: true,
+        }
     }
 
     pub fn with_source(mut self, source: Source) -> Self {
@@ -307,9 +311,243 @@ impl Decoder {
         self
     }
 
-    pub fn decode(self, _data: &[u8]) -> Vec<(Vec<u8>, Vec<u8>)> {
-        unimplemented!("v2 decode is not yet implemented")
+    pub fn with_verify(mut self, verify: bool) -> Self {
+        self.verify = verify;
+        self
     }
+
+    pub fn decode(self, data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+        match self.source {
+            Some(Source::Zip) => decode_via_zip(data),
+            Some(Source::Image) => decode_via_image(data),
+            None => {
+                // Try both methods
+                let zip_result = decode_via_zip(data);
+                let image_result = decode_via_image(data);
+
+                match (zip_result, image_result) {
+                    (Ok(zip_files), Ok(image_files)) => {
+                        if self.verify && zip_files != image_files {
+                            Err(DecodeError::MethodMismatch {
+                                zip_count: zip_files.len(),
+                                image_count: image_files.len(),
+                            })
+                        } else {
+                            Ok(zip_files)
+                        }
+                    },
+                    (Ok(files), Err(_)) => {
+                        tracing::info!("Extracted via ZIP method only (image method failed)");
+                        Ok(files)
+                    },
+                    (Err(_), Ok(files)) => {
+                        tracing::info!("Extracted via image method only (ZIP method failed)");
+                        Ok(files)
+                    },
+                    (Err(zip_err), Err(_image_err)) => Err(zip_err),
+                }
+            },
+        }
+    }
+}
+
+/// Errors that can occur during decoding.
+#[derive(Debug)]
+pub enum DecodeError {
+    /// ZIP extraction failed.
+    ZipError(String),
+    /// Image extraction failed.
+    ImageError(String),
+    /// Both methods succeeded but produced different results.
+    MethodMismatch { zip_count: usize, image_count: usize },
+}
+
+impl std::fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ZipError(msg) => write!(f, "ZIP extraction failed: {}", msg),
+            Self::ImageError(msg) => write!(f, "Image extraction failed: {}", msg),
+            Self::MethodMismatch {
+                zip_count,
+                image_count,
+            } => write!(
+                f,
+                "Extraction mismatch: ZIP found {} files, image found {} files",
+                zip_count, image_count
+            ),
+        }
+    }
+}
+
+impl std::error::Error for DecodeError {}
+
+#[cfg(feature = "zip")]
+fn decode_via_zip(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    use std::io::{Cursor, Read};
+
+    let cursor = Cursor::new(data);
+    let mut archive =
+        zip::ZipArchive::new(cursor).map_err(|e| DecodeError::ZipError(e.to_string()))?;
+
+    let mut files = Vec::new();
+
+    for i in 0..archive.len() {
+        let mut file = archive
+            .by_index(i)
+            .map_err(|e| DecodeError::ZipError(e.to_string()))?;
+
+        if file.is_dir() {
+            continue;
+        }
+
+        let name = file.name().as_bytes().to_vec();
+        let mut content = Vec::new();
+        file.read_to_end(&mut content)
+            .map_err(|e| DecodeError::ZipError(e.to_string()))?;
+
+        files.push((name, content));
+    }
+
+    Ok(files)
+}
+
+#[cfg(not(feature = "zip"))]
+fn decode_via_zip(_data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    Err(DecodeError::ZipError(
+        "ZIP decoding not available (feature not enabled)".to_string(),
+    ))
+}
+
+#[cfg(feature = "image")]
+fn decode_via_image(data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    use std::{
+        collections::HashMap,
+        io::{Cursor, Read},
+    };
+
+    // Load image using the image crate (works with PNG, GIF, BMP, etc.)
+    let img = image::load_from_memory(data)
+        .map_err(|e| DecodeError::ImageError(format!("Failed to load image: {}", e)))?;
+
+    // Try RGBA mode first (simpler)
+    let rgba_img = img.to_rgba8();
+    if is_rgba_mode(&rgba_img) {
+        return decode_rgba(&rgba_img);
+    }
+
+    // Fall back to indexed mode
+    let rgb_img = img.to_rgb8();
+    let pixels = rgb_img.as_raw();
+
+    // Count unique colors and build reverse map
+    let mut unique_colors = HashMap::new();
+    for chunk in pixels.chunks_exact(3) {
+        let rgb = [chunk[0], chunk[1], chunk[2]];
+        let next_index = unique_colors.len();
+        unique_colors.entry(rgb).or_insert(next_index);
+        
+        // Early exit if too many colors
+        if unique_colors.len() > 256 {
+            return Err(DecodeError::ImageError(
+                "Image has >256 unique colors, not indexed mode (likely RGBA or corrupted)".to_string(),
+            ));
+        }
+    }
+
+    // Valid indexed zipng must have exactly 256 colors
+    if unique_colors.len() != 256 {
+        return Err(DecodeError::ImageError(format!(
+            "Image has {} unique colors (expected exactly 256 for indexed mode)",
+            unique_colors.len()
+        )));
+    }
+
+    // Build reverse color map
+    let mut reverse_map: HashMap<[u8; 3], u8> = HashMap::new();
+    for (color, index) in unique_colors.iter() {
+        reverse_map.insert(*color, *index as u8);
+    }
+
+    // Extract bytes from pixels
+    let mut bytes = Vec::new();
+    for chunk in pixels.chunks_exact(3) {
+        let rgb = [chunk[0], chunk[1], chunk[2]];
+        bytes.push(reverse_map[&rgb]);
+    }
+
+    // Parse as ZIP archive
+    parse_zip_from_bytes(&bytes)
+}
+
+#[cfg(feature = "image")]
+fn is_rgba_mode(img: &image::RgbaImage) -> bool {
+    const RGBA_REF_COLORS: [[u8; 4]; 6] = [
+        [0, 0, 0, 0],         // transparent
+        [0, 0, 0, 255],       // black
+        [255, 255, 255, 255], // white
+        [255, 0, 0, 255],     // red
+        [0, 255, 0, 255],     // green
+        [0, 0, 255, 255],     // blue
+    ];
+    
+    let width = img.width() as usize;
+    // Check first row for gradient pattern (at least 2 cycles)
+    let check_pixels = width.min(12);
+    
+    for x in 0..check_pixels {
+        let pixel = img.get_pixel(x as u32, 0);
+        let expected = &RGBA_REF_COLORS[x % 6];
+        if &pixel.0 != expected {
+            return false;
+        }
+    }
+    
+    true
+}
+
+#[cfg(feature = "image")]
+fn decode_rgba(img: &image::RgbaImage) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    // In RGBA mode, pixel bytes ARE the file bytes (direct 4:1 mapping)
+    // [R, G, B, A] channels map to 4 consecutive bytes
+    let bytes = img.as_raw().clone();
+    parse_zip_from_bytes(&bytes)
+}
+
+#[cfg(feature = "image")]
+fn parse_zip_from_bytes(bytes: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    use std::io::{Cursor, Read};
+    
+    let cursor = Cursor::new(bytes);
+    let mut archive =
+        zip::ZipArchive::new(cursor).map_err(|e| DecodeError::ImageError(e.to_string()))?;
+
+    let mut files = Vec::new();
+
+    for i in 0..archive.len() {
+        let mut file = archive
+            .by_index(i)
+            .map_err(|e| DecodeError::ImageError(e.to_string()))?;
+
+        if file.is_dir() {
+            continue;
+        }
+
+        let name = file.name().as_bytes().to_vec();
+        let mut content = Vec::new();
+        file.read_to_end(&mut content)
+            .map_err(|e| DecodeError::ImageError(e.to_string()))?;
+
+        files.push((name, content));
+    }
+
+    Ok(files)
+}
+
+#[cfg(not(feature = "image"))]
+fn decode_via_image(_data: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>, DecodeError> {
+    Err(DecodeError::ImageError(
+        "Image decoding not available (feature not enabled)".to_string(),
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -319,6 +557,34 @@ impl Decoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore] // Manual inspection test
+    fn inspect_rgba_structure() {
+        // Load an RGBA zipng and inspect its structure
+        let data = std::fs::read("/tmp/zipng-rgba-test/rgba-test.png").unwrap();
+        let img = image::load_from_memory(&data).unwrap();
+        let rgba = img.to_rgba8();
+        
+        println!("Dimensions: {}x{}", rgba.width(), rgba.height());
+        println!("\nFirst 12 pixels:");
+        for x in 0..12 {
+            let p = rgba.get_pixel(x, 0);
+            println!("  {:?}", p.0);
+        }
+        
+        // Count colors
+        use std::collections::HashSet;
+        let mut colors = HashSet::new();
+        let pixels = rgba.as_raw();
+        for chunk in pixels.chunks_exact(4) {
+            colors.insert([chunk[0], chunk[1], chunk[2], chunk[3]]);
+            if colors.len() > 300 {
+                break;
+            }
+        }
+        println!("\nUnique colors: {}", colors.len());
+    }
 
     #[test]
     fn encode_produces_nonempty_output() {
@@ -354,5 +620,85 @@ mod tests {
             .with_sorted(false)
             .encode(vec![("z.txt", "zzz"), ("a.txt", "aaa")]);
         assert!(!output.is_empty());
+    }
+
+    #[test]
+    #[cfg(all(feature = "zip", feature = "image"))]
+    fn roundtrip_rgba_mode() {
+        // Create files totaling >2 MiB to trigger RGBA mode
+        let large_data = vec![0x42u8; 55 * 1024]; // 55 KB
+        let mut files = Vec::new();
+        for i in 0..40 {
+            files.push((format!("file{}.dat", i), large_data.clone()));
+        }
+
+        // Encode (should use RGBA mode)
+        let archive = Encoder::new()
+            .with_mode(EncoderMode::Rgba)
+            .encode(files.clone());
+        
+        assert!(!archive.is_empty());
+        assert_eq!(&archive[..4], b"\x89PNG");
+
+        // Decode
+        let decoded = decode(&archive).expect("RGBA decode should succeed");
+
+        // Verify file count
+        assert_eq!(decoded.len(), 40);
+
+        // Verify all files have correct content
+        for (name, content) in decoded.iter() {
+            assert_eq!(content.len(), 55 * 1024);
+            assert!(content.iter().all(|&b| b == 0x42));
+            
+            // Name should match pattern file\d+.dat
+            let name_str = String::from_utf8(name.clone()).unwrap();
+            assert!(name_str.starts_with("file"));
+            assert!(name_str.ends_with(".dat"));
+        }
+    }
+
+    #[test]
+    #[cfg(all(feature = "zip", feature = "image"))]
+    fn roundtrip_encode_decode() {
+        let original_files = vec![
+            ("hello.txt", "Hello, world!"),
+            ("data/info.txt", "Some information"),
+            ("README.md", "# Test Archive"),
+        ];
+
+        // Encode
+        let archive = encode(original_files.clone());
+        assert!(!archive.is_empty());
+
+        // Decode
+        let decoded = decode(&archive).expect("decode should succeed");
+
+        // Convert to comparable format
+        let mut decoded_files: Vec<(String, String)> = decoded
+            .into_iter()
+            .map(|(name, content)| {
+                (
+                    String::from_utf8(name).unwrap(),
+                    String::from_utf8(content).unwrap(),
+                )
+            })
+            .collect();
+
+        let mut original_sorted: Vec<(String, String)> = original_files
+            .into_iter()
+            .map(|(n, c)| (n.to_string(), c.to_string()))
+            .collect();
+        original_sorted.sort_by(|a, b| a.0.cmp(&b.0));
+        decoded_files.sort_by(|a, b| a.0.cmp(&b.0));
+
+        // Compare
+        assert_eq!(decoded_files.len(), original_sorted.len());
+        for ((dec_name, dec_content), (orig_name, orig_content)) in
+            decoded_files.iter().zip(original_sorted.iter())
+        {
+            assert_eq!(dec_name, orig_name);
+            assert_eq!(dec_content, orig_content);
+        }
     }
 }

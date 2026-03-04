@@ -1,15 +1,15 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 7ffed853f4d5d9c6373a7c3f956eec60a2caf946
-136d8a:
-  author: Jeremy Banks <_@jeremy.ca>
+    main: 07cde273147472dae97f517271cf1339abba8334
+87ef49:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: Initial commit
   tree: {}
-79bac8:
+1990ef:
   message: commit 1
   parents: []
   tree:
@@ -19,48 +19,46 @@ refs:
         core:
           mod.rs: core module
         lib.rs: lib root
-cb2827:
+4f0741:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
-  committer: 🔎 <git-zoom-in@localhost>
   message: |-
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 136d8a
-  - 79bac8
+  - 87ef49
+  - 1990ef
   tree:
     core:
       mod.rs:
-        //commit: 79bac8
+        //commit: 1990ef
         //path: src/lib/core/mod.rs
     lib.rs:
-      //commit: 79bac8
+      //commit: 1990ef
       //path: src/lib/lib.rs
-9843a1:
+610c4b:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
-  committer: 🔎 <git-zoom-in@localhost>
   message: |-
     Merge from 'core'
 
     git-zoom-in: core
   parents:
-  - 136d8a
-  - cb2827
+  - 87ef49
+  - 4f0741
   tree:
     mod.rs:
-      //commit: cb2827
+      //commit: 4f0741
       //path: core/mod.rs
-ae252c:
+4900db:
   author: User <user@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   message: Update core
   tree:
     mod.rs: modified core
-3b547d:
+a7d27a:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
@@ -69,15 +67,15 @@ ae252c:
 
     git-zoom-out: core
   parents:
-  - cb2827
-  - ae252c
+  - 4f0741
+  - 4900db
   tree:
     core:
       mod.rs:
-        //commit: ae252c
+        //commit: 4900db
         //path: mod.rs
-7ffed853f4d5d9c6373a7c3f956eec60a2caf946:
-  author: Jeremy Banks <_@jeremy.ca>
+07cde273147472dae97f517271cf1339abba8334:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
@@ -86,12 +84,12 @@ ae252c:
 
     git-zoom-out: src/lib
   parents:
-  - 79bac8
-  - 3b547d
+  - 1990ef
+  - a7d27a
   tree:
     src:
       lib:
         core:
           mod.rs:
-            //commit: 3b547d
+            //commit: a7d27a
             //path: core/mod.rs

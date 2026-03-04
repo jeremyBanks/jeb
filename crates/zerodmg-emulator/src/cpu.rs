@@ -37,9 +37,15 @@ pub struct CPUData {
     /// Disable interrupts after next instruction
     #[expect(dead_code)]
     di_pending: bool,
-    /// Enable interrupt after next instruction
-    #[expect(dead_code)]
+    /// Enable interrupt after next instruction (EI has a 1-instruction delay on DMG)
     ei_pending: bool,
+    /// HALT bug: next instruction fetch should re-read current PC byte
+    /// (occurs when HALT is executed with IME=0 and IE&IF != 0)
+    halt_bug: bool,
+    /// CPU is halted and waiting (Case 1 or 3: HALT entered with IE&IF=0).
+    /// When we re-execute HALT and pending becomes non-zero, we exit cleanly
+    /// (no halt bug) because the interrupt became pending AFTER halt was entered.
+    halting: bool,
 }
 
 pub struct InstructionExecution {
@@ -60,17 +66,12 @@ pub trait CPUController:
     fn relative_jump(&mut self, n: i8);
     fn stack_push(&mut self, value: u16);
     fn stack_pop(&mut self) -> u16;
-    #[expect(dead_code)]
     fn af(&self) -> u16;
-    #[expect(dead_code)]
     fn set_af(&mut self, value: u16);
     fn c_flag(&self) -> bool;
-    #[expect(dead_code)]
     fn set_c_flag(&mut self, value: bool);
-    #[expect(dead_code)]
     fn h_flag(&self) -> bool;
     fn set_h_flag(&mut self, value: bool);
-    #[expect(dead_code)]
     fn n_flag(&self) -> bool;
     fn set_n_flag(&mut self, value: bool);
     fn z_flag(&self) -> bool;
@@ -105,6 +106,32 @@ impl CPUData {
             ift: 0x00,
             di_pending: false,
             ei_pending: false,
+            halt_bug: false,
+            halting: false,
+        }
+    }
+
+    /// DMG post-boot register state (after boot ROM completes).
+    pub fn post_boot() -> Self {
+        Self {
+            t: 0,
+            a: 0x01,   // DMG
+            f: 0xB0,   // Z=1 N=0 H=1 C=1
+            b: 0x00,
+            c: 0x13,
+            d: 0x00,
+            e: 0xD8,
+            h: 0x01,
+            l: 0x4D,
+            sp: 0xFFFE,
+            pc: 0x0100,
+            ime: false, // Interrupts disabled after boot
+            ie: 0x00,
+            ift: 0x00,
+            di_pending: false,
+            ei_pending: false,
+            halt_bug: false,
+            halting: false,
         }
     }
 
@@ -112,6 +139,16 @@ impl CPUData {
     pub fn pc(&self) -> u16 {
         self.pc
     }
+
+    pub fn a(&self) -> u8 { self.a }
+    pub fn f(&self) -> u8 { self.f }
+    pub fn b(&self) -> u8 { self.b }
+    pub fn c(&self) -> u8 { self.c }
+    pub fn d(&self) -> u8 { self.d }
+    pub fn e(&self) -> u8 { self.e }
+    pub fn h(&self) -> u8 { self.h }
+    pub fn l(&self) -> u8 { self.l }
+    pub fn sp(&self) -> u16 { self.sp }
 }
 
 /// Iterates over bytes at PC, while incrementing it, in a borrowed [GameBoy].
@@ -125,8 +162,15 @@ impl<'gb> Iterator for PCMemoryIterator<'gb> {
     fn next(&mut self) -> Option<u8> {
         let pc_0 = self.gb.cpu.pc;
         let byte = self.gb.mem(pc_0);
-        let pc_1 = pc_0.wrapping_add(0x001);
-        self.gb.cpu.pc = pc_1;
+        // HALT bug: if active, suppress PC increment on this (first) fetch,
+        // so the next byte is read at the same address again.
+        if self.gb.cpu.halt_bug {
+            self.gb.cpu.halt_bug = false;
+            // PC does NOT advance — next fetch reads same byte as operand
+        } else {
+            let pc_1 = pc_0.wrapping_add(0x001);
+            self.gb.cpu.pc = pc_1;
+        }
         Some(byte)
     }
 }
@@ -190,6 +234,13 @@ impl CPUController for GameBoy {
     fn tick(&mut self) -> InstructionExecution {
         use zerodmg_codes::instruction::prelude::*;
 
+        // EI delay: capture whether we should enable IME at END of this tick.
+        // The instruction after EI executes with IME=0; IME becomes 1 after it completes.
+        let enable_ime_after = self.cpu.ei_pending;
+        if enable_ime_after {
+            self.cpu.ei_pending = false;
+        }
+
         let has_interrupt = self.pop_interrupt();
 
         let source;
@@ -215,12 +266,7 @@ impl CPUController for GameBoy {
             instruction = self.instruction_from_pc();
         };
 
-        // println!("   t = {:<10}  f_z = {}", self.cpu.t, self.z_flag());
-        // println!("  HL = {:04X}  A = {:02X}  B = {:02X}  C = {:02X}  D = {:02X}, E =
-        // {:02X}", self.get_register(HL), self.get_register(A), self.get_register(B),
-        // self.get_register(C), self.get_register(D), self.get_register(E));
-        // println!("{:6}:   {:<16}  ; {:<16}", source, format!("{}", instruction),
-        // format!("{:?}", instruction));
+        // Tracing disabled
 
         let t_0 = self.cpu.t;
         let cycles;
@@ -237,11 +283,68 @@ impl CPUController for GameBoy {
                 cycles = 1;
                 tracer = None;
             }
-            HALT => unimplemented!("CPU instruction: HALT (wait for interrupt)"),
-            STOP(_unused) => unimplemented!("CPU instruction: STOP"),
-            EI => unimplemented!("CPU instruction: EI (enable interrupts)"),
-            DI => unimplemented!("CPU instruction: DI (disable interrupts)"),
-            HCF(_variant) => unimplemented!("CPU instruction: HCF (halt and catch fire)"),
+            HALT => {
+                // HALT behavior depends on IME and pending interrupts:
+                //
+                // Case 1: IME=1, IE&IF=0  → CPU halts; re-execute HALT until interrupt fires
+                // Case 2: IME=1, IE&IF≠0  → interrupt dispatched on next tick (no halt)
+                //         (pop_interrupt() at start of tick handles this; HALT just completes)
+                // Case 3: IME=0, IE&IF=0  → CPU halts; exits when IE&IF≠0, but IME stays 0
+                //         so interrupt is NOT dispatched; execution continues after HALT
+                // Case 4: IME=0, IE&IF≠0  → HALT BUG: CPU does NOT halt, but PC is not
+                //         advanced past HALT opcode, so next byte is fetched twice
+                //
+                // Key distinction for halt_bug:
+                // - Case 4: HALT BUG fires only when IE&IF≠0 at the moment HALT is FIRST executed
+                // - Case 3 exit: when HALT was entered with IE&IF=0 and an interrupt later becomes
+                //   pending, HALT exits cleanly — no halt bug (even though we re-execute HALT and
+                //   now see IE&IF≠0, this was not the Case 4 condition at entry)
+                let pending = self.cpu.ie & self.cpu.ift;
+                if pending == 0 {
+                    // Cases 1 & 3: no pending interrupt — enter/continue halting
+                    self.cpu.pc -= 1; // back up to re-execute HALT
+                    self.cpu.halting = true;
+                } else if self.cpu.halting {
+                    // Case 3 exit: we were truly halted (entered with IE&IF=0), now an interrupt
+                    // became pending. Exit cleanly — no halt bug.
+                    self.cpu.halting = false;
+                } else if !self.cpu.ime {
+                    // Case 4: HALT BUG — first execution of HALT with IME=0 and IE&IF≠0.
+                    // HALT exits immediately, but next instruction's opcode byte is read twice.
+                    self.cpu.halt_bug = true;
+                }
+                // Case 2: IME=1, IE&IF≠0 — HALT exits, next tick dispatches interrupt
+                cycles = 1;
+                tracer = None;
+            }
+            STOP(_unused) => {
+                // STOP halts CPU and LCD until a button is pressed.
+                // For now, treat as NOP.
+                cycles = 1;
+                tracer = None;
+            }
+            EI => {
+                // Enable interrupts with 1-instruction delay (DMG hardware behavior).
+                // IME becomes true at the START of the tick AFTER the next instruction.
+                self.cpu.ei_pending = true;
+                cycles = 1;
+                tracer = None;
+            }
+            DI => {
+                // Disable interrupts
+                self.cpu.ime = false;
+                cycles = 1;
+                tracer = None;
+            }
+            HCF(_variant) => {
+                let hcf_pc = match source {
+                    InstructionSource::ProgramCounter(a) => a,
+                    _ => 0xFFFF,
+                };
+                let opcode_byte = self.mem(hcf_pc);
+                panic!("HCF at PC=0x{:04X} opcode=0x{:02X} SP=0x{:04X} A=0x{:02X} t={}",
+                    hcf_pc, opcode_byte, self.cpu.sp, self.cpu.a, self.cpu.t);
+            }
             // 8-Bit Arithmatic and Logic
             INC(target) => {
                 let (old_value, extra_read_cycles) = self.read_register(target);
@@ -249,7 +352,8 @@ impl CPUController for GameBoy {
                 let extra_write_cycles = self.set_register(target, new_value);
                 self.set_z_flag(new_value == 0);
                 self.set_n_flag(false);
-                self.set_h_flag(u8_get_bit(new_value, 4));
+                // Half-carry: carry from bit 3 to bit 4
+                self.set_h_flag((old_value & 0x0F) + 1 > 0x0F);
                 cycles = 1 + extra_read_cycles + extra_write_cycles;
                 trace!(
                     "{}₀ = 0x{:02X}, {}₁ = 0x{:02X}",
@@ -262,7 +366,8 @@ impl CPUController for GameBoy {
                 let extra_write_cycles = self.set_register(target, new_value);
                 self.set_z_flag(new_value == 0);
                 self.set_n_flag(true);
-                self.set_h_flag(u8_get_bit(new_value, 4));
+                // Half-carry (borrow from bit 4): set if lower nibble was 0
+                self.set_h_flag((old_value & 0x0F) == 0);
                 cycles = 1 + extra_read_cycles + extra_write_cycles;
                 trace!(
                     "{}₀ = 0x{:02X}, {}₁ = 0x{:02X}",
@@ -274,33 +379,65 @@ impl CPUController for GameBoy {
                 let (value, extra_read_cycles) = self.read_register(source);
                 let a_1 = a_0.wrapping_add(value);
                 self.cpu.a = a_1;
-                self.set_znhc_flags(a_1 == 0, false, u8_get_bit(a_1, 4), a_1 < a_0);
+                let h = (a_0 & 0x0F) + (value & 0x0F) > 0x0F;
+                let c = (a_0 as u16) + (value as u16) > 0xFF;
+                self.set_znhc_flags(a_1 == 0, false, h, c);
                 cycles = 1 + extra_read_cycles;
                 trace!(
                     "A₀ = 0x{:02X}, {} = 0x{:02X}, A₁ = 0x{:02X}",
                     a_0, source, value, a_1
                 );
             }
-            ADC(_source) => unimplemented!("CPU instruction: ADC (add with carry)"),
+            ADC(source) => {
+                let a_0 = self.cpu.a;
+                let (value, extra_read_cycles) = self.read_register(source);
+                let carry = if self.c_flag() { 1u8 } else { 0u8 };
+                let a_1 = a_0.wrapping_add(value).wrapping_add(carry);
+                self.cpu.a = a_1;
+                let h = (a_0 & 0x0F) + (value & 0x0F) + carry > 0x0F;
+                let c = (a_0 as u16) + (value as u16) + (carry as u16) > 0xFF;
+                self.set_znhc_flags(a_1 == 0, false, h, c);
+                cycles = 1 + extra_read_cycles;
+                trace!(
+                    "A₀ = 0x{:02X}, {} = 0x{:02X}, carry = {}, A₁ = 0x{:02X}",
+                    a_0, source, value, carry, a_1
+                );
+            }
             SUB(source) => {
                 let (value, extra_read_cycles) = self.read_register(source);
                 let a_0 = self.cpu.a;
                 let a_1 = a_0.wrapping_sub(value);
                 self.cpu.a = a_1;
-                self.set_znhc_flags(a_1 == 0, false, u8_get_bit(a_1, 4), a_1 > a_0);
+                let h = (a_0 & 0x0F) < (value & 0x0F);
+                let c = a_0 < value;
+                self.set_znhc_flags(a_1 == 0, true, h, c);
                 cycles = 1 + extra_read_cycles;
                 trace!(
                     "A₀ = 0x{:02X}, {} = 0x{:02X}, A₁ = 0x{:02X}",
                     a_0, source, value, a_1
                 );
             }
-            SBC(_source) => unimplemented!("CPU instruction: SBC (subtract with carry)"),
+            SBC(source) => {
+                let a_0 = self.cpu.a;
+                let (value, extra_read_cycles) = self.read_register(source);
+                let carry = if self.c_flag() { 1u8 } else { 0u8 };
+                let a_1 = a_0.wrapping_sub(value).wrapping_sub(carry);
+                self.cpu.a = a_1;
+                let h = (a_0 & 0x0F) < (value & 0x0F) + carry;
+                let c = (a_0 as u16) < (value as u16) + (carry as u16);
+                self.set_znhc_flags(a_1 == 0, true, h, c);
+                cycles = 1 + extra_read_cycles;
+                trace!(
+                    "A₀ = 0x{:02X}, {} = 0x{:02X}, carry = {}, A₁ = 0x{:02X}",
+                    a_0, source, value, carry, a_1
+                );
+            }
             AND(source) => {
                 let (value, extra_read_cycles) = self.read_register(source);
                 let a_0 = self.cpu.a;
                 let a_1 = a_0 & value;
                 self.cpu.a = a_1;
-                self.set_znhc_flags(a_1 == 0, true, true, false);
+                self.set_znhc_flags(a_1 == 0, false, true, false);
                 cycles = 1 + extra_read_cycles;
                 trace!(
                     "A₀ = 0x{:02X}, {} = 0x{:02X}, A₁ = 0x{:02X}",
@@ -334,31 +471,143 @@ impl CPUController for GameBoy {
             CP(source) => {
                 let (value, extra_read_cycles) = self.read_register(source);
                 let a = self.cpu.a;
-                let delta = a.wrapping_sub(value);
-                self.set_znhc_flags(delta == 0, false, u8_get_bit(delta, 4), delta > a);
+                let result = a.wrapping_sub(value);
+                let h = (a & 0x0F) < (value & 0x0F);
+                let c = a < value;
+                self.set_znhc_flags(result == 0, true, h, c);
                 cycles = 1 + extra_read_cycles;
                 trace!("A = 0x{:02X}, {} = 0x{:02X}", a, source, value);
             }
-            ADD_IMMEDIATE(_value) => unimplemented!("CPU instruction: ADD A, imm8"),
-            ADC_IMMEDIATE(_value) => unimplemented!("CPU instruction: ADC A, imm8"),
-            SUB_IMMEDIATE(_value) => unimplemented!("CPU instruction: SUB imm8"),
-            SBC_IMMEDIATE(_value) => unimplemented!("CPU instruction: SBC A, imm8"),
-            AND_IMMEDIATE(_value) => unimplemented!("CPU instruction: AND imm8"),
-            XOR_IMMEDIATE(_value) => unimplemented!("CPU instruction: XOR imm8"),
-            OR_IMMEDIATE(_value) => unimplemented!("CPU instruction: OR imm8"),
+            ADD_IMMEDIATE(value) => {
+                let a_0 = self.cpu.a;
+                let a_1 = a_0.wrapping_add(value);
+                self.cpu.a = a_1;
+                let h = (a_0 & 0x0F) + (value & 0x0F) > 0x0F;
+                let c = (a_0 as u16) + (value as u16) > 0xFF;
+                self.set_znhc_flags(a_1 == 0, false, h, c);
+                cycles = 2;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
+            }
+            ADC_IMMEDIATE(value) => {
+                let a_0 = self.cpu.a;
+                let carry = if self.c_flag() { 1u8 } else { 0u8 };
+                let a_1 = a_0.wrapping_add(value).wrapping_add(carry);
+                self.cpu.a = a_1;
+                let h = (a_0 & 0x0F) + (value & 0x0F) + carry > 0x0F;
+                let c = (a_0 as u16) + (value as u16) + (carry as u16) > 0xFF;
+                self.set_znhc_flags(a_1 == 0, false, h, c);
+                cycles = 2;
+                trace!("A₀ = 0x{:02X}, carry = {}, A₁ = 0x{:02X}", a_0, carry, a_1);
+            }
+            SUB_IMMEDIATE(value) => {
+                let a_0 = self.cpu.a;
+                let a_1 = a_0.wrapping_sub(value);
+                self.cpu.a = a_1;
+                let h = (a_0 & 0x0F) < (value & 0x0F);
+                let c = a_0 < value;
+                self.set_znhc_flags(a_1 == 0, true, h, c);
+                cycles = 2;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
+            }
+            SBC_IMMEDIATE(value) => {
+                let a_0 = self.cpu.a;
+                let carry = if self.c_flag() { 1u8 } else { 0u8 };
+                let a_1 = a_0.wrapping_sub(value).wrapping_sub(carry);
+                self.cpu.a = a_1;
+                let h = (a_0 & 0x0F) < (value & 0x0F) + carry;
+                let c = (a_0 as u16) < (value as u16) + (carry as u16);
+                self.set_znhc_flags(a_1 == 0, true, h, c);
+                cycles = 2;
+                trace!("A₀ = 0x{:02X}, carry = {}, A₁ = 0x{:02X}", a_0, carry, a_1);
+            }
+            AND_IMMEDIATE(value) => {
+                let a_0 = self.cpu.a;
+                let a_1 = a_0 & value;
+                self.cpu.a = a_1;
+                self.set_znhc_flags(a_1 == 0, false, true, false);
+                cycles = 2;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
+            }
+            XOR_IMMEDIATE(value) => {
+                let a_0 = self.cpu.a;
+                let a_1 = a_0 ^ value;
+                self.cpu.a = a_1;
+                self.set_znhc_flags(a_1 == 0, false, false, false);
+                cycles = 2;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
+            }
+            OR_IMMEDIATE(value) => {
+                let a_0 = self.cpu.a;
+                let a_1 = a_0 | value;
+                self.cpu.a = a_1;
+                self.set_znhc_flags(a_1 == 0, false, false, false);
+                cycles = 2;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
+            }
             CP_IMMEDIATE(value) => {
                 let a = self.cpu.a;
-                let delta = a.wrapping_sub(value);
-                self.set_znhc_flags(delta == 0, true, u8_get_bit(delta, 4), a < value);
+                let result = a.wrapping_sub(value);
+                let half_carry = (a & 0xF) < (value & 0xF);
+                self.set_znhc_flags(result == 0, true, half_carry, a < value);
                 let z_flag = self.z_flag();
                 let c_flag = self.c_flag();
                 cycles = 2;
                 trace!("A = 0x{:02X}, F_Z = {}, F_C = {}", a, z_flag, c_flag);
             }
-            CPL => unimplemented!("CPU instruction: CPL (complement A)"),
-            CCF => unimplemented!("CPU instruction: CCF (complement carry flag)"),
-            SCF => unimplemented!("CPU instruction: SCF (set carry flag)"),
-            DAA => unimplemented!("CPU instruction: DAA (decimal adjust A)"),
+            CPL => {
+                // Complement A (flip all bits)
+                let a_0 = self.cpu.a;
+                self.cpu.a = !a_0;
+                self.set_n_flag(true);
+                self.set_h_flag(true);
+                cycles = 1;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, !a_0);
+            }
+            CCF => {
+                // Complement carry flag
+                let c_0 = self.c_flag();
+                self.set_znhc_flags(self.z_flag(), false, false, !c_0);
+                cycles = 1;
+                trace!("C₀ = {}, C₁ = {}", c_0, !c_0);
+            }
+            SCF => {
+                // Set carry flag
+                self.set_znhc_flags(self.z_flag(), false, false, true);
+                cycles = 1;
+                tracer = None;
+            }
+            DAA => {
+                // Decimal Adjust Accumulator (BCD correction)
+                let mut a = self.cpu.a;
+                let n = self.n_flag();
+                let h = self.h_flag();
+                let c = self.c_flag();
+                let mut new_c = false;
+                if !n {
+                    // After addition
+                    if c || a > 0x99 {
+                        a = a.wrapping_add(0x60);
+                        new_c = true;
+                    }
+                    if h || (a & 0x0F) > 0x09 {
+                        a = a.wrapping_add(0x06);
+                    }
+                } else {
+                    // After subtraction
+                    if c {
+                        a = a.wrapping_sub(0x60);
+                        new_c = true;
+                    }
+                    if h {
+                        a = a.wrapping_sub(0x06);
+                    }
+                }
+                let a_0 = self.cpu.a;
+                self.cpu.a = a;
+                self.set_znhc_flags(a == 0, n, false, new_c);
+                cycles = 1;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a);
+            }
             // 16-Bit Arithmatic and Logic
             INC_16(target) => {
                 let old_value = self.get_register(target);
@@ -380,17 +629,42 @@ impl CPUController for GameBoy {
                     target, old_value, target, new_value
                 );
             }
-            ADD_TO_HL(_) => unimplemented!("CPU instruction: ADD HL, r16"),
-            ADD_SP(_) => unimplemented!("CPU instruction: ADD SP, imm8"),
+            ADD_TO_HL(source) => {
+                let hl_0 = self.get_register(U16Register::HL);
+                let value = self.get_register(source);
+                let hl_1 = hl_0.wrapping_add(value);
+                self.set_register(U16Register::HL, hl_1);
+                let h = (hl_0 & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
+                let c = (hl_0 as u32) + (value as u32) > 0xFFFF;
+                self.set_n_flag(false);
+                self.set_h_flag(h);
+                self.set_znhc_flags(self.z_flag(), false, h, c);
+                cycles = 2;
+                trace!(
+                    "HL₀ = 0x{:04X}, {:?} = 0x{:04X}, HL₁ = 0x{:04X}",
+                    hl_0, source, value, hl_1
+                );
+            }
+            ADD_SP(offset) => {
+                let sp_0 = self.cpu.sp;
+                let sp_1 = (sp_0 as i32 + offset as i32) as u16;
+                // Flags are based on the low byte addition
+                let h = (sp_0 & 0x000F) + ((offset as u8) as u16 & 0x000F) > 0x000F;
+                let c = (sp_0 & 0x00FF) + ((offset as u8) as u16) > 0x00FF;
+                self.cpu.sp = sp_1;
+                self.set_znhc_flags(false, false, h, c);
+                cycles = 4;
+                trace!("SP₀ = 0x{:04X}, SP₁ = 0x{:04X}", sp_0, sp_1);
+            }
             // 8-Bit Bitwise Operations
             RL(register) => {
                 let f_c_0 = self.c_flag();
-                let value_0 = self.get_register(register);
+                let (value_0, extra_read) = self.read_register(register);
                 let value_1 = (value_0 << 1) + if f_c_0 { 1 } else { 0 };
                 let f_c_1 = value_0 & 0b1000_0000 > 0;
-                self.set_register(register, value_1);
+                let extra_write = self.set_register(register, value_1);
                 self.set_znhc_flags(value_1 == 0, false, false, f_c_1);
-                cycles = 2;
+                cycles = 2 + extra_read + extra_write;
                 trace!(
                     "Fc₀ = {}, {}₀ = 0x{:02X}, Fc₁ = {}, {}₁ = 0x{:02X}",
                     f_c_0, register, value_0, f_c_1, register, value_1
@@ -402,35 +676,131 @@ impl CPUController for GameBoy {
                 let a_1 = (a_0 << 1) + if f_c_0 { 1 } else { 0 };
                 let f_c_1 = a_0 & 0b1000_0000 > 0;
                 self.cpu.a = a_1;
-                // We're setting the wrong flags!
-                self.set_znhc_flags(a_1 == 0, false, false, f_c_1);
-                cycles = 2;
+                // RLA always clears Z (unlike RL)
+                self.set_znhc_flags(false, false, false, f_c_1);
+                cycles = 1;
                 trace!(
                     "Fc₀ = {}, A₀ = 0x{:02X}, Fc₁ = {}, A₁ = 0x{:02X}",
                     f_c_0, a_0, f_c_1, a_1
                 );
             }
-            RLC(_register) => unimplemented!("CPU instruction: RLC (rotate left circular)"),
-            RLCA => unimplemented!("CPU instruction: RLCA (rotate A left circular)"),
-            RR(_register) => unimplemented!("CPU instruction: RR (rotate right through carry)"),
-            RRA => unimplemented!("CPU instruction: RRA (rotate A right through carry)"),
-            RRC(_register) => unimplemented!("CPU instruction: RRC (rotate right circular)"),
-            RRCA => unimplemented!("CPU instruction: RRCA (rotate A right circular)"),
-            SRL(_register) => unimplemented!("CPU instruction: SRL (shift right logical)"),
-            SRA(_register) => unimplemented!("CPU instruction: SRA (shift right arithmetic)"),
-            SLA(_register) => unimplemented!("CPU instruction: SLA (shift left arithmetic)"),
-            SWAP(_register) => unimplemented!("CPU instruction: SWAP (swap nibbles)"),
+            RLC(register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let high_bit = value_0 >> 7;
+                let value_1 = (value_0 << 1) | high_bit;
+                let extra_write = self.set_register(register, value_1);
+                self.set_znhc_flags(value_1 == 0, false, false, high_bit != 0);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
+            RLCA => {
+                let a_0 = self.cpu.a;
+                let high_bit = a_0 >> 7;
+                let a_1 = (a_0 << 1) | high_bit;
+                self.cpu.a = a_1;
+                // RLCA always clears Z (unlike RLC)
+                self.set_znhc_flags(false, false, false, high_bit != 0);
+                cycles = 1;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
+            }
+            RR(register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let old_carry = if self.c_flag() { 1u8 } else { 0u8 };
+                let new_carry = value_0 & 1;
+                let value_1 = (value_0 >> 1) | (old_carry << 7);
+                let extra_write = self.set_register(register, value_1);
+                self.set_znhc_flags(value_1 == 0, false, false, new_carry != 0);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
+            RRA => {
+                let a_0 = self.cpu.a;
+                let old_carry = if self.c_flag() { 1u8 } else { 0u8 };
+                let new_carry = a_0 & 1;
+                let a_1 = (a_0 >> 1) | (old_carry << 7);
+                self.cpu.a = a_1;
+                self.set_znhc_flags(false, false, false, new_carry != 0);
+                cycles = 1;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
+            }
+            RRC(register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let low_bit = value_0 & 1;
+                let value_1 = (value_0 >> 1) | (low_bit << 7);
+                let extra_write = self.set_register(register, value_1);
+                self.set_znhc_flags(value_1 == 0, false, false, low_bit != 0);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
+            RRCA => {
+                let a_0 = self.cpu.a;
+                let low_bit = a_0 & 1;
+                let a_1 = (a_0 >> 1) | (low_bit << 7);
+                self.cpu.a = a_1;
+                self.set_znhc_flags(false, false, false, low_bit != 0);
+                cycles = 1;
+                trace!("A₀ = 0x{:02X}, A₁ = 0x{:02X}", a_0, a_1);
+            }
+            SRL(register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let low_bit = value_0 & 1;
+                let value_1 = value_0 >> 1;
+                let extra_write = self.set_register(register, value_1);
+                self.set_znhc_flags(value_1 == 0, false, false, low_bit != 0);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
+            SRA(register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let low_bit = value_0 & 1;
+                // Arithmetic shift: preserve bit 7
+                let value_1 = (value_0 >> 1) | (value_0 & 0x80);
+                let extra_write = self.set_register(register, value_1);
+                self.set_znhc_flags(value_1 == 0, false, false, low_bit != 0);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
+            SLA(register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let high_bit = value_0 >> 7;
+                let value_1 = value_0 << 1;
+                let extra_write = self.set_register(register, value_1);
+                self.set_znhc_flags(value_1 == 0, false, false, high_bit != 0);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
+            SWAP(register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let value_1 = (value_0 >> 4) | (value_0 << 4);
+                let extra_write = self.set_register(register, value_1);
+                self.set_znhc_flags(value_1 == 0, false, false, false);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
             BIT(bit, register) => {
-                let value = self.get_register(register);
+                // BIT is read-only (no write back): 2 M-cycles + 1 for AT_HL read
+                let (value, extra_read) = self.read_register(register);
                 let result = !u8_get_bit(value, bit.index());
                 self.set_z_flag(result);
                 self.set_n_flag(false);
                 self.set_h_flag(true);
-                cycles = 2;
+                cycles = 2 + extra_read;
                 trace!("Z₁ = {}", result);
             }
-            SET(_bit, _register) => unimplemented!("CPU instruction: SET (set bit)"),
-            RES(_bit, _register) => unimplemented!("CPU instruction: RES (reset bit)"),
+            SET(bit, register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let value_1 = value_0 | (1 << bit.index());
+                let extra_write = self.set_register(register, value_1);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
+            RES(bit, register) => {
+                let (value_0, extra_read) = self.read_register(register);
+                let value_1 = value_0 & !(1 << bit.index());
+                let extra_write = self.set_register(register, value_1);
+                cycles = 2 + extra_read + extra_write;
+                trace!("{}₀ = 0x{:02X}, {}₁ = 0x{:02X}", register, value_0, register, value_1);
+            }
             // 8-Bit Loads
             LD_8_INTERNAL(dest, source) => {
                 let dest_value_0 = self.get_register(dest);
@@ -457,16 +827,17 @@ impl CPUController for GameBoy {
             }
             LD_8_FROM_SECONDARY(source) => {
                 let a_0 = self.cpu.a;
-                let a_1 = self.get_register(source);
+                // Must use read_register for HLI/HLD side effects
+                let (a_1, extra_read_cycles) = self.read_register(source);
                 self.cpu.a = a_1;
-                cycles = 2;
+                cycles = 2 + extra_read_cycles;
                 trace!("A₀ = 0x{:02X}, {} = 0x{:02X}", a_0, source, a_1)
             }
             LD_8_TO_FF_IMMEDIATE(offset) => {
                 let a = self.cpu.a;
                 let address = 0xFF00 + u16::from(offset);
                 self.set_mem(address, a);
-                cycles = 4;
+                cycles = 3; // LDH (n),A = 3 M-cycles (was incorrectly 4)
                 trace!("A = 0x{:02X}", a);
             }
             LD_8_FROM_FF_IMMEDIATE(offset) => {
@@ -488,7 +859,18 @@ impl CPUController for GameBoy {
                     c, a, old_value
                 );
             }
-            LD_8_FROM_FF_C => unimplemented!("CPU instruction: LD A, (0xFF00+C)"),
+            LD_8_FROM_FF_C => {
+                let c = self.cpu.c;
+                let address = 0xFF00 + u16::from(c);
+                let a_0 = self.cpu.a;
+                let a_1 = self.mem(address);
+                self.cpu.a = a_1;
+                cycles = 2;
+                trace!(
+                    "C = 0x{:02X}, A₀ = 0x{:02X}, A₁ = 0x{:02X}",
+                    c, a_0, a_1
+                );
+            }
             LD_8_TO_MEMORY_IMMEDIATE(address) => {
                 let a = self.cpu.a;
                 let old_value = self.mem(address);
@@ -496,8 +878,12 @@ impl CPUController for GameBoy {
                 cycles = 4;
                 trace!("A = {:02X}, (0x{:04X})₀ = 0x{:02X}", address, a, old_value);
             }
-            LD_8_FROM_MEMORY_IMMEDIATE(_address) => {
-                unimplemented!("CPU instruction: LD A, (imm16)")
+            LD_8_FROM_MEMORY_IMMEDIATE(address) => {
+                let a_0 = self.cpu.a;
+                let a_1 = self.mem(address);
+                self.cpu.a = a_1;
+                cycles = 4;
+                trace!("(0x{:04X}) = 0x{:02X}, A₀ = 0x{:02X}", address, a_1, a_0);
             }
             // 16-Bit Loads
             LD_16_IMMEDIATE(dest, value) => {
@@ -506,10 +892,31 @@ impl CPUController for GameBoy {
                 cycles = 3;
                 trace!("{:?}₀ = 0x{:04X}", dest, old_value);
             }
-            LD_HL_FROM_SP => unimplemented!("CPU instruction: LD HL, SP"),
-            LD_HL_FROM_SP_PLUS(_value) => unimplemented!("CPU instruction: LD HL, SP+imm8"),
-            LD_SP_TO_IMMEDIATE_ADDRESS(_address) => {
-                unimplemented!("CPU instruction: LD (imm16), SP")
+            LD_HL_FROM_SP => {
+                // NOTE: Despite the misleading name, opcode 0xF9 is LD SP,HL (SP ← HL)
+                let hl = self.get_register(U16Register::HL);
+                self.cpu.sp = hl;
+                let sp_1 = self.cpu.sp;
+                cycles = 2;
+                trace!("HL = 0x{:04X}, SP₁ = 0x{:04X}", hl, sp_1);
+            }
+            LD_HL_FROM_SP_PLUS(offset) => {
+                let sp = self.cpu.sp;
+                let result = (sp as i32 + offset as i32) as u16;
+                self.set_register(U16Register::HL, result);
+                let h = (sp & 0x000F) + ((offset as u8) as u16 & 0x000F) > 0x000F;
+                let c = (sp & 0x00FF) + ((offset as u8) as u16) > 0x00FF;
+                self.set_znhc_flags(false, false, h, c);
+                cycles = 3;
+                trace!("SP = 0x{:04X}, HL₁ = 0x{:04X}", sp, result);
+            }
+            LD_SP_TO_IMMEDIATE_ADDRESS(address) => {
+                let sp = self.cpu.sp;
+                let (lo, hi) = u16_to_u8s(sp);
+                self.set_mem(address, lo);
+                self.set_mem(address.wrapping_add(1), hi);
+                cycles = 5;
+                trace!("SP = 0x{:04X}, (0x{:04X}) = SP", sp, address);
             }
             PUSH(register) => {
                 let value = self.get_register(register);
@@ -524,6 +931,24 @@ impl CPUController for GameBoy {
                 self.set_register(register, value);
                 cycles = 3;
                 trace!("{:?}₁ = 0x{:02X}, SP₁ = 0x{:04X}", register, value, sp_1);
+            }
+            PUSH_AF => {
+                let a = self.cpu.a;
+                let f = self.cpu.f;
+                let af = u16::from(a) << 8 | u16::from(f);
+                self.stack_push(af);
+                let sp_1 = self.cpu.sp;
+                cycles = 4;
+                trace!("AF = 0x{:04X}, SP₁ = 0x{:04X}", af, sp_1);
+            }
+            POP_AF => {
+                let af = self.stack_pop();
+                let sp_1 = self.cpu.sp;
+                self.cpu.a = (af >> 8) as u8;
+                // Lower nibble of F is always 0 on GB
+                self.cpu.f = (af & 0xF0) as u8;
+                cycles = 3;
+                trace!("AF₁ = 0x{:04X}, SP₁ = 0x{:04X}", af, sp_1);
             }
             // Jumps and Calls
             JP_IF(condition, address) => {
@@ -541,7 +966,12 @@ impl CPUController for GameBoy {
                 cycles = 4;
                 tracer = None;
             }
-            JP_HL => unimplemented!("CPU instruction: JP HL"),
+            JP_HL => {
+                let hl = self.get_register(U16Register::HL);
+                self.cpu.pc = hl;
+                cycles = 1;
+                trace!("HL = 0x{:04X}", hl);
+            }
             JR_IF(condition, offset) => {
                 if self.condition(condition) {
                     self.relative_jump(offset);
@@ -590,15 +1020,40 @@ impl CPUController for GameBoy {
                 let pc_1 = self.stack_pop();
                 let sp_1 = self.cpu.sp;
                 self.cpu.pc = pc_1;
-                cycles = 2;
+                cycles = 4; // RET = 4 M-cycles on DMG (was incorrectly 2)
                 trace!("SP₁ = {:04X}", sp_1);
             }
-            RET_IF(_condition) => unimplemented!("CPU instruction: RET cc (conditional return)"),
-            RETI => unimplemented!("CPU instruction: RETI (return and enable interrupts)"),
+            RET_IF(condition) => {
+                if self.condition(condition) {
+                    let pc_1 = self.stack_pop();
+                    let sp_1 = self.cpu.sp;
+                    self.cpu.pc = pc_1;
+                    cycles = 5;
+                    trace!("returned - PC₁ = 0x{:04X}, SP₁ = 0x{:04X}", pc_1, sp_1);
+                } else {
+                    cycles = 2;
+                    trace!("skipped - condition false");
+                }
+            }
+            RETI => {
+                // Return from interrupt handler and re-enable interrupts
+                let pc_1 = self.stack_pop();
+                let sp_1 = self.cpu.sp;
+                self.cpu.pc = pc_1;
+                self.cpu.ime = true;
+                cycles = 4;
+                trace!("PC₁ = 0x{:04X}, SP₁ = 0x{:04X}", pc_1, sp_1);
+            }
         }
 
         let t_1 = t_0 + cycles;
         self.cpu.t = t_1;
+
+        // EI delay: enable IME at the END of the instruction following EI.
+        // This is AFTER the instruction has executed, so the instruction sees IME=0.
+        if enable_ime_after {
+            self.cpu.ime = true;
+        }
 
         InstructionExecution {
             instruction,
@@ -612,6 +1067,10 @@ impl CPUController for GameBoy {
     /// Returns the next InterruptType currently set in the interrupt register,
     /// and unsets it there.
     fn pop_interrupt(&mut self) -> Option<InterruptType> {
+        // Only dispatch interrupts when IME (Interrupt Master Enable) is set
+        if !self.cpu.ime {
+            return None;
+        }
         let enabled_and_triggered = self.cpu.ie & self.cpu.ift;
         if enabled_and_triggered & 0b00001 != 0 {
             self.cpu.ift &= !0b00001;
@@ -666,18 +1125,20 @@ impl CPUController for GameBoy {
 
     fn stack_push(&mut self, value: u16) {
         let sp0 = self.cpu.sp;
-        let sp1 = sp0 - 2;
+        let sp1 = sp0.wrapping_sub(2);
         let (value_low, value_high) = u16_to_u8s(value);
-        self.set_mem(sp1 + 1, value_low);
-        self.set_mem(sp1, value_high);
+        // GB is little-endian: low byte at lower address
+        self.set_mem(sp1, value_low);
+        self.set_mem(sp1.wrapping_add(1), value_high);
         self.cpu.sp = sp1;
     }
 
     fn stack_pop(&mut self) -> u16 {
         let sp0 = self.cpu.sp;
-        let sp1 = sp0 + 2;
-        let value_low = self.mem(sp0 + 1);
-        let value_high = self.mem(sp0);
+        let sp1 = sp0.wrapping_add(2);
+        // GB is little-endian: low byte at lower address
+        let value_low = self.mem(sp0);
+        let value_high = self.mem(sp0.wrapping_add(1));
         let value = u8s_to_u16(value_low, value_high);
         self.cpu.sp = sp1;
         value

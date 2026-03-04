@@ -535,7 +535,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
         repo: &'repo Repository,
         target_prefix: &[u8],
         target_mask: Option<&[u8]>,
-        letter_suffix: bool,
+        suffix_req: crate::suffix::SuffixRequirement,
         min_timestamp: impl Into<Option<i64>>,
         target_timestamp: impl Into<Option<i64>>,
     ) -> Commit<'repo> {
@@ -548,7 +548,7 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
             .to_vec();
         trace!(
             "Brute forcing a timestamp for {target_prefix:2x?} with mask {target_mask:2x?} \
-             letter_suffix={letter_suffix}"
+             suffix_req={suffix_req:?}"
         );
 
         let thread_count = num_cpus::get() as u64;
@@ -678,27 +678,38 @@ pub trait CommitExt<'repo>: Borrow<Commit<'repo>> + Debug {
                             .map(|(x, mask)| x & *mask)
                             .all(|x| x == 0);
 
-                        // Check letter suffix (next nibble must be a-f) if required
-                        let suffix_matches = !letter_suffix || {
-                            // If the mask for the last byte is 0xF0 (odd nibbles), we check the
-                            // second nibble of that byte. If the mask
-                            // is 0xFF (even nibbles), we check the first nibble of the NEXT byte.
+                        // Check suffix requirement (next nibble must satisfy the constraint)
+                        use crate::suffix::SuffixRequirement;
+                        let suffix_matches = match suffix_req {
+                            SuffixRequirement::None => true,
+                            SuffixRequirement::Letter | SuffixRequirement::Digit => {
+                                // If the mask for the last byte is 0xF0 (odd nibbles), we check the
+                                // second nibble of that byte. If the mask
+                                // is 0xFF (even nibbles), we check the first nibble of the NEXT byte.
 
-                            let len = target_mask.len();
-                            if len == 0 {
-                                // Empty prefix: check first nibble of first byte
-                                !oid_bytes.is_empty() && (oid_bytes[0] >> 4) >= 0xA
-                            } else {
-                                let last_mask = target_mask[len - 1];
-                                if last_mask == 0xF0 {
-                                    // Odd nibbles: check the second nibble of the last matched byte
-                                    // We need to re-fetch the byte because it might have been
-                                    // partially matched
-                                    (oid_bytes[len - 1] & 0x0F) >= 0xA
+                                let len = target_mask.len();
+                                let nibble = if len == 0 {
+                                    // Empty prefix: check first nibble of first byte
+                                    if oid_bytes.is_empty() {
+                                        0xFF  // Invalid nibble, will fail check
+                                    } else {
+                                        oid_bytes[0] >> 4
+                                    }
                                 } else {
-                                    // Even nibbles: check the first nibble of the next byte
-                                    len < oid_bytes.len() && (oid_bytes[len] >> 4) >= 0xA
-                                }
+                                    let last_mask = target_mask[len - 1];
+                                    if last_mask == 0xF0 {
+                                        // Odd nibbles: check the second nibble of the last matched byte
+                                        oid_bytes[len - 1] & 0x0F
+                                    } else {
+                                        // Even nibbles: check the first nibble of the next byte
+                                        if len < oid_bytes.len() {
+                                            oid_bytes[len] >> 4
+                                        } else {
+                                            0xFF  // Invalid nibble, will fail check
+                                        }
+                                    }
+                                };
+                                suffix_req.check(nibble)
                             }
                         };
 

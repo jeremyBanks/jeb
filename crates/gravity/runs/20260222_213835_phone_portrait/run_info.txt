@@ -1,0 +1,33 @@
+run_id=20260222_213835_phone_portrait
+run_id:        20260222_213835_phone_portrait
+seed:          1860093361
+seconds:       26
+commit:        00a71bff8054
+gravity:       0.3
+softening:     5
+speed_cap:     5
+pop_target:    768
+pop_band:      96
+rate_limit:    64
+conway_every:  1
+seed_density:  1/128
+init_pop:      768
+init_vel:      zero
+circles:       1
+vel_scale:     1
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+stagger_x:     36
+stagger_y:     0
+dampen_x:      0.125
+dampen_y:      0
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    72x288 → 144x576

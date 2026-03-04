@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: b65ddcd8d120e93b89df50f93c12103217857e5d
+    main: 6740b2dd8758fc3f6307bfbb49493ea3188e47f8
 381a71:
   author: Tester <test@example.com>
   author-date: 2026-01-02T21:10:36Z
@@ -30,24 +30,23 @@ refs:
       file-018.txt: content 18
       file-019.txt: content 19
       file-020.txt: content 20
-136d8a:
-  author: Jeremy Banks <_@jeremy.ca>
+87ef49:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: Initial commit
   parents: []
   tree: {}
-ad6b22:
+d1650a:
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
-  committer: 🔎 <git-zoom-in@localhost>
   message: |-
     Merge from 'many'
 
     git-zoom-in: many
   parents:
-  - 136d8a
+  - 87ef49
   - 381a71
   tree:
     file-001.txt:
@@ -110,8 +109,8 @@ ad6b22:
     file-020.txt:
       //commit: 381a71
       //path: many/file-020.txt
-b65ddcd8d120e93b89df50f93c12103217857e5d:
-  author: Jeremy Banks <_@jeremy.ca>
+6740b2dd8758fc3f6307bfbb49493ea3188e47f8:
+  author: Temp <temp@localhost>
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
   committer: 🔍 <git-zoom-out@localhost>
@@ -121,4 +120,4 @@ b65ddcd8d120e93b89df50f93c12103217857e5d:
     git-zoom-out: many
   parents:
   - 381a71
-  - ad6b22
+  - d1650a

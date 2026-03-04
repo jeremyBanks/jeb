@@ -1,0 +1,34 @@
+run_id=test2
+run_id:        test2
+seed:          44
+frames:        1
+seconds:       0
+commit:        unknown
+gravity:       0.125
+softening:     3
+speed_cap:     2
+pop_target:    768
+pop_band:      256
+rate_limit:    256
+conway_every:  1
+seed_density:  1/128
+init_pop:      320
+init_vel:      swirl
+circles:       none
+vel_scale:     1
+wrap_x:        false
+wrap_y:        false
+bounce_x:      false
+bounce_y:      false
+stagger_x:     0
+stagger_y:     0
+dampen_x:      0
+dampen_y:      0
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      false
+resolution:    256x160 → 512x320

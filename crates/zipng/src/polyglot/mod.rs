@@ -637,29 +637,42 @@ fn estimate_total_size(files: &[(&[u8], &[u8])], font: Option<&FontSelection>) -
 /// The combined period is LCM(DATA_ALIGNMENT, bytes_per_pixel). We find the
 /// offset within that period where both constraints hold, then align to it.
 fn align_to_row_width(value: usize, bytes_per_pixel: usize) -> usize {
-    // Period for the combined constraints
-    let period = lcm(DATA_ALIGNMENT, bytes_per_pixel);
-    // Find the offset within `period` where row_width % bpp == 0 and (row_width -
-    // 4) % 64 == 0. Since period = LCM(64, bpp), any row_width = offset +
-    // k*period satisfying both constraints at offset will satisfy them for all
-    // k. We need: offset % bpp == 0 AND (offset - 4) % 64 == 0, i.e. offset ≡ 4
-    // (mod 64). Search within one period (always small: at most LCM(64, 4) =
-    // 64).
-    let offset = (0..=period)
-        .find(|&o| {
-            o % bytes_per_pixel == 0
-                && o >= DEFLATE_HEADER_OVERHEAD
-                && (o - DEFLATE_HEADER_OVERHEAD).is_multiple_of(DATA_ALIGNMENT)
-        })
-        .expect("no valid alignment offset found");
-
-    // Find smallest row_width >= value matching: row_width = offset + k * period
-
-    if value <= offset {
-        offset
+    // Find the smallest power-of-2 data size >= (value - 4)
+    // Then row_width = data_size + 4
+    
+    let min_data_size = if value <= DEFLATE_HEADER_OVERHEAD {
+        DATA_ALIGNMENT // Minimum 64 bytes
     } else {
-        let k = (value - offset).div_ceil(period);
-        offset + k * period
+        value - DEFLATE_HEADER_OVERHEAD
+    };
+    
+    // Round up to next power of 2
+    let data_size = min_data_size.next_power_of_two().max(DATA_ALIGNMENT);
+    let row_width = data_size + DEFLATE_HEADER_OVERHEAD;
+    
+    // Ensure row_width is a multiple of bytes_per_pixel
+    if row_width % bytes_per_pixel == 0 {
+        row_width
+    } else {
+        // Round up to next multiple of bytes_per_pixel
+        let remainder = row_width % bytes_per_pixel;
+        let aligned = row_width + (bytes_per_pixel - remainder);
+        
+        // Check if this still satisfies power-of-2 for data portion
+        let data_portion = aligned - DEFLATE_HEADER_OVERHEAD;
+        if data_portion.is_power_of_two() {
+            aligned
+        } else {
+            // Need to go to next power of 2 that's compatible with bytes_per_pixel
+            let mut candidate_data = data_size;
+            loop {
+                candidate_data *= 2;
+                let candidate_width = candidate_data + DEFLATE_HEADER_OVERHEAD;
+                if candidate_width % bytes_per_pixel == 0 {
+                    return candidate_width;
+                }
+            }
+        }
     }
 }
 

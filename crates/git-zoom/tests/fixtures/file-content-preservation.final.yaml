@@ -1,8 +1,8 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: afc0bd642d24fe3cd3d8bab47e21d72b81745b14
-b50a41:
+    main: 99288cc1baddd3f73983c40211ebf3556b6075df
+04e436:
   message: commit 1
   tree:
     README.md: Project Documentation - This is important.
@@ -12,41 +12,40 @@ b50a41:
       lib:
         core.rs: pub fn core() { /* complex code */ }
         utils.rs: pub fn utils() {}
-136d8a:
-  author: Jeremy Banks <_@jeremy.ca>
+87ef49:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: Initial commit
   parents: []
   tree: {}
-da70bf:
+7542c9:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
-  committer: 🔎 <git-zoom-in@localhost>
   message: |-
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 136d8a
-  - b50a41
+  - 87ef49
+  - 04e436
   tree:
     core.rs:
-      //commit: b50a41
+      //commit: 04e436
       //path: src/lib/core.rs
     utils.rs:
-      //commit: b50a41
+      //commit: 04e436
       //path: src/lib/utils.rs
-84578b:
+a8369e:
   author: User <user@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   message: Update core
   tree:
     core.rs: pub fn core() { /* UPDATED */ }
-afc0bd642d24fe3cd3d8bab47e21d72b81745b14:
-  author: Jeremy Banks <_@jeremy.ca>
+99288cc1baddd3f73983c40211ebf3556b6075df:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
@@ -55,11 +54,11 @@ afc0bd642d24fe3cd3d8bab47e21d72b81745b14:
 
     git-zoom-out: src/lib
   parents:
-  - b50a41
-  - 84578b
+  - 04e436
+  - a8369e
   tree:
     src:
       lib:
         core.rs:
-          //commit: 84578b
+          //commit: a8369e
           //path: core.rs

@@ -1,7 +1,7 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: 67c1424cecfc64abad3ad549d4a998d4a58ad47e
+    main: f701d9691d6fed9823e0228d25825d3fe4f1b7a4
 3cfd2a:
   author: Jeremy Banks <_@jeremy.ca>
   author-date: 2026-01-02T21:10:36Z
@@ -14,24 +14,23 @@ refs:
       lib:
         bar.txt: bar
         foo.txt: original
-136d8a:
-  author: Jeremy Banks <_@jeremy.ca>
+87ef49:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: Initial commit
   parents: []
   tree: {}
-17ca73:
+ab17c9:
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
-  committer: 🔎 <git-zoom-in@localhost>
   message: |-
     Merge from 'src/lib'
 
     git-zoom-in: src/lib
   parents:
-  - 136d8a
+  - 87ef49
   - 3cfd2a
   tree:
     bar.txt:
@@ -40,7 +39,7 @@ refs:
     foo.txt:
       //commit: 3cfd2a
       //path: src/lib/foo.txt
-b13e94:
+f7e0f3:
   author: User <user@localhost>
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
@@ -48,7 +47,8 @@ b13e94:
   tree:
     foo.txt: modified
     new.txt: new file
-67c1424cecfc64abad3ad549d4a998d4a58ad47e:
+f701d9691d6fed9823e0228d25825d3fe4f1b7a4:
+  author: Temp <temp@localhost>
   author-date: 2026-01-02T21:10:36Z
   commit-date: 2026-01-02T21:10:36Z
   committer: 🔍 <git-zoom-out@localhost>
@@ -58,13 +58,13 @@ b13e94:
     git-zoom-out: src/lib
   parents:
   - 3cfd2a
-  - b13e94
+  - f7e0f3
   tree:
     src:
       lib:
         foo.txt:
-          //commit: b13e94
+          //commit: f7e0f3
           //path: foo.txt
         new.txt:
-          //commit: b13e94
+          //commit: f7e0f3
           //path: new.txt

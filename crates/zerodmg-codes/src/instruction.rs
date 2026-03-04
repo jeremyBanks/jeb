@@ -178,6 +178,10 @@ pub enum Instruction {
     PUSH(U16Register),
     /// Pops two bytes from the stack into a 16-bit register.
     POP(U16Register),
+    /// Pushes AF (accumulator + flags) onto the stack.
+    PUSH_AF,
+    /// Pops two bytes from the stack into AF (accumulator + flags).
+    POP_AF,
 
     // Jumps and Calls
     /// Absolute jump, updates PC.
@@ -398,6 +402,8 @@ impl Instruction {
             }
             PUSH(register) => vec![0xC5 | (register.index() << 4)],
             POP(register) => vec![0xC1 | (register.index() << 4)],
+            PUSH_AF => vec![0xF5],
+            POP_AF => vec![0xF1],
             ADD_SP(offset) => vec![0xE8, offset as u8],
             LD_HL_FROM_SP => vec![0xF9],
             LD_HL_FROM_SP_PLUS(offset) => vec![0xF8, offset as u8],
@@ -564,8 +570,10 @@ impl Instruction {
                     let register = U16Register::from_index(0b11 & (opcode >> 4));
                     LD_16_IMMEDIATE(register, d16(bytes))
                 }
-                0xC5 | 0xD5 | 0xE5 | 0xF5 => PUSH(U16Register::from_index(0b11 & (opcode >> 4))),
-                0xC1 | 0xD1 | 0xE1 | 0xF1 => POP(U16Register::from_index(0b11 & (opcode >> 4))),
+                0xC5 | 0xD5 | 0xE5 => PUSH(U16Register::from_index(0b11 & (opcode >> 4))),
+                0xF5 => PUSH_AF,
+                0xC1 | 0xD1 | 0xE1 => POP(U16Register::from_index(0b11 & (opcode >> 4))),
+                0xF1 => POP_AF,
                 0xE8 => ADD_SP(r8(bytes)),
                 0xF9 => LD_HL_FROM_SP,
                 0xF8 => LD_HL_FROM_SP_PLUS(r8(bytes)),
@@ -652,7 +660,7 @@ impl Instruction {
             LD_HL_FROM_SP => 1,
             LD_HL_FROM_SP_PLUS(_) => 2,
             LD_SP_TO_IMMEDIATE_ADDRESS(_) => 3,
-            PUSH(_) | POP(_) => 1,
+            PUSH(_) | POP(_) | PUSH_AF | POP_AF => 1,
             // Jumps and Calls
             JP_IF(_, _) => 3,
             JP(_) => 3,
@@ -748,6 +756,8 @@ impl Display for Instruction {
             LD_SP_TO_IMMEDIATE_ADDRESS(address) => write!(f, "LD (0x{:02X}), SP", address),
             PUSH(register) => write!(f, "PUSH {:?}", register),
             POP(register) => write!(f, "POP {:?}", register),
+            PUSH_AF => write!(f, "PUSH AF"),
+            POP_AF => write!(f, "POP AF"),
             // Jumps and Calls
             JP(address) => write!(f, "JP 0x{:04X}", address),
             JP_HL => write!(f, "JP HL"),

@@ -1,0 +1,34 @@
+run_id=20260223_105339_var_R03
+run_id:        20260223_105339_var_R03
+seed:          782967835
+frames:        16384
+seconds:       273
+commit:        ac725bc78424
+gravity:       0.16
+softening:     3.7
+speed_cap:     4.8
+pop_target:    832
+pop_band:      192
+rate_limit:    60
+conway_every:  1
+seed_density:  1/128
+init_pop:      832
+init_vel:      radial-out
+circles:       1
+vel_scale:     1.8
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+stagger_x:     104
+stagger_y:     0
+dampen_x:      0
+dampen_y:      0.055
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    208x208 → 416x416

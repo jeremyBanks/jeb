@@ -1,0 +1,37 @@
+[package]
+name = "z855-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+description = "Fuzz testing for z855 encoder/decoder"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+# Standalone workspace to avoid conflicts with parent
+
+[dependencies]
+z855 = { path = ".." }
+libfuzzer-sys = "0.4"
+
+[[bin]]
+name = "fuzz_roundtrip"
+path = "fuzz_targets/fuzz_roundtrip.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_decoder_robustness"
+path = "fuzz_targets/fuzz_decoder_robustness.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_position_invariance"
+path = "fuzz_targets/fuzz_position_invariance.rs"
+test = false
+doc = false
+bench = false

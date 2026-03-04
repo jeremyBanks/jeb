@@ -52,7 +52,8 @@ mod tests {
         std::{fs, process::Command},
         tempfile::TempDir,
     };
-    fn setup_test_repo() -> TempDir {
+    fn setup_test_repo() -> (TempDir, std::sync::MutexGuard<'static, ()>) {
+        let lock = crate::test_utils::CWD_LOCK.lock().unwrap();
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();
         Command::new("git")
@@ -70,11 +71,11 @@ mod tests {
             .current_dir(dir.path())
             .output()
             .unwrap();
-        dir
+        (dir, lock)
     }
     #[test]
     fn test_scan_for_trailer_not_found() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::write(dir.path().join("test.txt"), "hello").unwrap();
         Command::new("git")
             .args(["add", "test.txt"])
@@ -91,7 +92,7 @@ mod tests {
     }
     #[test]
     fn test_scan_for_trailer_found() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::write(dir.path().join("test.txt"), "hello").unwrap();
         Command::new("git")
             .args(["add", "test.txt"])
@@ -121,7 +122,7 @@ mod tests {
     }
     #[test]
     fn test_scan_with_filter() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::write(dir.path().join("test.txt"), "hello").unwrap();
         Command::new("git")
             .args(["add", "test.txt"])

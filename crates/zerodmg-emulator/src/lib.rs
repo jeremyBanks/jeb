@@ -1,10 +1,10 @@
 // #![warn(missing_docs, missing_debug_implementations)]
 
 mod audio;
-mod cpu;
-mod memory;
+pub mod cpu;
+pub mod memory;
 pub mod test_runner;
-mod video;
+pub mod video;
 
 use image::GenericImageView;
 
@@ -34,7 +34,11 @@ pub struct GameBoy {
 
     // Serial I/O for Blargg test output
     serial_output: Vec<u8>,
+    serial_input: Vec<u8>,  // Queue of bytes to be read by ROM
     sb_register: u8,
+    
+    // Joypad state
+    joypad_buttons: u8, // Bits 0-7: Right, Left, Up, Down, A, B, Select, Start
 }
 
 pub struct Output {
@@ -148,18 +152,79 @@ impl GameBoy {
             debug_latest_executions_next_i: 0,
             output_buffer,
             serial_output: Vec::new(),
+            serial_input: Vec::new(),
             sb_register: 0,
+            joypad_buttons: 0,
         }
+    }
+    
+    /// Set joypad button state. Bits: 0=Right, 1=Left, 2=Up, 3=Down, 4=A, 5=B, 6=Select, 7=Start
+    pub fn set_joypad(&mut self, buttons: u8) {
+        self.joypad_buttons = buttons;
+    }
+
+    /// Create a new GameBoy with post-boot-ROM state (skips boot ROM).
+    /// Useful for test ROMs that don't need the Nintendo logo check.
+    pub fn new_skip_boot(game_rom: Vec<u8>, output_buffer: Arc<Mutex<Output>>) -> Self {
+        let mut gb = Self::new(game_rom, output_buffer);
+        // Set registers to DMG post-boot values
+        gb.cpu = CPUData::post_boot();
+        gb.mem.boot_rom_mapped = false;
+        // Set PPU to post-boot state: real DMG boot ROM takes ~32768 M-cycles.
+        // After boot, LY=153 (0x99) — the last VBlank line, 114 cycles before
+        // wrapping to LY=0. This matches documented DMG post-boot hardware state.
+        gb.vid.t = 153 * 114; // LY=153, start of last VBlank line
+        gb
     }
 
     /// Returns the accumulated serial output from Blargg tests.
     pub fn serial_output(&self) -> &[u8] {
         &self.serial_output
     }
+    
+    /// Push a byte to the serial input queue (for ROM to read via 0xFF01).
+    pub fn push_serial_input(&mut self, byte: u8) {
+        self.serial_input.push(byte);
+    }
+    
+    /// Check if serial input is available.
+    pub fn has_serial_input(&self) -> bool {
+        !self.serial_input.is_empty()
+    }
 
     /// Returns the current program counter value.
     pub fn pc(&self) -> u16 {
         self.cpu.pc()
+    }
+
+    /// Returns the raw internal div_counter value (for timer debugging).
+    pub fn raw_div_counter(&self) -> u16 {
+        self.mem.div_counter
+    }
+
+    /// Returns CPU register state as a tuple (A, F, B, C, D, E, H, L, SP).
+    pub fn cpu_state(&self) -> (u8, u8, u8, u8, u8, u8, u8, u8, u16) {
+        (
+            self.cpu.a(), self.cpu.f(),
+            self.cpu.b(), self.cpu.c(),
+            self.cpu.d(), self.cpu.e(),
+            self.cpu.h(), self.cpu.l(),
+            self.cpu.sp(),
+        )
+    }
+
+    /// Read a byte from memory at the given address.
+    pub fn read_memory(&self, addr: u16) -> u8 {
+        use crate::memory::MemoryController;
+        self.mem(addr)
+    }
+    
+    pub fn read_b(&self) -> u8 {
+        self.cpu.b()
+    }
+    
+    pub fn read_hl(&self) -> u16 {
+        ((self.cpu.h() as u16) << 8) | (self.cpu.l() as u16)
     }
 
     pub fn print_recent_executions(&mut self, limit: usize) {
@@ -198,6 +263,47 @@ impl GameBoy {
         println!();
     }
 
+    /// Advance the timer hardware by one T-cycle.
+    fn timer_tick(&mut self) {
+        use self::cpu::CPUController;
+
+        let old_div = self.mem.div_counter;
+        self.mem.div_counter = self.mem.div_counter.wrapping_add(1);
+
+        // TIMA only ticks when TAC bit 2 (enable) is set
+        if self.mem.tac & 0x04 != 0 {
+            // Clock select: determines which bit of div_counter triggers TIMA
+            let bit_pos: u16 = match self.mem.tac & 0x03 {
+                0 => 9,   // 4096 Hz (every 1024 T-cycles)
+                1 => 3,   // 262144 Hz (every 16 T-cycles)
+                2 => 5,   // 65536 Hz (every 64 T-cycles)
+                3 => 7,   // 16384 Hz (every 256 T-cycles)
+                _ => unreachable!(),
+            };
+            let mask = 1 << bit_pos;
+            // Falling edge detection: old bit was 1, new bit is 0
+            if old_div & mask != 0 && self.mem.div_counter & mask == 0 {
+                let (new_tima, overflow) = self.mem.tima.overflowing_add(1);
+                if overflow {
+                    // TIMA overflowed: reload from TMA and trigger timer interrupt
+                    self.mem.tima = self.mem.tma;
+                    let ift = self.ift();
+                    self.set_ift(ift | 0b00100); // Timer interrupt
+                } else {
+                    self.mem.tima = new_tima;
+                }
+            }
+        }
+    }
+
+    /// Advance the timer hardware by one M-cycle (= 4 T-cycles).
+    pub fn timer_cycle(&mut self) {
+        self.timer_tick();
+        self.timer_tick();
+        self.timer_tick();
+        self.timer_tick();
+    }
+
     pub fn run(&mut self) -> ! {
         let log_size = EXECUTIONS_BUFFER_SIZE.min(32);
         let log_interval = (1024 * 1024) / 2;
@@ -234,6 +340,7 @@ impl GameBoy {
             for _t in t_0..t_1 {
                 self.video_cycle();
                 self.audio_cycle();
+                self.timer_cycle();
 
                 if (self.t + log_interval - log_interval.min(log_size as u64))
                     .is_multiple_of(log_interval)
@@ -254,9 +361,8 @@ impl GameBoy {
                 const MAX_LAG: Duration = Duration::from_millis(8);
                 const ZERO: Duration = Duration::from_secs(0);
 
-                // TODO: this is exactly 1MHz, which is wrong.
-                let internal_elapsed =
-                    Duration::new(self.t / 1000000, ((self.t * 1000) % 1000000000) as u32);
+                // self.t counts M-cycles; GB M-cycle frequency = 4,194,304 / 4 = 1,048,576 Hz
+                let internal_elapsed = Duration::from_secs_f64(self.t as f64 / 1_048_576.0);
                 let wall_elapsed = start_time.elapsed().expect("failed to get elapsed time?!");
 
                 let skew_ahead = if internal_elapsed > wall_elapsed {

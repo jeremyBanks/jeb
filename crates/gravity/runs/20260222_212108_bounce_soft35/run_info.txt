@@ -1,0 +1,33 @@
+run_id=20260222_212108_bounce_soft35
+run_id:        20260222_212108_bounce_soft35
+seed:          2898696920
+seconds:       4
+commit:        02c8411b3eb6
+gravity:       0.2
+softening:     3.5
+speed_cap:     4
+pop_target:    1024
+pop_band:      128
+rate_limit:    64
+conway_every:  1
+seed_density:  1/128
+init_pop:      1024
+init_vel:      spin
+circles:       1
+vel_scale:     1
+wrap_x:        false
+wrap_y:        false
+bounce_x:      false
+bounce_y:      false
+stagger_x:     0
+stagger_y:     0
+dampen_x:      0
+dampen_y:      0
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    256x160 → 512x320

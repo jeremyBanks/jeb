@@ -88,7 +88,8 @@ mod tests {
         std::{fs, process::Command},
         tempfile::TempDir,
     };
-    fn setup_test_repo() -> TempDir {
+    fn setup_test_repo() -> (TempDir, std::sync::MutexGuard<'static, ()>) {
+        let lock = crate::test_utils::CWD_LOCK.lock().unwrap();
         let dir = TempDir::new().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();
         Command::new("git")
@@ -106,11 +107,11 @@ mod tests {
             .current_dir(dir.path())
             .output()
             .unwrap();
-        dir
+        (dir, lock)
     }
     #[test]
     fn test_zoom_out_basic() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "original").unwrap();
         fs::write(dir.path().join("root.txt"), "root").unwrap();
@@ -150,7 +151,7 @@ mod tests {
     }
     #[test]
     fn test_zoom_cycle() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "v1").unwrap();
         fs::write(dir.path().join("root.txt"), "root").unwrap();
@@ -223,7 +224,7 @@ mod tests {
     }
     #[test]
     fn test_multiple_paths() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::create_dir_all(dir.path().join("src/bin")).unwrap();
         fs::write(dir.path().join("src/lib/lib.txt"), "library").unwrap();
@@ -271,7 +272,7 @@ mod tests {
     }
     #[test]
     fn test_nested_zoom() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib/core")).unwrap();
         fs::write(dir.path().join("src/lib/core/mod.rs"), "v1").unwrap();
         fs::write(dir.path().join("src/lib/lib.rs"), "lib").unwrap();
@@ -317,7 +318,7 @@ mod tests {
     }
     #[test]
     fn test_explicit_target() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "v1").unwrap();
         fs::write(dir.path().join("root.txt"), "root v1").unwrap();
@@ -366,7 +367,7 @@ mod tests {
     }
     #[test]
     fn test_explicit_path_filter() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::create_dir_all(dir.path().join("src/bin")).unwrap();
         fs::write(dir.path().join("src/lib/lib.txt"), "lib").unwrap();
@@ -414,7 +415,7 @@ mod tests {
     }
     #[test]
     fn test_deny_empty() {
-        let dir = setup_test_repo();
+        let (dir, _lock) = setup_test_repo();
         fs::create_dir_all(dir.path().join("src/lib")).unwrap();
         fs::write(dir.path().join("src/lib/foo.txt"), "hello").unwrap();
         Command::new("git")

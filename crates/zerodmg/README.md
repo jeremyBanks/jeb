@@ -14,6 +14,31 @@ and open
 
 to see what we've got.
 
+## Utilities
+
+Several command-line utilities are available for testing and debugging:
+
+- **`screenshot-rom`** - Visual sanity checker: runs a ROM for 10 seconds and saves screenshots every second
+  ```bash
+  cargo run --bin screenshot-rom path/to/rom.gb [output-dir]
+  ```
+  Useful for quick visual regression testing.
+
+- **`test-blargg`** - Run Blargg test ROM suites and report results
+  ```bash
+  cargo run --bin test-blargg
+  ```
+
+- **`run-rom`** - Execute any Game Boy ROM and capture serial output
+  ```bash
+  cargo run --bin run-rom path/to/rom.gb
+  ```
+
+- **`trace-rom`** - Run ROM with detailed CPU tracing
+  ```bash
+  cargo run --bin trace-rom path/to/rom.gb
+  ```
+
 [![Blog on GitHub Pages](https://img.shields.io/badge/blog-here-4422FF.svg?style=flat-square)](https://jeremybanks.github.io/0dmg/)\
 [![using Rust Nightly](https://img.shields.io/badge/rust-nightly-441199.svg?style=flat-square)](https://github.com/rust-lang-nursery/rustup.rs/blob/master/README.md#working-with-nightly-rust)
 

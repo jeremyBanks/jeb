@@ -1,44 +1,43 @@
 HEAD: refs/heads/main
 refs:
   heads:
-    main: b6302e6c32f9e5bf2939853ba931531fe961c6b9
-3d81b3:
+    main: 163b83c7e32113a73821bd38d7a7b12347ec1510
+86549f:
   message: commit 1
   tree:
     src:
       a.txt: a
       b.txt: b
       c.txt: c
-136d8a:
-  author: Jeremy Banks <_@jeremy.ca>
+87ef49:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔎 <git-zoom-in@localhost>
   message: Initial commit
   parents: []
   tree: {}
-b2cef5:
+74bc98:
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
-  committer: 🔎 <git-zoom-in@localhost>
   message: |-
     Merge from 'src'
 
     git-zoom-in: src
   parents:
-  - 136d8a
-  - 3d81b3
+  - 87ef49
+  - 86549f
   tree:
     a.txt:
-      //commit: 3d81b3
+      //commit: 86549f
       //path: src/a.txt
     b.txt:
-      //commit: 3d81b3
+      //commit: 86549f
       //path: src/b.txt
     c.txt:
-      //commit: 3d81b3
+      //commit: 86549f
       //path: src/c.txt
-96986f:
+e5be98:
   author: User <user@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
@@ -48,8 +47,8 @@ b2cef5:
     b.txt: B
     c.txt: C
     d.txt: D
-b6302e6c32f9e5bf2939853ba931531fe961c6b9:
-  author: Jeremy Banks <_@jeremy.ca>
+163b83c7e32113a73821bd38d7a7b12347ec1510:
+  author: Temp <temp@localhost>
   author-date: 2024-12-06T12:36:24-06:24
   commit-date: 2024-12-06T12:36:24-06:24
   committer: 🔍 <git-zoom-out@localhost>
@@ -58,19 +57,19 @@ b6302e6c32f9e5bf2939853ba931531fe961c6b9:
 
     git-zoom-out: src
   parents:
-  - 3d81b3
-  - 96986f
+  - 86549f
+  - e5be98
   tree:
     src:
       a.txt:
-        //commit: 96986f
+        //commit: e5be98
         //path: a.txt
       b.txt:
-        //commit: 96986f
+        //commit: e5be98
         //path: b.txt
       c.txt:
-        //commit: 96986f
+        //commit: e5be98
         //path: c.txt
       d.txt:
-        //commit: 96986f
+        //commit: e5be98
         //path: d.txt

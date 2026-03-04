@@ -1,0 +1,16 @@
+run_id:        20260221_175527
+seed:          46394521
+seconds:       4369
+commit:        e06fd072ab6e
+gravity:       0.05
+softening:     2
+speed_cap:     4
+pop_target:    768
+pop_band:      256
+rate_limit:    8
+seed_density:  1/128
+init_vel:      zero
+wrap:          true
+dampen:        true
+steer:         false
+resolution:    512x320 → 2048x1280

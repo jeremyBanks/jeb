@@ -10,3 +10,12 @@ pub use z855::{
     EncodeError,
     Z855Options,
 };
+
+#[cfg(test)]
+mod proptest;
+
+#[cfg(test)]
+mod proptest_priority1;
+
+#[cfg(test)]
+mod proptest_priority2;

@@ -1,0 +1,4 @@
+--speed-cap 9 --init-vel swirl --wrap
+round=1
+label=wrap+cap9+swirl
+score=1427

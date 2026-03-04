@@ -1,0 +1,28 @@
+run_id=20260222_034942
+run_id:        20260222_034942
+seed:          3515734288
+seconds:       4369
+commit:        62a4f51a31fa
+gravity:       0.19
+softening:     2.2
+speed_cap:     3.9
+pop_target:    384
+pop_band:      128
+rate_limit:    64
+conway_every:  1
+seed_density:  1/128
+init_pop:      384
+init_vel:      zero
+circles:       6
+vel_scale:     1.75
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+dampen_x:      0.015625
+dampen_y:      0.015625
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    128x128 → 256x256

@@ -1,0 +1,12 @@
+# Screenshot test script
+LOG Taking screenshot after boot
+TIMEOUT 10000000
+
+# Wait for some execution
+WAIT_FRAMES 10
+LOG Waited 10 frames
+
+# Capture a screenshot
+SCREENSHOT test-screenshot.png
+
+HALT

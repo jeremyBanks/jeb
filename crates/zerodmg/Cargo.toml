@@ -22,3 +22,6 @@ hyper-util = { workspace = true, features = ["tokio"] }
 image.workspace = true
 rand.workspace = true
 tokio = { workspace = true, features = ["full"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

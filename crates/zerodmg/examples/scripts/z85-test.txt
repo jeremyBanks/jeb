@@ -1,0 +1,10 @@
+# Test Z85 encoding via serial I/O
+LOG Starting Z85 encoder test
+TIMEOUT 10000000
+
+SERIAL_ENABLE
+WAIT 5000000
+SERIAL_DISABLE
+
+LOG Test complete
+HALT

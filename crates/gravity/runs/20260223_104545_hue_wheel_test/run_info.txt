@@ -1,0 +1,34 @@
+run_id=20260223_104545_hue_wheel_test
+run_id:        20260223_104545_hue_wheel_test
+seed:          3279865137
+frames:        16384
+seconds:       273
+commit:        ac725bc78424
+gravity:       0.16
+softening:     3.5
+speed_cap:     4.5
+pop_target:    1024
+pop_band:      192
+rate_limit:    64
+conway_every:  1
+seed_density:  1/128
+init_pop:      1024
+init_vel:      spin
+circles:       3
+vel_scale:     1.5
+wrap_x:        true
+wrap_y:        true
+bounce_x:      false
+bounce_y:      false
+stagger_x:     96
+stagger_y:     0
+dampen_x:      0
+dampen_y:      0.06
+vel_decay:     0
+vel_nudge:     0
+vel_nudge_rate:0.03125
+steer:         false
+pos_color_in:  false
+pos_color_out: false
+tile_2x2:      true
+resolution:    192x192 → 384x384

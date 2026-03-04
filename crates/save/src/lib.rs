@@ -65,7 +65,9 @@ pub mod ez;
 pub mod git2;
 pub mod graph_stats;
 pub mod hex;
+pub mod hex_b1032;
 pub mod phonetic;
+pub mod suffix;
 pub mod testing;
 #[doc(inline)]
 pub use self::ez::*;

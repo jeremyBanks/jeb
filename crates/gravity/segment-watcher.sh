@@ -1,0 +1,211 @@
+#!/bin/bash
+# segment-watcher.sh — sends a 3-part preview per completed segment.
+# Run-aware: reads run_id from state/run_info.txt at startup and validates
+# every segment against it. Self-terminates if the run changes (new render started).
+# Scopes seen-file to run_id so restarts never replay old segments.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+DISCORD_CHANNEL="1467063568712339561"
+PREVIEW_DIR="/Users/matte/.openclaw/workspace/shared/gravity"
+PREVIEW_W=512
+PREVIEW_H=-2   # auto-height preserves aspect ratio (use -2 for codec alignment)
+CLIP_FULL=2      # seconds at full speed per clip section
+CLIP_SLOW_SRC=1  # seconds of source for slow section (→ 3s output at 1/3 speed)
+SLOW_FPS=20
+GAP_DUR="0.125"
+
+# ── read current run_id ─────────────────────────────────────────────────────
+if [ ! -f state/run_info.txt ]; then
+    echo "[watcher] waiting for state/run_info.txt..."
+    for (( i=0; i<30; i++ )); do sleep 2; [ -f state/run_info.txt ] && break; done
+fi
+RUN_ID=$(grep "^run_id=" state/run_info.txt 2>/dev/null | cut -d= -f2)
+if [ -z "$RUN_ID" ]; then echo "[watcher] no run_id, exiting"; exit 1; fi
+
+SEEN_FILE="/tmp/gravity_seen_${RUN_ID}.txt"
+touch "$SEEN_FILE"
+LAST_TIME=$(date +%s)
+chunk_count=0  # incremented per segment; no hardcoded total
+
+# Estimate total frames from run_info (seconds * 60fps)
+RUN_SECONDS=$(grep "^seconds:" state/run_info.txt 2>/dev/null | awk '{print $2}')
+TOTAL_FRAMES=$(( ${RUN_SECONDS:-0} * 60 ))
+
+echo "[watcher] started for run $RUN_ID"
+
+# ── preview builder ─────────────────────────────────────────────────────────
+make_preview() {
+    local seg="$1" out="$2"
+    local dur
+    dur=$(ffprobe -v error -show_entries format=duration \
+          -of csv=p=0 "$seg" 2>/dev/null | tr -d '[:space:]')
+    dur=${dur:-0}
+
+    local scale="scale=${PREVIEW_W}:${PREVIEW_H}:flags=neighbor"
+
+    local clip_total
+    clip_total=$(echo "scale=3; $CLIP_FULL + $CLIP_SLOW_SRC" | bc)
+    if (( $(echo "$dur < $(echo "scale=3; $clip_total * 2 + 1" | bc)" | bc -l) )); then
+        ffmpeg -y -i "$seg" -vf "$scale" -r "$SLOW_FPS" -c:v libx264 -crf 22 -preset fast "$out" 2>/dev/null
+        return
+    fi
+
+    # Compute start times for each of the 3 positions (beginning / middle / end)
+    local a0=0
+    local b0 c0 a1 b1 c1
+    b0=$(echo "scale=3; $dur / 2 - $clip_total / 2" | bc)
+    c0=$(echo "scale=3; $dur - $clip_total"          | bc)
+    a1=$(echo "scale=3; $a0 + $CLIP_FULL" | bc)
+    b1=$(echo "scale=3; $b0 + $CLIP_FULL" | bc)
+    c1=$(echo "scale=3; $c0 + $CLIP_FULL" | bc)
+
+    echo "[watcher] preview seeks: a=${a0}+${a1} b=${b0}+${b1} c=${c0}+${c1} (dur=${dur})"
+
+    # Single input decoded once, split 6 ways for video + 6 ways for audio.
+    # trim+setpts/atrim+asetpts for accurate section extraction.
+    # Slow sections: video pts ×3, audio also trimmed to match (not pitch-shifted).
+    local slow_audio_dur
+    slow_audio_dur=$(echo "scale=3; $CLIP_SLOW_SRC * 3" | bc)
+    ffmpeg -y -i "$seg" -filter_complex "
+        [0:v]split=6[v0][v1][v2][v3][v4][v5];
+        [0:a]asplit=6[a0][a1][a2][a3][a4][a5];
+        [v0]trim=start=${a0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[vaf];
+        [v1]trim=start=${a1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[vas];
+        [v2]trim=start=${b0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[vbf];
+        [v3]trim=start=${b1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[vbs];
+        [v4]trim=start=${c0}:duration=${CLIP_FULL},setpts=PTS-STARTPTS,${scale},fps=${SLOW_FPS}[vcf];
+        [v5]trim=start=${c1}:duration=${CLIP_SLOW_SRC},setpts=3*(PTS-STARTPTS),${scale},fps=${SLOW_FPS}[vcs];
+        [a0]atrim=start=${a0}:duration=${CLIP_FULL},asetpts=PTS-STARTPTS[aaf];
+        [a1]atrim=start=${a1}:duration=${slow_audio_dur},asetpts=PTS-STARTPTS[aas];
+        [a2]atrim=start=${b0}:duration=${CLIP_FULL},asetpts=PTS-STARTPTS[abf];
+        [a3]atrim=start=${b1}:duration=${slow_audio_dur},asetpts=PTS-STARTPTS[abs];
+        [a4]atrim=start=${c0}:duration=${CLIP_FULL},asetpts=PTS-STARTPTS[acf];
+        [a5]atrim=start=${c1}:duration=${slow_audio_dur},asetpts=PTS-STARTPTS[acs];
+        [vaf][aaf][vas][aas][vbf][abf][vbs][abs][vcf][acf][vcs][acs]concat=n=6:v=1:a=1[vout][aout]
+    " -map "[vout]" -map "[aout]" -c:v libx264 -crf 22 -preset fast -c:a aac -b:a 128k "$out" 2>/tmp/watcher_ffmpeg.log || true
+    [ -f "$out" ]  # return success only if output file exists
+}
+
+# ── main loop ───────────────────────────────────────────────────────────────
+while true; do
+    # Self-terminate if run_id changed (new render started, new watcher launched)
+    CURRENT_RUN=$(grep "^run_id=" state/run_info.txt 2>/dev/null | cut -d= -f2)
+    if [ -n "$CURRENT_RUN" ] && [ "$CURRENT_RUN" != "$RUN_ID" ]; then
+        echo "[watcher] run changed to $CURRENT_RUN — exiting stale watcher for $RUN_ID"
+        exit 0
+    fi
+
+    SEG_DIR="runs/${RUN_ID}/segments"
+    if [ -d "$SEG_DIR" ]; then
+        while IFS= read -r -d '' seg; do
+            grep -qF "$seg" "$SEEN_FILE" && continue
+
+            sleep 2
+            [ -f "$seg" ] || continue
+
+            # Validate segment belongs to THIS run (check mtime vs run start time)
+            # run_id is YYYYMMDD_HHMMSS_name — extract first 15 chars for timestamp
+            RUN_TS=$(echo "$RUN_ID" | cut -c1-15)
+            RUN_EPOCH=$(date -j -f "%Y%m%d_%H%M%S" "$RUN_TS" "+%s" 2>/dev/null || echo 0)
+            SEG_MTIME=$(stat -f %m "$seg" 2>/dev/null || echo 0)
+            if [ "$SEG_MTIME" -lt "$RUN_EPOCH" ]; then
+                echo "[watcher] skipping stale segment $seg (predates run $RUN_ID)"
+                echo "$seg" >> "$SEEN_FILE"
+                continue
+            fi
+
+            seg_name=$(basename "$seg" .mp4)
+            frame_offset=$(echo "$seg_name" | sed 's/seg_0*//')
+            frame_offset=${frame_offset:-0}
+
+            # Skip epilogue segments (frame_offset >= total frames = past the end of main render)
+            if [ "$TOTAL_FRAMES" -gt 0 ] && [ "$frame_offset" -ge "$TOTAL_FRAMES" ]; then
+                echo "[watcher] skipping epilogue segment $seg_name (frame $frame_offset >= $TOTAL_FRAMES)"
+                echo "$seg" >> "$SEEN_FILE"
+                continue
+            fi
+
+            # Percentage based on actual frame offset (accurate regardless of chunk size)
+            if [ "$TOTAL_FRAMES" -gt 0 ]; then
+                PCT=$(( frame_offset * 100 / TOTAL_FRAMES ))
+            else
+                PCT="?"
+            fi
+
+            # chunk_num assigned tentatively; only incremented on successful send
+            chunk_num=$(( chunk_count + 1 ))
+            preview="${PREVIEW_DIR}/preview_${RUN_ID}_chunk${chunk_num}.mp4"
+
+            if make_preview "$seg" "$preview"; then
+                NOW=$(date +%s)
+                ELAPSED=$(( NOW - LAST_TIME ))
+                META="${ELAPSED}s | $(du -m "$seg" | cut -f1)MB"
+
+                # Build params string from run_info
+                EXTRA=""
+                if [ -f "state/run_info.txt" ]; then
+                    G=$(    grep "^gravity:"    state/run_info.txt | awk '{print $2}')
+                    S=$(    grep "^softening:"  state/run_info.txt | awk '{print $2}')
+                    SC=$(   grep "^speed_cap:"  state/run_info.txt | awk '{print $2}')
+                    POP=$(  grep "^pop_target:" state/run_info.txt | awk '{print $2}')
+                    BAND=$( grep "^pop_band:"   state/run_info.txt | awk '{print $2}')
+                    RATE=$( grep "^rate_limit:" state/run_info.txt | awk '{print $2}')
+                    WRAP_X=$(grep "^wrap_x:"    state/run_info.txt | awk '{print $2}')
+                    WRAP_Y=$(grep "^wrap_y:"    state/run_info.txt | awk '{print $2}')
+                    INITV=$(   grep "^init_vel:"   state/run_info.txt | awk '{print $2}')
+                    VELSC=$(   grep "^vel_scale:"  state/run_info.txt | awk '{print $2}')
+                    CMT=$(     grep "^commit:"     state/run_info.txt | awk '{print $2}')
+                    DAMP_X=$(    grep "^dampen_x:"     state/run_info.txt | awk '{print $2}')
+                    DAMP_Y=$(    grep "^dampen_y:"     state/run_info.txt | awk '{print $2}')
+                    INITPOP=$(   grep "^init_pop:"     state/run_info.txt | awk '{print $2}')
+                    RES=$(       grep "^resolution:"   state/run_info.txt | awk '{print $2}')
+                    CIRCLES=$(   grep "^circles:"      state/run_info.txt | awk '{print $2}')
+                    BOUNCE_X=$(  grep "^bounce_x:"     state/run_info.txt | awk '{print $2}')
+                    BOUNCE_Y=$(  grep "^bounce_y:"     state/run_info.txt | awk '{print $2}')
+                    VEL_DECAY=$( grep "^vel_decay:"    state/run_info.txt | awk '{print $2}')
+                    VEL_NUDGE=$( grep "^vel_nudge:"    state/run_info.txt | awk '{print $2}')
+                    VNR=$(       grep "^vel_nudge_rate:" state/run_info.txt | sed 's/.*://' | awk '{print $1}')
+                    SECS=$(      grep "^seconds:"      state/run_info.txt | awk '{print $2}')
+                    STAG_X=$(    grep "^stagger_x:"    state/run_info.txt | awk '{print $2}')
+                    STAG_Y=$(    grep "^stagger_y:"    state/run_info.txt | awk '{print $2}')
+                    # Optional extras — only show non-zero/non-false values to keep message concise
+                    OPT=""
+                    [ "$BOUNCE_X" = "true" ] || [ "$BOUNCE_Y" = "true" ] && OPT="${OPT} bounce=${BOUNCE_X}/${BOUNCE_Y}"
+                    [ -n "$VEL_DECAY" ] && [ "$VEL_DECAY" != "0" ] && OPT="${OPT} decay=${VEL_DECAY}"
+                    [ -n "$VEL_NUDGE" ] && [ "$VEL_NUDGE" != "0" ] && OPT="${OPT} nudge=${VEL_NUDGE}@${VNR}"
+                    [ -n "$STAG_X" ] && [ "$STAG_X" != "0" ] && OPT="${OPT} stag_x=${STAG_X}"
+                    [ -n "$STAG_Y" ] && [ "$STAG_Y" != "0" ] && OPT="${OPT} stag_y=${STAG_Y}"
+                    EXTRA=" | \`${RUN_ID}\` ${CMT} ${SECS}s G=${G} soft=${S} cap=${SC} pop=${POP}±${BAND} init_pop=${INITPOP} rate=${RATE} circles=${CIRCLES} vel=${INITV}×${VELSC} wx=${WRAP_X} wy=${WRAP_Y} dx=${DAMP_X} dy=${DAMP_Y} grid=${RES}${OPT}"
+                fi
+
+                # Current state from render log (last stats line before chunk boundary)
+                STATE_LINE=$(grep "avg_spd" /tmp/gravity_render.log 2>/dev/null | tail -1 || true)
+                CUR_POP=$(  echo "$STATE_LINE" | grep -oE 'pop=[0-9]+'     2>/dev/null | cut -d= -f2 || true)
+                CUR_SPD=$(  echo "$STATE_LINE" | grep -oE 'avg_spd=[0-9.]+' 2>/dev/null | cut -d= -f2 || true)
+                CUR_P10=$(  echo "$STATE_LINE" | grep -oE 'p10=[0-9.]+'     2>/dev/null | cut -d= -f2 || true)
+                STATE_MSG=""
+                [ -n "$CUR_POP" ] && STATE_MSG="pop=${CUR_POP} avg_spd=${CUR_SPD} p10=${CUR_P10}"
+
+                MSG="chunk ${chunk_num} (${PCT}%) | ${META}${EXTRA}"
+                [ -n "$STATE_MSG" ] && MSG="${MSG}
+${STATE_MSG}"
+
+                if openclaw message send --channel discord \
+                    -t "$DISCORD_CHANNEL" \
+                    --media "$preview" \
+                    -m "$MSG"; then
+                    (( chunk_count++ )) || true
+                    echo "[watcher] sent chunk $chunk_num ($META)"
+                    echo "$seg" >> "$SEEN_FILE"
+                    LAST_TIME=$NOW
+                else
+                    echo "[watcher] send failed chunk $chunk_num, will retry"
+                fi
+            fi
+            rm -f "$preview"
+        done < <(find "$SEG_DIR" -name "seg_*.mp4" -print0 | sort -z)
+    fi
+
+    sleep 5
+done

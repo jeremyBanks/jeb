@@ -150,9 +150,11 @@ pub struct Save {
     ///
     /// May be explicitly set to an empty string to skip brute-forcing the hash.
     ///
-    /// [default: the commit index as decimal digits, followed by any hex letter
-    /// (a-f). Use --tree-target to use the first 4 hex digits of the tree hash
-    /// instead.]
+    /// [default: generation index using hex-b1032 encoding:
+    ///   • 0-9999: decimal + any letter [a-f]
+    ///   • 10000-65535: hex (≥4 digits) + any digit [0-9]
+    ///   • 65536+: hex, no suffix constraint
+    /// Use --tree-target to use the first 4 hex digits of the tree hash instead.]
     #[clap(
         help_heading = "COMMIT OPTIONS",
         long = "prefix",
@@ -586,16 +588,28 @@ pub fn main(args: Save) -> Result<()> {
     }
 
     let tree4 = tree.to_string()[..4].to_string().to_ascii_uppercase();
-    let g4 = format!("{}", graph_stats.generation_index);
+    let gen_idx = graph_stats.generation_index;
 
-    // Determine target and whether to require letter suffix
-    let (target_hex, letter_suffix) = if let Some(prefix) = args.prefix_hex.as_ref() {
-        (prefix.clone(), false)
+    // Determine target and suffix requirement
+    use crate::suffix::SuffixRequirement;
+    let (target_hex, suffix_req) = if let Some(prefix) = args.prefix_hex.as_ref() {
+        (prefix.clone(), SuffixRequirement::None)
     } else if args.tree_target {
-        (tree4.clone(), false)
+        (tree4.clone(), SuffixRequirement::None)
     } else {
-        // Default: NNNN with any letter suffix [a-f]
-        (g4, true)
+        // Default: hex-b1032 scheme
+        // 0-9999: decimal + any letter [a-f]
+        // 10000-65535: hex (skipping all-digit values) + any digit [0-9]
+        // 65536+: hex, no suffix constraint
+        let encoded = crate::hex_b1032::encode_generation_index(gen_idx);
+        let suffix = if gen_idx <= 9999 {
+            SuffixRequirement::Letter
+        } else if gen_idx <= 65535 {
+            SuffixRequirement::Digit
+        } else {
+            SuffixRequirement::None
+        };
+        (encoded, suffix)
     };
 
     let target = crate::hex::decode_hex_nibbles(target_hex);
@@ -718,7 +732,7 @@ pub fn main(args: Save) -> Result<()> {
         &repo,
         &target.bytes,
         Some(&target.mask),
-        letter_suffix,
+        suffix_req,
         min_timestamp,
         target_timestamp,
     );
@@ -885,6 +899,11 @@ fn get_committer_from_agent_env() -> Option<(String, String)> {
         ))
     } else if env::var("CURSOR_AGENT").is_ok() {
         Some(("⇗ Cursor".to_string(), "cursoragent@cursor.com".to_string()))
+    } else if env::var("OPENCLAW_SERVICE_MARKER").is_ok() {
+        Some((
+            "🦀 OpenClaw".to_string(),
+            "noreply@openclaw.ai".to_string(),
+        ))
     } else {
         None
     }
