@@ -81,7 +81,8 @@ fn narrow_down_failure_region() {
                     eprintln!("Byte at pos {}: {} ('{}')", end_pos-1, b, b as char);
 
                     // Can we decode up to end_pos-1?
-                    let ok = decode(&enc_fail[..end_pos-1]);
+                    let sub_str = &enc_fail[..end_pos-1];
+                    let ok = decode(sub_str);
                     eprintln!("Decode[..{}]: {:?}", end_pos-1, ok.as_ref().map(|v| v.len()).map_err(|e| format!("{:?}", e)));
                 }
             }
