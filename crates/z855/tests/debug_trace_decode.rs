@@ -1,83 +1,85 @@
 use z855::z855::{encode, decode};
 
-fn gen_data(seed: u64, len: usize) -> Vec<u8> {
-    let mut data = Vec::with_capacity(len);
-    let mut state = seed.wrapping_mul(6364136223846793005).wrapping_add(len as u64);
-    for _ in 0..len {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
-        data.push((state >> 33) as u8);
+#[test]
+fn repro_large_input() {
+    // From proptest regression - the known failing input
+    let data: Vec<u8> = vec![
+        144, 221, 95, 52, 97, 55, 253, 24, 78, 14, 105, 236, 136, 97, 181, 174,
+        117, 121, 25, 130, 95, 131, 56, 239, 24, 135, 215, 114, 133, 122, 184, 124,
+        178, 87, 39, 115, 137, 38, 77, 81, 248, 128, 161, 246, 160, 62, 52, 206,
+        139, 9, 214, 138, 222, 43, 97, 150, 197, 157, 99, 207, 72, 66, 57, 13,
+        242, 100, 136, 145, 131, 231, 103, 133, 77, 52, 54, 8, 16, 182, 128, 34,
+        83, 66, 61, 92, 215, 64, 139, 6, 189, 31, 143, 5, 189, 58, 100, 8,
+        127, 78, 198, 99,
+    ];
+
+    // Try to find the minimal prefix that fails
+    for len in 1..=data.len() {
+        let sub = &data[..len];
+        let enc = encode(sub);
+        match decode(&enc) {
+            Ok(dec) => {
+                if dec != sub {
+                    eprintln!("MISMATCH at len={}", len);
+                    eprintln!("  encoded: {:?}", enc);
+                    eprintln!("  expected {} bytes, got {} bytes", sub.len(), dec.len());
+                    panic!("mismatch");
+                }
+            }
+            Err(e) => {
+                eprintln!("DECODE FAILED at len={}", len);
+                eprintln!("  input bytes: {:?}", sub);
+                eprintln!("  encoded ({} chars): {:?}", enc.len(), enc);
+                eprintln!("  error: {:?}", e);
+
+                // Also try decoding the previous length to confirm it works
+                if len > 1 {
+                    let prev = &data[..len-1];
+                    let prev_enc = encode(prev);
+                    match decode(&prev_enc) {
+                        Ok(d) if d == prev => eprintln!("  len={} works fine", len-1),
+                        _ => eprintln!("  len={} also fails!", len-1),
+                    }
+                }
+                panic!("decode failed at len={}", len);
+            }
+        }
     }
-    data
+    eprintln!("All prefixes up to {} bytes roundtrip OK", data.len());
 }
 
 #[test]
-fn verify_decode_manually() {
-    let data = gen_data(12, 90);
-    let enc = encode(&data);
-    
-    // Verify data matches what I expect
-    assert_eq!(data[20], 146);
-    assert_eq!(data[21], 44); // ','
-    
-    eprintln!("Data[20..30]: {:?}", &data[20..30]);
-    
-    // The encoded string
-    eprintln!("Encoded: {:?}", enc);
-    eprintln!("Encoded len: {}", enc.len());
-    
-    // Now let's verify: does the TypeScript encoder produce the same thing?
-    // For now just check the Rust decoder on small substrings
-    
-    // Decode just up to position 99 (before the , escape)
-    let prefix = &enc[..100];
-    match decode(prefix) {
-        Ok(d) => {
-            eprintln!("First 100 chars decode to {} bytes", d.len());
-            // How many bytes should 100 chars decode to?
-            // 5 blocks (0-24) = 20 bytes
-            // _ escape at 27 with passthrough 28-33 = 7 bytes (byte 20-26)
-            // Blocks 34-98 = 13 blocks = 52 bytes (bytes 27-78)
-            // Total: 20 + 7 + 52 = 79 bytes... does it match?
-            assert_eq!(&d[..], &data[..d.len()], "prefix decode mismatch");
-            eprintln!("Prefix decode matches first {} bytes of input", d.len());
-        }
-        Err(e) => eprintln!("First 100 chars decode error: {:?}", e),
+fn repro_large_input_full() {
+    // Full 1000+ byte input from proptest - just test if ANY large random input fails
+    let mut data = Vec::new();
+    let mut rng = 42u64;
+    for _ in 0..2000 {
+        rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        data.push((rng >> 33) as u8);
     }
-    
-    // Decode up to position 105 (after the , escape + passthrough)
-    let prefix2 = &enc[..109]; // through the after block
-    match decode(prefix2) {
-        Ok(d) => {
-            eprintln!("First 109 chars decode to {} bytes", d.len());
-            assert_eq!(&d[..], &data[..d.len()], "prefix2 decode mismatch");
-        }
-        Err(e) => eprintln!("First 109 chars decode error: {:?}", e),
-    }
-    
-    // Decode the full string
-    match decode(&enc) {
-        Ok(d) => {
-            eprintln!("Full decode to {} bytes", d.len());
-            assert_eq!(&d[..], &data[..], "full decode mismatch");
-        }
+
+    let encoded = encode(&data);
+    match decode(&encoded) {
+        Ok(decoded) => assert_eq!(decoded, data, "roundtrip mismatch"),
         Err(e) => {
-            eprintln!("Full decode error: {:?}", e);
-            // Try to find exactly where
-            for end in 100..=enc.len() {
-                match decode(&enc[..end]) {
-                    Err(e) => {
-                        if end <= 101 || decode(&enc[..end-1]).is_ok() {
-                            eprintln!("  First failure at {} chars: {:?}", end, e);
-                            eprintln!("  Chars {}-{}: {:?}", end.saturating_sub(5), end.min(enc.len()), &enc[end.saturating_sub(5)..end.min(enc.len())]);
-                        }
-                    }
-                    Ok(d) => {
-                        if end >= enc.len() - 1 {
-                            eprintln!("  {} chars decode OK ({} bytes)", end, d.len());
-                        }
-                    }
+            // Binary search for the minimal failing prefix
+            let mut lo = 1usize;
+            let mut hi = data.len();
+            while lo < hi {
+                let mid = (lo + hi) / 2;
+                let sub = &data[..mid];
+                let enc = encode(sub);
+                match decode(&enc) {
+                    Ok(d) if d == sub => lo = mid + 1,
+                    _ => hi = mid,
                 }
             }
+            eprintln!("Minimum failing prefix: {} bytes", lo);
+            let sub = &data[..lo];
+            let enc = encode(sub);
+            eprintln!("Encoded: {:?}", &enc[..enc.len().min(500)]);
+            eprintln!("Error: {:?}", e);
+            panic!("decode failed");
         }
     }
 }

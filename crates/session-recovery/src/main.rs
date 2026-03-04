@@ -1176,11 +1176,16 @@ fn main() -> Result<()> {
     for sp in &sessions {
         let (sid, format, ft, lt, ops) = extract(sp, &effective_includes, &excludes, args.ignore_external, &repo_path, cutoff, args.verbose)?;
         
-        // Track file stats
+        // Track file stats (only write/edit ops, not reads/batch breaks)
         for op in &ops {
-            let fi = file_infos.entry(op.path.clone()).or_default();
-            fi.sessions.insert(sid.clone());
-            fi.versions += 1;
+            match &op.kind {
+                OpKind::Write(_) | OpKind::Edit { .. } => {
+                    let fi = file_infos.entry(op.path.clone()).or_default();
+                    fi.sessions.insert(sid.clone());
+                    fi.versions += 1;
+                }
+                _ => {}
+            }
         }
         
         session_infos.push(SessionInfo {
@@ -1188,7 +1193,7 @@ fn main() -> Result<()> {
             format,
             first_ts: ft,
             last_ts: lt,
-            op_count: ops.len(),
+            op_count: ops.iter().filter(|o| matches!(o.kind, OpKind::Write(_) | OpKind::Edit { .. })).count(),
             first_commit: None,
             last_commit: None,
         });
@@ -1381,7 +1386,7 @@ fn main() -> Result<()> {
     let mut total_commits = 0;
     let mut warnings: Vec<Warning> = Vec::new();
     let mut seen_sessions: HashSet<String> = HashSet::new();
-    let mut session_commits: HashMap<String, (Option<Oid>, Option<Oid>)> = HashMap::new();
+    let session_commits: HashMap<String, (Option<Oid>, Option<Oid>)> = HashMap::new();
     let branch_ref = format!("refs/heads/{}", branch);
     // Map op index → batch index for quick lookup
     let mut op_to_batch: HashMap<usize, usize> = HashMap::new();
@@ -1393,11 +1398,11 @@ fn main() -> Result<()> {
     
     // Track batch state for consolidated commits
     let mut current_batch_ops: Vec<(String, &str, String)> = Vec::new(); // (path, kind, session)
-    let mut current_batch_idx: Option<usize> = None;
-    let mut pending_batch_tree: Option<Oid> = None;
-    let mut pending_batch_ts: Option<DateTime<Utc>> = None;
-    let mut pending_batch_tz: i32 = 0;
-    let mut pending_batch_model: String = String::new();
+    let mut _current_batch_idx: Option<usize> = None;
+    let mut pending_batch_tree: Option<Oid>;
+    let mut pending_batch_ts: Option<DateTime<Utc>>;
+    let mut pending_batch_tz: i32;
+    let mut pending_batch_model: String;
     
     for (op_idx, op) in all_ops.iter().enumerate() {
         match &op.kind {
