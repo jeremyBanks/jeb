@@ -114,7 +114,7 @@ struct Args {
     scan_sessions: bool,
 
     /// OpenClaw sessions directory
-    #[arg(long, default_value = "~/.openclaw/agents/main/sessions/")]
+    #[arg(long, visible_alias = "openclaw-sessions-dir", default_value = "~/.openclaw/agents/main/sessions/")]
     sessions_dir: String,
 
     /// Claude Code projects directory (scans all subdirectories)
@@ -1386,7 +1386,7 @@ fn main() -> Result<()> {
     let mut total_commits = 0;
     let mut warnings: Vec<Warning> = Vec::new();
     let mut seen_sessions: HashSet<String> = HashSet::new();
-    let session_commits: HashMap<String, (Option<Oid>, Option<Oid>)> = HashMap::new();
+    let mut session_commits: HashMap<String, (Option<Oid>, Option<Oid>)> = HashMap::new();
     let branch_ref = format!("refs/heads/{}", branch);
     // Map op index → batch index for quick lookup
     let mut op_to_batch: HashMap<usize, usize> = HashMap::new();
@@ -1481,11 +1481,16 @@ fn main() -> Result<()> {
                     };
                     parent = Some(oid);
                     total_commits += 1;
-                    
+
+                    // Track per-session first/last commit
+                    let sc = session_commits.entry(op.session.clone()).or_insert((None, None));
+                    if sc.0.is_none() { sc.0 = Some(oid); }
+                    sc.1 = Some(oid);
+
                     if args.confirm {
                         repo.reference(&branch_ref, oid, true, "write")?;
                     }
-                    
+
                     // Clear batch state
                     current_batch_ops.clear();
                 }
@@ -1506,7 +1511,7 @@ fn main() -> Result<()> {
                 tree_id = Some(new_tree);
                 
                 // Determine edit kind label
-                let kind_label = if ok { "edit" } else { "⚠️ edit (mismatched)" };
+                let kind_label = if ok { "edit" } else { "⚠️ edit (appended)" };
                 
                 // Track this op for batch
                 current_batch_ops.push((ps.clone(), kind_label, op.session.clone()));
@@ -1530,7 +1535,7 @@ fn main() -> Result<()> {
                     Some(Warning {
                         path: ps.clone(),
                         ts: op.ts,
-                        message: "Edit target not found, content appended as mismatched".into(),
+                        message: "Edit target not found, content appended".into(),
                         commit: None, // Will be filled in when we commit
                     })
                 } else {
@@ -1562,13 +1567,18 @@ fn main() -> Result<()> {
                     };
                     parent = Some(oid);
                     total_commits += 1;
-                    
+
+                    // Track per-session first/last commit
+                    let sc = session_commits.entry(op.session.clone()).or_insert((None, None));
+                    if sc.0.is_none() { sc.0 = Some(oid); }
+                    sc.1 = Some(oid);
+
                     // Add warning with commit ID
                     if let Some(mut w) = pending_warning {
                         w.commit = Some(oid);
                         warnings.push(w);
                     }
-                    
+
                     if args.confirm {
                         repo.reference(&branch_ref, oid, true, "edit")?;
                     }
@@ -1644,10 +1654,14 @@ fn main() -> Result<()> {
             };
             format!("{} ({})", &s.id[..8], fmt)
         }).collect();
-        let slist = if session_labels.len() == 1 { 
-            format!("session {}", session_labels[0]) 
-        } else { 
-            format!("sessions {}", session_labels.join(", ")) 
+        let slist = match session_labels.len() {
+            1 => format!("session {}", session_labels[0]),
+            2 => format!("sessions {} and {}", session_labels[0], session_labels[1]),
+            _ => {
+                let last = session_labels.last().unwrap();
+                let rest = &session_labels[..session_labels.len() - 1];
+                format!("sessions {}, and {}", rest.join(", "), last)
+            }
         };
         let suffix = if !warnings.is_empty() { " (partial recovery with errors)" } else { "" };
         let mmsg = format!("Merge recovered {}{}", slist, suffix);

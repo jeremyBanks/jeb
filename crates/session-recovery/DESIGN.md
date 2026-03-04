@@ -203,18 +203,15 @@ Collapsed commits have message format:
 - Failed matches: commit message prefixed with ⚠️
 
 ### Read
-- Creates a "context commit" if the file is written/edited anywhere in the transcript (even later)
-- Only if it would actually change the current file state in the recovery branch
-- Provides baseline content that may help resolve later edits more accurately
+- Updates the in-memory file state model (does not create commits)
+- Provides baseline content that helps resolve subsequent edits more accurately
+- If we see a Read before any Write/Edit for a file, the Read content establishes the known file state
 
 ## Error Handling
 
 ### Malformed Log Lines
-- Skip invalid/unparseable lines
-- Batch consecutive skipped lines into a single warning commit
-- Warning commit message: "⚠️ Skipped N malformed lines"
-- Timestamp: average of the timestamps immediately before and after the skipped section
-- Final merge commit message notes "partial recovery with errors" if any lines were skipped
+- Skip invalid/unparseable lines silently
+- Lines without timestamps are skipped (common for metadata lines)
 
 ### Empty Recovery
 - If recovery would produce only empty/warning commits with no actual file operations: 
@@ -227,38 +224,32 @@ Collapsed commits have message format:
 
 ## Commit Messages
 
-**Initial commit (per session, always orphan):**
-```
-Beginning recovery from OpenClaw session <session-id>
-```
-
-**File operations:**
+**File operations (single):**
 ```
 write: path/to/file.rs
+
+OpenClaw session <session-id>
 ```
 ```
 edit: path/to/file.rs
+
+Claude Code session <session-id>
 ```
 ```
 ⚠️ edit (appended): path/to/file.rs
+
+OpenClaw session <session-id>
 ```
 
-**Collapsed operations:**
+**Consolidated operations (multiple ops in one commit):**
 ```
-[5 ops] write/edit: path/to/file.rs
+write: path/to/file.rs (×3)
+edit: path/to/other.rs
+
+OpenClaw session <session-id>
 ```
 
-No model or timestamp in message body — already in author/date.
-
-**Skipped lines:**
-```
-⚠️ Skipped 3 malformed lines
-```
-
-**Final commit (per session):**
-```
-Completing recovery from OpenClaw session <session-id>
-```
+Model and timestamp are in the git author/date fields, not the message body.
 
 ## Multiple Transcripts
 
@@ -268,22 +259,12 @@ Accept multiple transcript paths as arguments. Process as one logical stream:
 2. Preserve tool call/response pairs (don't actually interleave mid-call)
 3. Earlier transcripts provide context for later edit resolution
 
-### Per-Session Markers
+### Commit Structure
 
-- "Beginning recovery" at timestamp of first event in that session
-- "Completing recovery" at timestamp of last event in that session
-- These may interleave if sessions overlap temporally
-
-### Orphan Commits for Traceability
-
-**Each session's "Beginning recovery" commit is always an orphan.**
-
-If combining multiple transcripts:
-1. First session: orphan becomes base of recovery branch
-2. Subsequent sessions: orphan is immediately merged into ongoing branch
-   - Merge message: "Including OpenClaw session <id> in recovery"
-3. This ensures the same initial commit hash exists in all branches recovered from that session
-4. You can find all branches derived from a session by searching for its initial orphan commit hash
+All operations from all sessions are merged into a single linear commit chain,
+ordered chronologically. The first commit is an orphan. Each commit's message
+identifies which session it came from, including the format label (e.g.,
+"OpenClaw session abc123" or "Claude Code session def456").
 
 ### Determinism Across Runs
 
@@ -377,7 +358,6 @@ Key principles:
 | `--at <path>@<time>` | Point-in-time recovery for specific file | (none) |
 | `--lookback <duration>` | Session search window for --at | 14d |
 | `--collapse` / `--no-collapse` | Collapse additive operations | yes |
-| `--dry-run` | Show what would be done | no |
 | `--list-only` | List operations without committing | no |
 | `--verbose` | Detailed output | no |
 
