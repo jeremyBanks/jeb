@@ -1655,7 +1655,7 @@ fn decode_core(input: &[u8]) -> Result<Vec<u8>, DecodeError> {
     while in_idx < input.len() {
         let byte = input[in_idx];
 
-        if block_pos == 0 && (in_idx % 5) == 0 && byte == HASH_PADDING {
+        if block_pos == 0 && known_high_bytes.is_empty() && (in_idx % 5) == 0 && byte == HASH_PADDING {
             let remaining = input.len() - in_idx;
             if remaining >= 5 {
                 let mut hash_run = 0usize;

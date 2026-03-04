@@ -1,12 +1,7 @@
 use z855::z855::{encode, decode};
 
-#[test]
-fn narrow_down_failure_region() {
-    // Reproduce the exact failure
+fn get_failing_input() -> Vec<u8> {
     let mut rng: u64 = 12345;
-
-    // Find first failing trial
-    let mut fail_data = Vec::new();
     for _trial in 0u64..1000 {
         rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
         let size = 1000 + (rng as usize % 5000);
@@ -16,103 +11,140 @@ fn narrow_down_failure_region() {
         }).collect();
 
         let encoded = encode(&data);
-        match decode(&encoded) {
-            Ok(decoded) if decoded == data => {},
-            _ => {
-                fail_data = data;
-                break;
-            }
+        if decode(&encoded).is_err() {
+            return data;
         }
     }
-    assert!(!fail_data.is_empty(), "no failure found");
+    panic!("no failure found");
+}
 
-    // Binary search for minimum prefix that fails
-    let mut lo = 1usize;
-    let mut hi = fail_data.len();
-    while lo < hi {
-        let mid = (lo + hi) / 2;
-        let sub = &fail_data[..mid];
-        let enc = encode(sub);
-        match decode(&enc) {
-            Ok(d) if d == sub => lo = mid + 1,
-            _ => hi = mid,
-        }
-    }
-    let min_len = lo;
-    eprintln!("Minimum failing length: {}", min_len);
+/// Simulate the decoder's actual logic including hash padding detection
+fn trace_decoder_full(encoded: &str) -> (usize, bool) {
+    let input = encoded.as_bytes();
+    let mut in_idx = 0;
+    let mut block_pos: usize = 0;
+    let mut block_digits: usize = 0;
+    let mut known_high: usize = 0;
+    let mut needed: usize = 5;
+    let mut hash_padding_triggered = false;
 
-    // Now we know fail_data[..min_len] fails but fail_data[..min_len-1] works.
-    // The two encodings differ because adding byte at min_len-1 changes the encoding.
-    // Let's see WHERE in the encoding the change happens.
+    while in_idx < input.len() {
+        let byte = input[in_idx];
 
-    let enc_ok = encode(&fail_data[..min_len-1]);
-    let enc_fail = encode(&fail_data[..min_len]);
-
-    eprintln!("OK encoding: {} chars", enc_ok.len());
-    eprintln!("Fail encoding: {} chars", enc_fail.len());
-
-    // Find where they diverge
-    let common = enc_ok.as_bytes().iter().zip(enc_fail.as_bytes().iter())
-        .take_while(|(a,b)| a==b).count();
-    eprintln!("Diverge at char {}", common);
-
-    // What's the encoded output around the divergence?
-    let start = common.saturating_sub(20);
-    let end = (common + 40).min(enc_ok.len()).min(enc_fail.len());
-    eprintln!("OK  [{}..{}]: {:?}", start, end, &enc_ok[start..end.min(enc_ok.len())]);
-    eprintln!("Fail[{}..{}]: {:?}", start, end, &enc_fail[start..end.min(enc_fail.len())]);
-
-    // Now the key question: what's the decode error on enc_fail?
-    // Let's progressively decode more of enc_fail to find where decode breaks
-    let mut last_ok_len = 0;
-    for end_pos in 1..=enc_fail.len() {
-        let prefix = &enc_fail[..end_pos];
-        match decode(&enc_fail[..end_pos]) {
-            Ok(_) => last_ok_len = end_pos,
-            Err(_) => {
-                // Only print the first failure
-                if last_ok_len == end_pos - 1 {
-                    eprintln!("\nFirst decode failure at encoded position {}", end_pos);
-                    let ctx_start = end_pos.saturating_sub(15);
-                    eprintln!("Context: {:?}", &enc_fail[ctx_start..end_pos.min(enc_fail.len())]);
-
-                    // What's at this position? Is it an escape?
-                    let b = enc_fail.as_bytes()[end_pos - 1];
-                    eprintln!("Byte at pos {}: {} ('{}')", end_pos-1, b, b as char);
-
-                    // Can we decode up to end_pos-1?
-                    let sub_str = &enc_fail[..end_pos-1];
-                    let ok = decode(sub_str);
-                    eprintln!("Decode[..{}]: {:?}", end_pos-1, ok.as_ref().map(|v| v.len()).map_err(|e| format!("{:?}", e)));
+        // Check for hash padding (mirrors decoder at line 1658)
+        if block_pos == 0 && (in_idx % 5) == 0 && byte == b'#' {
+            let remaining = input.len() - in_idx;
+            if remaining >= 5 {
+                let mut hash_run = 0usize;
+                while hash_run < 3 && input[in_idx + hash_run] == b'#' {
+                    hash_run += 1;
+                }
+                if hash_run > 0 {
+                    let num_chars = 5 - hash_run;
+                    eprintln!("  !!! HASH PADDING at pos {} (hash_run={}, num_chars={}), known_high={}", in_idx, hash_run, num_chars, known_high);
+                    hash_padding_triggered = true;
+                    in_idx += 5;
+                    block_digits = 0;
+                    block_pos = 0;
+                    known_high = 0;
+                    needed = 5;
+                    continue;
                 }
             }
         }
-    }
 
-    // Try a different approach: the full encoding fails to decode.
-    // But does it fail because of the escapes, or because the output length is wrong?
-    // Let's strip all escapes and just try to decode the Z85 portions.
-    eprintln!("\nFull encoding ({} chars): last 30 chars = {:?}", enc_fail.len(), &enc_fail[enc_fail.len()-30..]);
+        // Check for long escape
+        if byte == b'|' {
+            eprintln!("  pos {}: | (long escape), digits={}", in_idx, block_digits);
+            break;
+        }
 
-    // Count total chars consumed by escape sequences
-    let enc_bytes = enc_fail.as_bytes();
-    let mut total_escape_chars = 0;
-    let mut i = 0;
-    while i < enc_bytes.len() {
-        match enc_bytes[i] {
-            b',' => { total_escape_chars += 5; i += 5; },
-            b';' => { total_escape_chars += 6; i += 6; },
-            b'_' => { total_escape_chars += 7; i += 7; },
-            b'~' => { total_escape_chars += 8; i += 8; },
-            b'|' => {
-                eprintln!("Long escape at pos {}, context: {:?}", i, &enc_fail[i.saturating_sub(5)..enc_fail.len().min(i+20)]);
-                break; // complex, skip
+        // Check for passthrough escape
+        let pass_len = match byte {
+            b',' => Some(4usize),
+            b';' => Some(5),
+            b'_' => Some(6),
+            b'~' => Some(7),
+            _ => None,
+        };
+
+        if let Some(pl) = pass_len {
+            if pl == 4 {
+                let p = block_pos;
+                if p == 0 {
+                    in_idx += 5;
+                } else {
+                    eprintln!("  pos {}: , (4-byte P={}), known_high={}", in_idx, p, known_high);
+                    block_digits = 0;
+                    block_pos = 0;
+                    known_high = p;
+                    needed = 5 - p;
+                    in_idx += 5;
+                }
+            } else {
+                // Extended passthrough
+                if block_digits == 0 {
+                    eprintln!("  pos {}: {} ({}-byte block-aligned)", in_idx, byte as char, pl);
+                    in_idx += 1 + pl;
+                } else {
+                    let p = block_digits - 1;
+                    eprintln!("  pos {}: {} ({}-byte P={}), digits={}, known_high={}", in_idx, byte as char, pl, p, block_digits, known_high);
+                    block_digits = 0;
+                    block_pos = 0;
+                    known_high = 0;
+                    needed = 5;
+                    in_idx += 1 + pl;
+                }
             }
-            _ => { i += 1; }
+        } else {
+            // Regular Z85 digit
+            block_digits += 1;
+            block_pos += 1;
+            in_idx += 1;
+            if block_digits == needed {
+                if known_high > 0 {
+                    eprintln!("  pos {}: after-block complete (needed={}, known_high={})", in_idx, needed, known_high);
+                }
+                block_digits = 0;
+                block_pos = 0;
+                known_high = 0;
+                needed = 5;
+            }
         }
     }
-    eprintln!("Total escape-consumed chars up to pos {}: {}", i, total_escape_chars);
-    eprintln!("Remaining plain Z85 chars: {} (from {} total)", enc_bytes.len() - total_escape_chars, enc_bytes.len());
 
-    panic!("Analysis complete");
+    eprintln!("  Final: {} remaining digits at pos {}/{}, known_high={}", block_digits, in_idx, input.len(), known_high);
+    (block_digits, hash_padding_triggered)
+}
+
+#[test]
+fn trace_failing_decode() {
+    let data = get_failing_input();
+
+    for len in 3288..=3296 {
+        if len > data.len() { continue; }
+        let sub = &data[..len];
+        let enc = encode(sub);
+        let result = decode(&enc);
+        match &result {
+            Ok(d) if d == sub => {
+                eprintln!("{} bytes: OK (enc_len={}, expected={})", len, enc.len(), z85_len(len));
+            }
+            Ok(_) => {
+                eprintln!("{} bytes: MISMATCH", len);
+            }
+            Err(e) => {
+                eprintln!("\n=== {} bytes: ERROR {:?} ===", len, e);
+                eprintln!("  enc_len={}, expected={}", enc.len(), z85_len(len));
+                let (remaining, hash_triggered) = trace_decoder_full(&enc);
+                eprintln!("  Simulated remaining: {}, hash_padding_triggered: {}", remaining, hash_triggered);
+            }
+        }
+    }
+
+    panic!("Trace complete");
+}
+
+fn z85_len(n: usize) -> usize {
+    (n * 5 + 3) / 4
 }
