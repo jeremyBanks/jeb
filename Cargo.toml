@@ -41,6 +41,7 @@ panic = "abort"
 _autofix = { path = "crates/_autofix" }
 _chosen = { path = "crates/_chosen" }
 _claude_hooks = { path = "crates/_claude_hooks" }
+_discord_tools = { path = "crates/_discord_tools" }
 _examples = { path = "crates/_examples" }
 _scripts = { path = "crates/_scripts" }
 _trace = { path = "crates/_trace" }
@@ -118,6 +119,7 @@ proc-macro2 = "1.0.40"
 quote = "1.0.0"
 rand = "0.9"
 regex = "1.12.2"
+reqwest = "0.12"
 save = "0.20220708.0"
 semver = "1.0.0"
 serde = "1.0.0"
