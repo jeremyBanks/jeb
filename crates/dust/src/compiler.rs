@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Child, Node};
+use crate::ast::Node;
 use crate::token::TokenKind;
 use crate::wasm::{self, op, FuncBody, FuncType, LocalDecl, Module};
 
@@ -78,6 +78,7 @@ struct FuncCompiler<'a> {
     /// Local declarations to emit (type groups for non-param locals).
     local_decls: Vec<LocalDecl>,
     /// The function's return type.
+    #[allow(dead_code)]
     ret_type: ValType,
     /// Access to module-level info.
     module_ctx: &'a ModuleCtx,
