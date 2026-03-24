@@ -1,8 +1,0 @@
-{
-  "skills": {
-    "validate-requirements": {
-      "description": "Deep semantic validation of requirements - checks if implementations actually satisfy their definitions",
-      "file": "skills/validate-requirements.md"
-    }
-  }
-}
