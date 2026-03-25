@@ -585,6 +585,23 @@ impl<'a> FuncCompiler<'a> {
         let rhs = expr.child_node("rhs").unwrap();
         let op_tok = expr.child_token("op").unwrap();
 
+        // Handle `as` casts specially: rhs is a type name parsed as an ident.
+        if op_tok.kind == TokenKind::As {
+            let lhs_ty = self.compile_expr(lhs)?;
+            let type_name = match rhs.kind {
+                "ident" => rhs.child_token("name").unwrap().text.as_str(),
+                "named_type" => rhs.child_token("name").unwrap().text.as_str(),
+                _ => {
+                    return Err(CompileError(format!(
+                        "unsupported cast target: {}",
+                        rhs.kind
+                    )));
+                }
+            };
+            let target_ty = ValType::from_name(type_name)?;
+            return self.emit_cast(lhs_ty, target_ty);
+        }
+
         let lhs_ty = self.compile_expr(lhs)?;
         let rhs_ty = self.compile_expr(rhs)?;
 
@@ -756,6 +773,85 @@ impl<'a> FuncCompiler<'a> {
             }
         };
 
+        // Handle built-in intrinsics for memory access.
+        match func_name {
+            "load_byte" => {
+                // load_byte(addr: i32) -> i32
+                if args.len() != 1 {
+                    return Err(CompileError("load_byte expects 1 arg".into()));
+                }
+                self.compile_expr(&args[0])?;
+                // i32.load8_u with alignment 0, offset 0
+                self.code.push(0x2D); // i32.load8_u
+                self.code.push(0x00); // alignment
+                self.code.push(0x00); // offset
+                return Ok(ValType::I32);
+            }
+            "store_byte" => {
+                // store_byte(addr: i32, val: i32)
+                if args.len() != 2 {
+                    return Err(CompileError("store_byte expects 2 args".into()));
+                }
+                self.compile_expr(&args[0])?;
+                self.compile_expr(&args[1])?;
+                // i32.store8 with alignment 0, offset 0
+                self.code.push(0x3A); // i32.store8
+                self.code.push(0x00); // alignment
+                self.code.push(0x00); // offset
+                return Ok(ValType::Void);
+            }
+            "load_i32" => {
+                // load_i32(addr: i32) -> i32
+                if args.len() != 1 {
+                    return Err(CompileError("load_i32 expects 1 arg".into()));
+                }
+                self.compile_expr(&args[0])?;
+                self.code.push(op::I32_LOAD);
+                self.code.push(0x02); // alignment (4 bytes = 2^2)
+                self.code.push(0x00); // offset
+                return Ok(ValType::I32);
+            }
+            "store_i32" => {
+                // store_i32(addr: i32, val: i32)
+                if args.len() != 2 {
+                    return Err(CompileError("store_i32 expects 2 args".into()));
+                }
+                self.compile_expr(&args[0])?;
+                self.compile_expr(&args[1])?;
+                self.code.push(op::I32_STORE);
+                self.code.push(0x02); // alignment
+                self.code.push(0x00); // offset
+                return Ok(ValType::Void);
+            }
+            "memory_grow" => {
+                // memory_grow(pages: i32) -> i32 (returns previous size, or -1 on failure)
+                if args.len() != 1 {
+                    return Err(CompileError("memory_grow expects 1 arg".into()));
+                }
+                self.compile_expr(&args[0])?;
+                self.code.push(0x40); // memory.grow
+                self.code.push(0x00); // memory index
+                return Ok(ValType::I32);
+            }
+            "memory_size" => {
+                // memory_size() -> i32 (returns current memory size in pages)
+                if !args.is_empty() {
+                    return Err(CompileError("memory_size expects 0 args".into()));
+                }
+                self.code.push(0x3F); // memory.size
+                self.code.push(0x00); // memory index
+                return Ok(ValType::I32);
+            }
+            "unreachable" => {
+                if !args.is_empty() {
+                    return Err(CompileError("unreachable expects 0 args".into()));
+                }
+                self.code.push(op::UNREACHABLE);
+                return Ok(ValType::Void);
+            }
+            _ => {}
+        }
+
         let info = self
             .module_ctx
             .functions
@@ -818,6 +914,42 @@ impl<'a> FuncCompiler<'a> {
             _ => return Err(CompileError(format!("unsupported type for compound op: {:?}", ty))),
         }
         Ok(())
+    }
+
+    fn emit_cast(&mut self, from: ValType, to: ValType) -> Result<ValType, CompileError> {
+        match (from, to) {
+            (ValType::I32, ValType::I64) | (ValType::Bool, ValType::I64) => {
+                self.code.push(op::I64_EXTEND_I32_S);
+            }
+            (ValType::I64, ValType::I32) => {
+                self.code.push(op::I32_WRAP_I64);
+            }
+            (ValType::I32, ValType::F64) | (ValType::Bool, ValType::F64) => {
+                self.code.push(op::F64_CONVERT_I32_S);
+            }
+            (ValType::I64, ValType::F64) => {
+                self.code.push(op::F64_CONVERT_I64_S);
+            }
+            (ValType::F64, ValType::I32) => {
+                self.code.push(op::I32_TRUNC_F64_S);
+            }
+            (ValType::F64, ValType::I64) => {
+                self.code.push(op::I64_TRUNC_F64_S);
+            }
+            (ValType::I32, ValType::Bool) | (ValType::Bool, ValType::I32) => {
+                // no-op, both are i32 in wasm
+            }
+            (a, b) if a == b => {
+                // no-op cast to same type
+            }
+            _ => {
+                return Err(CompileError(format!(
+                    "unsupported cast: {:?} as {:?}",
+                    from, to
+                )));
+            }
+        }
+        Ok(to)
     }
 }
 
