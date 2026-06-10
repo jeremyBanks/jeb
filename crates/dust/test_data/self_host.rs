@@ -21,16 +21,16 @@
 // ================================================================
 
 fn SRC_BASE() -> i32 { 0 }
-fn OUT_BASE() -> i32 { 32768 }
-fn TOK_BASE() -> i32 { 65536 }
-fn NODE_BASE() -> i32 { 131072 }
-fn CHILD_BASE() -> i32 { 196608 }
-fn FTAB_BASE() -> i32 { 229376 }
-fn LTAB_BASE() -> i32 { 245760 }
-fn GLOB() -> i32 { 253952 }
-fn SEC_BUF() -> i32 { 262144 }
-fn CODE_BUF() -> i32 { 327680 }
-fn PSTACK_BASE() -> i32 { 360448 }
+fn OUT_BASE() -> i32 { 65536 }
+fn TOK_BASE() -> i32 { 131072 }
+fn NODE_BASE() -> i32 { 393216 }
+fn CHILD_BASE() -> i32 { 589824 }
+fn FTAB_BASE() -> i32 { 655360 }
+fn LTAB_BASE() -> i32 { 671744 }
+fn GLOB() -> i32 { 688128 }
+fn SEC_BUF() -> i32 { 696320 }
+fn CODE_BUF() -> i32 { 827392 }
+fn PSTACK_BASE() -> i32 { 892928 }
 
 fn TOK_SIZE() -> i32 { 16 }
 fn NODE_SIZE() -> i32 { 28 }
@@ -1439,8 +1439,8 @@ fn gen_call(node: i32) {
 // ================================================================
 
 fn compile(src_len: i32) -> i32 {
-    // Grow memory from 1 page to 10 pages
-    memory_grow(9);
+    // Grow memory from 1 page to 16 pages
+    memory_grow(15);
 
     // Initialize globals
     set_src_len(src_len);

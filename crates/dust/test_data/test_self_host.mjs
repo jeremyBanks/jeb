@@ -28,8 +28,8 @@ const outputLen = compiler.compile(testProgram.length);
 // The compiler may have grown memory, refresh the view
 const compilerMem2 = new Uint8Array(compiler.memory.buffer);
 
-// Read output from OUT_BASE (0x08000 = 32768)
-const outputWasm = compilerMem2.slice(32768, 32768 + outputLen);
+// Read output from OUT_BASE (0x10000 = 65536)
+const outputWasm = compilerMem2.slice(65536, 65536 + outputLen);
 
 console.log(`Compiled test program: ${testProgram.length} bytes source -> ${outputLen} bytes WASM`);
 
