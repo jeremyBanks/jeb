@@ -55,6 +55,8 @@ fn G_SEC_POS() -> i32 { 40 }
 fn G_CUR_PARAMS() -> i32 { 44 }
 fn G_PSTACK_PTR() -> i32 { 48 }
 fn G_LIST_FIRST() -> i32 { 52 }
+fn G_BREAK_DEPTH() -> i32 { 56 }
+fn G_CONT_DEPTH() -> i32 { 60 }
 
 // ================================================================
 // TOKEN KINDS
@@ -165,6 +167,10 @@ fn set_cur_params(v: i32) { set_glob(G_CUR_PARAMS(), v); }
 fn get_pstack_ptr() -> i32 { get_glob(G_PSTACK_PTR()) }
 fn set_pstack_ptr(v: i32) { set_glob(G_PSTACK_PTR(), v); }
 fn get_list_first() -> i32 { get_glob(G_LIST_FIRST()) }
+fn get_break_depth() -> i32 { get_glob(G_BREAK_DEPTH()) }
+fn set_break_depth(v: i32) { set_glob(G_BREAK_DEPTH(), v); }
+fn get_cont_depth() -> i32 { get_glob(G_CONT_DEPTH()) }
+fn set_cont_depth(v: i32) { set_glob(G_CONT_DEPTH(), v); }
 
 // Begin collecting a child list. Returns the stack position to pass to end_list.
 fn begin_list() -> i32 { get_pstack_ptr() }
@@ -1162,12 +1168,12 @@ fn gen_stmt(node: i32) {
     if k == NK_LOOP() { gen_loop(node); return; }
     if k == NK_BREAK() {
         code_byte(12); // br
-        code_leb_u(1);
+        code_leb_u(get_break_depth());
         return;
     }
     if k == NK_CONTINUE() {
         code_byte(12); // br
-        code_leb_u(0);
+        code_leb_u(get_cont_depth());
         return;
     }
     if k == NK_EXPR_STMT() {
@@ -1229,6 +1235,9 @@ fn gen_if(node: i32) {
     gen_expr(cond);
     code_byte(4);  // if
     code_byte(64); // void block type
+    // if introduces a label scope
+    set_break_depth(get_break_depth() + 1);
+    set_cont_depth(get_cont_depth() + 1);
     gen_block(then_blk);
     if else_node != -1 {
         code_byte(5); // else
@@ -1238,16 +1247,22 @@ fn gen_if(node: i32) {
             gen_block(else_node);
         }
     }
+    set_break_depth(get_break_depth() - 1);
+    set_cont_depth(get_cont_depth() - 1);
     code_byte(11); // end
 }
 
 fn gen_while(node: i32) {
     let mut cond: i32 = node_d1(node);
     let mut body: i32 = node_d2(node);
+    let mut saved_break: i32 = get_break_depth();
+    let mut saved_cont: i32 = get_cont_depth();
     code_byte(2);  // block
     code_byte(64); // void
     code_byte(3);  // loop
     code_byte(64); // void
+    set_break_depth(1);
+    set_cont_depth(0);
     gen_expr(cond);
     code_byte(69); // i32.eqz
     code_byte(13); // br_if
@@ -1255,19 +1270,27 @@ fn gen_while(node: i32) {
     gen_block(body);
     code_byte(12); // br
     code_leb_u(0);
+    set_break_depth(saved_break);
+    set_cont_depth(saved_cont);
     code_byte(11); // end loop
     code_byte(11); // end block
 }
 
 fn gen_loop(node: i32) {
     let mut body: i32 = node_d1(node);
+    let mut saved_break: i32 = get_break_depth();
+    let mut saved_cont: i32 = get_cont_depth();
     code_byte(2);  // block
     code_byte(64); // void
     code_byte(3);  // loop
     code_byte(64); // void
+    set_break_depth(1);
+    set_cont_depth(0);
     gen_block(body);
     code_byte(12); // br
     code_leb_u(0);
+    set_break_depth(saved_break);
+    set_cont_depth(saved_cont);
     code_byte(11); // end loop
     code_byte(11); // end block
 }
@@ -1455,6 +1478,8 @@ fn compile(src_len: i32) -> i32 {
     set_loop_depth(0);
     set_sec_pos(0);
     set_pstack_ptr(0);
+    set_break_depth(0);
+    set_cont_depth(0);
 
     // Phase 1: Lex
     lex_all();
