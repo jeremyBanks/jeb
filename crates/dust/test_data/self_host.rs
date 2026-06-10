@@ -30,6 +30,7 @@ fn LTAB_BASE() -> i32 { 245760 }
 fn GLOB() -> i32 { 253952 }
 fn SEC_BUF() -> i32 { 262144 }
 fn CODE_BUF() -> i32 { 327680 }
+fn PSTACK_BASE() -> i32 { 360448 }
 
 fn TOK_SIZE() -> i32 { 16 }
 fn NODE_SIZE() -> i32 { 28 }
@@ -52,6 +53,8 @@ fn G_CODE_POS() -> i32 { 32 }
 fn G_LOOP_DEPTH() -> i32 { 36 }
 fn G_SEC_POS() -> i32 { 40 }
 fn G_CUR_PARAMS() -> i32 { 44 }
+fn G_PSTACK_PTR() -> i32 { 48 }
+fn G_LIST_FIRST() -> i32 { 52 }
 
 // ================================================================
 // TOKEN KINDS
@@ -159,6 +162,35 @@ fn get_sec_pos() -> i32 { get_glob(G_SEC_POS()) }
 fn set_sec_pos(v: i32) { set_glob(G_SEC_POS(), v); }
 fn get_cur_params() -> i32 { get_glob(G_CUR_PARAMS()) }
 fn set_cur_params(v: i32) { set_glob(G_CUR_PARAMS(), v); }
+fn get_pstack_ptr() -> i32 { get_glob(G_PSTACK_PTR()) }
+fn set_pstack_ptr(v: i32) { set_glob(G_PSTACK_PTR(), v); }
+fn get_list_first() -> i32 { get_glob(G_LIST_FIRST()) }
+
+// Begin collecting a child list. Returns the stack position to pass to end_list.
+fn begin_list() -> i32 { get_pstack_ptr() }
+
+// Push a node index onto the parse stack (NOT the children array).
+fn list_push(node_idx: i32) {
+    let mut p: i32 = get_pstack_ptr();
+    store_i32(PSTACK_BASE() + p * 4, node_idx);
+    set_pstack_ptr(p + 1);
+}
+
+// Flush all items since begin_list to the children array contiguously.
+// Returns the count. The first_child index is accessible via get_list_first().
+fn end_list(start: i32) -> i32 {
+    let mut end: i32 = get_pstack_ptr();
+    let mut count: i32 = end - start;
+    let mut first_child: i32 = get_child_count();
+    set_glob(G_LIST_FIRST(), first_child);
+    let mut i: i32 = 0;
+    while i < count {
+        push_child(load_i32(PSTACK_BASE() + (start + i) * 4));
+        i += 1;
+    }
+    set_pstack_ptr(start);
+    count
+}
 
 // ================================================================
 // UTILITY FUNCTIONS
@@ -518,13 +550,13 @@ fn eat(kind: i32) -> i32 {
 }
 
 fn parse_file() -> i32 {
-    let mut first_child: i32 = get_child_count();
-    let mut count: i32 = 0;
+    let mut mark: i32 = begin_list();
     while peek_kind() != TK_EOF() {
         let mut item: i32 = parse_fn_def();
-        push_child(item);
-        count += 1;
+        list_push(item);
     }
+    let mut count: i32 = end_list(mark);
+    let mut first_child: i32 = get_list_first();
     new_node(NK_FILE(), first_child, count, 0, 0, 0)
 }
 
@@ -533,7 +565,7 @@ fn parse_fn_def() -> i32 {
     let mut name_tok: i32 = expect(TK_IDENT());
     expect(TK_LPAREN());
 
-    let mut first_param: i32 = get_child_count();
+    let mut param_mark: i32 = begin_list();
     let mut param_count: i32 = 0;
     while peek_kind() != TK_RPAREN() {
         if param_count > 0 { expect(TK_COMMA()); }
@@ -541,10 +573,12 @@ fn parse_fn_def() -> i32 {
         expect(TK_COLON());
         expect(TK_I32_KW());
         let mut pnode: i32 = new_node(NK_PARAM(), pname, 0, 0, 0, 0);
-        push_child(pnode);
+        list_push(pnode);
         param_count += 1;
     }
     expect(TK_RPAREN());
+    param_count = end_list(param_mark);
+    let mut first_param: i32 = get_list_first();
 
     let mut has_return: i32 = 0;
     if eat(TK_ARROW()) != 0 {
@@ -558,14 +592,14 @@ fn parse_fn_def() -> i32 {
 
 fn parse_block() -> i32 {
     expect(TK_LBRACE());
-    let mut first_stmt: i32 = get_child_count();
-    let mut count: i32 = 0;
+    let mut mark: i32 = begin_list();
     while peek_kind() != TK_RBRACE() {
         let mut stmt: i32 = parse_stmt();
-        push_child(stmt);
-        count += 1;
+        list_push(stmt);
     }
     expect(TK_RBRACE());
+    let mut count: i32 = end_list(mark);
+    let mut first_stmt: i32 = get_list_first();
     new_node(NK_BLOCK(), first_stmt, count, 0, 0, 0)
 }
 
@@ -725,15 +759,17 @@ fn parse_primary() -> i32 {
 
 fn parse_call(callee_tok: i32) -> i32 {
     expect(TK_LPAREN());
-    let mut first_arg: i32 = get_child_count();
+    let mut mark: i32 = begin_list();
     let mut arg_count: i32 = 0;
     while peek_kind() != TK_RPAREN() {
         if arg_count > 0 { expect(TK_COMMA()); }
         let mut arg: i32 = parse_expr(0);
-        push_child(arg);
+        list_push(arg);
         arg_count += 1;
     }
     expect(TK_RPAREN());
+    arg_count = end_list(mark);
+    let mut first_arg: i32 = get_list_first();
     new_node(NK_CALL(), callee_tok, first_arg, arg_count, 0, 0)
 }
 
@@ -1418,6 +1454,7 @@ fn compile(src_len: i32) -> i32 {
     set_code_pos(0);
     set_loop_depth(0);
     set_sec_pos(0);
+    set_pstack_ptr(0);
 
     // Phase 1: Lex
     lex_all();

@@ -82,8 +82,10 @@ struct FuncCompiler<'a> {
     ret_type: ValType,
     /// Access to module-level info.
     module_ctx: &'a ModuleCtx,
-    /// Current loop nesting depth (for break/continue label resolution).
-    loop_depth: u32,
+    /// Relative br depth for `break` (targets the block wrapping the loop).
+    break_depth: u32,
+    /// Relative br depth for `continue` (targets the loop header).
+    continue_depth: u32,
 }
 
 struct ModuleCtx {
@@ -228,7 +230,8 @@ fn compile_function(func: &Node, module_ctx: &ModuleCtx) -> Result<FuncBody, Com
         local_decls: Vec::new(),
         ret_type: info.ret,
         module_ctx,
-        loop_depth: 0,
+        break_depth: 0,
+        continue_depth: 0,
     };
 
     // Register parameters as locals.
@@ -306,18 +309,13 @@ impl<'a> FuncCompiler<'a> {
             "while" => self.compile_while(stmt),
             "loop" => self.compile_loop(stmt),
             "break" => {
-                // Break out of the current loop's block.
-                // In our encoding: loop { block { ... br 1 to exit ... } }
-                // br 1 breaks out of the outer block wrapping the loop.
                 self.code.push(op::BR);
-                wasm::encode_u32(&mut self.code, 1);
+                wasm::encode_u32(&mut self.code, self.break_depth);
                 Ok(())
             }
             "continue" => {
-                // Continue to the top of the loop.
-                // br 0 branches to the loop header.
                 self.code.push(op::BR);
-                wasm::encode_u32(&mut self.code, 0);
+                wasm::encode_u32(&mut self.code, self.continue_depth);
                 Ok(())
             }
             _ => Err(CompileError(format!("unsupported stmt: {}", stmt.kind))),
@@ -411,21 +409,16 @@ impl<'a> FuncCompiler<'a> {
         let cond = stmt.child_node("cond").unwrap();
         let body = stmt.child_node("body").unwrap();
 
-        // block {           ; label 1 (break target)
-        //   loop {          ; label 0 (continue target)
-        //     <cond>
-        //     i32.eqz
-        //     br_if 1       ; break out of block if cond is false
-        //     <body>
-        //     br 0          ; continue to loop header
-        //   }
-        // }
+        let saved_break = self.break_depth;
+        let saved_continue = self.continue_depth;
+
         self.code.push(op::BLOCK);
         self.code.push(wasm::BLOCK_VOID);
         self.code.push(op::LOOP);
         self.code.push(wasm::BLOCK_VOID);
 
-        self.loop_depth += 1;
+        self.break_depth = 1;
+        self.continue_depth = 0;
 
         self.compile_expr(cond)?;
         self.code.push(op::I32_EQZ);
@@ -437,7 +430,8 @@ impl<'a> FuncCompiler<'a> {
         self.code.push(op::BR);
         wasm::encode_u32(&mut self.code, 0);
 
-        self.loop_depth -= 1;
+        self.break_depth = saved_break;
+        self.continue_depth = saved_continue;
 
         self.code.push(op::END); // end loop
         self.code.push(op::END); // end block
@@ -448,23 +442,24 @@ impl<'a> FuncCompiler<'a> {
     fn compile_loop(&mut self, stmt: &Node) -> Result<(), CompileError> {
         let body = stmt.child_node("body").unwrap();
 
-        // block {           ; label 1 (break target)
-        //   loop {          ; label 0 (continue target)
-        //     <body>
-        //     br 0          ; continue to loop header
-        //   }
-        // }
+        let saved_break = self.break_depth;
+        let saved_continue = self.continue_depth;
+
         self.code.push(op::BLOCK);
         self.code.push(wasm::BLOCK_VOID);
         self.code.push(op::LOOP);
         self.code.push(wasm::BLOCK_VOID);
 
-        self.loop_depth += 1;
+        self.break_depth = 1;
+        self.continue_depth = 0;
+
         self.compile_block(body)?;
-        self.loop_depth -= 1;
 
         self.code.push(op::BR);
         wasm::encode_u32(&mut self.code, 0);
+
+        self.break_depth = saved_break;
+        self.continue_depth = saved_continue;
 
         self.code.push(op::END); // end loop
         self.code.push(op::END); // end block
@@ -480,9 +475,11 @@ impl<'a> FuncCompiler<'a> {
 
         let has_else = node.has_child("else");
 
+        // `if` introduces a new label scope, adjust break/continue depths
+        self.break_depth += 1;
+        self.continue_depth += 1;
+
         if has_else {
-            // if-else can produce a value
-            // For now, use void block type
             self.code.push(op::IF);
             self.code.push(wasm::BLOCK_VOID);
             self.compile_block(then_block)?;
@@ -500,6 +497,9 @@ impl<'a> FuncCompiler<'a> {
             self.compile_block(then_block)?;
             self.code.push(op::END);
         }
+
+        self.break_depth -= 1;
+        self.continue_depth -= 1;
 
         Ok(ValType::Void)
     }
