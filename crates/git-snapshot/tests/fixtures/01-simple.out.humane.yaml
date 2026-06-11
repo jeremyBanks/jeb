@@ -1,9 +1,0 @@
-HEAD: refs/heads/main
-refs:
-  heads:
-    main: 1
-1:
-  tree:
-    README.md: '# Hello World'
-    src:
-      lib.rs: pub fn main() {}

@@ -1,7 +1,0 @@
-HEAD: refs/heads/main
-refs: {}
-staged:
-  Cargo.toml: '[package]\nname = "new"'
-  README.md: '# New Project'
-  src:
-    lib.rs: pub fn init() {}

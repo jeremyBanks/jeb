@@ -1,0 +1,12 @@
+[package]
+name = "dust"
+version = "0.1.0"
+edition.workspace = true
+
+[[bin]]
+name = "dust"
+path = "src/main.rs"
+
+[lib]
+name = "dust"
+path = "src/lib.rs"

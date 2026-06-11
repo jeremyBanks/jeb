@@ -1,4 +1,0 @@
-spec {
-  name "jeb"
-  rules_glob "**/*.md"
-}
